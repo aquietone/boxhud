@@ -1,28 +1,54 @@
 --[[
-boxhud.lua -- aquietone
+boxhud.lua 1.1 -- aquietone
 
 Recreates NetBots based HUD with DanNet observer based lua UI.
 It should handle peers dynamically coming/going. 
-Stale data will be removed after 30 seconds.
 
-Usage: /lua run boxhud.lua
+Configuration is included by requiring a separate lua file. See
+the included boxhud-settings.lua for more information on configuration.
+
+A default boxhud-settings.lua is provided. The script will first
+look for boxhud-settings-toonname.lua before using the default.
+A settings file can also be provided as an argument.
+
+Usage: /lua run boxhud [settings.lua]
+
+Changes:
+1.1
+- Configuration options externalized
+1.0
+- Initial release, static configuration UI
+
 --]]
 mq = require('mq')
 
+local arg = {...}
+
+-- TLOs
+local CMD = mq.cmd
 local TLO = mq.TLO
+local Me = TLO.Me
 local DanNet = TLO.DanNet
 local Spawn = TLO.Spawn
 local Zone = TLO.Zone
+local EverQuest = TLO.EverQuest
 
---[[ Maybe someday read table config from file, needs lua extensions though
-filepath = debug.getinfo(1).short_src:gsub("lua\\hud.lua", "config\\hud.ini")
-file = io.open(filepath, 'r')
-if f ~= nil then 
-    io.input(file)
-    print(io.read())
-    io.close(file)
-end
---]]
+-- Control variables
+local openGUI = true
+local shouldDrawGUI = true
+local terminate = false
+local settings = {}
+-- Default DanNet peer group to use
+local peerGroup = 'all'
+-- Default observer polling interval (0.25 seconds)
+local refreshInterval = 250
+-- Default stale observed data timeout (60 seconds)
+local staleDataTimeout = 60
+-- Stores all live observed toon information that will be displayed
+local dataTable = {}
+-- Tracks what toons observers have been added for to avoid adding multiple times
+local observedToons = {}
+local windowWidth = 0
 
 -- Utility functions
 
@@ -33,6 +59,10 @@ function Set(list)
     for _, l in ipairs(list) do set[l] = true end
     return set
 end
+
+-- list of classes to check against for things like displaying mana % versus endurance %
+local casters = Set { 'Cleric', 'Druid', 'Shaman', 'Enchanter', 'Magician', 'Necromancer', 'Wizard' }
+local melee = Set { 'Bard', 'Rogue', 'Monk', 'Berserker', 'Ranger', 'Beastlord', 'Warrior', 'Shadow Knight', 'Paladin'}
 
 -- Split a string using the provided separator, | by default
 function Split(input, sep)
@@ -46,85 +76,103 @@ function Split(input, sep)
     return t
 end
 
--- name: (string) name of the column
--- properties: (table) table of properties for this column
--- thresholds: (array) 1 threshold value for red/green coloring, or
---                     2 threshold values for red/yellow/green coloring
--- percentage: (boolean) is the property value a percentage
--- inzone: (boolean) only use this property when BotInZone == true
--- width: (number) column width
-function DefineColumn(name, properties, thresholds, percentage, inzone, width)
-    col = {}
-    col['Name'] = name
-    col['Properties'] = properties
-    col['Thresholds'] = thresholds
-    col['Percentage'] = percentage
-    col['InZone'] = inzone
-    col['Width'] = width
-    return col
+-- Return list of DanNet peers from the configured peer group
+-- peers list |peer1|peer2|peer3
+function Peers()
+    return Split(tostring(DanNet.Peers(peerGroup)))
 end
 
--- Control variables
-local openGUI = true
-local shouldDrawGUI = true
-local terminate = false
+function FileExists(path)
+    local f = io.open(path, "r")
+    if f ~= nil then io.close(f) return true else return false end
+end
 
--- list of classes to check against for things like displaying mana % versus endurance %
-local casters = Set { 'Cleric', 'Druid', 'Shaman', 'Enchanter', 'Magician', 'Necromancer', 'Wizard' }
-local melee = Set { 'Bard', 'Rogue', 'Monk', 'Berserker', 'Ranger', 'Beastlord', 'Warrior', 'Shadow Knight', 'Paladin'}
+function ValidateSettings()
+    if not settings['Columns'] then
+        print('ERROR: Missing \'Columns\' from settings')
+        mq.exit()
+    elseif not settings['ObservedProperties'] then
+        print('ERROR: Missing \'ObservedProperties\' from settings')
+        mq.exit()
+    elseif table.getn(settings['Columns']) == 0 then
+        print('ERROR: \'Columns\' contains no entries')
+        mq.exit()
+    elseif table.getn(settings['ObservedProperties']) == 0 then
+        print('ERROR: \'ObservedProperties\' contains no entries')
+        mq.exit()
+    end
+end
 
--- Stores all live observed toon information that will be displayed
-local dataTable = {}
+function CopySettingsFile(default_settings, new_settings)
+    local f = io.open(default_settings, 'r')
+    defaults = f:read('*a')
+    io.close(f)
+    f = io.open(new_settings, 'w')
+    f:write(defaults)
+    io.close(f)
+end
 
-local columnInfo = {}
-table.insert(columnInfo, DefineColumn('Name', nil, nil, false, false, 75))
-table.insert(columnInfo, DefineColumn('HP%', {all='Me.PctHPs'}, {35,70}, true, false, 40))
-table.insert(columnInfo, DefineColumn('MP%', {caster='Me.PctMana',melee='Me.PctEndurance'}, {35,70}, true, false, 40))
-table.insert(columnInfo, DefineColumn('Distance', {all='Distance3D'}, {100,200}, false, true, 60))
-table.insert(columnInfo, DefineColumn('Target', {all='Target.CleanName'}, nil, false, true, 125))
-table.insert(columnInfo, DefineColumn('Spell/Disc', {all='Me.Casting.Name',melee='Me.ActiveDisc.Name'}, nil, false, false, 125))
+function LoadSettings()
+    lua_dir = TLO.MacroQuest.Path():gsub('\\', '/') .. '/lua/'
+    settings_file = arg[1] or 'boxhud-settings-'..string.lower(tostring(Me.Name))..'.lua'
+    settings_path = lua_dir..settings_file
+    default_settings_path = lua_dir..'boxhud-settings.lua'
 
--- Define properties to observe
-local observePropsConfig = {
-    ObservedProperties = {
-        {Name='Me.ID'},
-        {Name='Me.Class'},
-        {Name='Me.PctHPs'},
-        {Name='Me.PctMana', 'caster'},
-        {Name='Me.PctEndurance', 'melee'},
-        {Name='Me.Casting.Name'},
-        {Name='Me.ActiveDisc.Name'},
-        {Name='Me.Invis'},
-        {Name='Target.CleanName'},
-        {Name='Zone.ID'}
-    },
-    SpawnProperties = {
-        {Name='Distance3D'}
-    }
-}
+    if FileExists(settings_path) then
+        print('Loading settings from file: ' .. settings_file)
+        settings = require(settings_file:gsub('.lua', ''))
+        ValidateSettings()
+    else
+        print('Loading default settings from file: boxhud-settings')
+        -- Default settings
+        settings = require('boxhud-settings')
+        -- Copy defaults into toon specific settings
+        CopySettingsFile(default_settings_path, settings_path)
+    end
+
+    if settings['PeerGroup'] and settings['PeerGroup'] == 'zone' then
+        peerGroup = 'zone_'..tostring(EverQuest.Server)..'_'..tostring(Zone.ShortName)
+    end
+    if settings['RefreshInterval'] then
+        refreshInterval = settings['RefreshInterval']
+    end
+    if settings['StaleDataTimeout'] then
+        staleDataTimeout = settings['StaleDataTimeout']
+    end
+
+    for _, column in pairs(settings['Columns']) do
+        windowWidth = windowWidth + column['Width']
+    end
+end
 
 -- Add or remove observers for the given toon
 function ManageObservers(botName, drop)
     if drop then
-        for _, obsProp in pairs(observePropsConfig['ObservedProperties']) do
+        for _, obsProp in pairs(settings['ObservedProperties']) do
             -- Drop the observation if it is set
             if tostring(DanNet(botName).ObserveSet(obsProp['Name'])) == 'TRUE' then
-                mq.cmd.dobserve(botName..' -q '..obsProp['Name']..' -drop')
+                CMD.dobserve(botName..' -q '..obsProp['Name']..' -drop')
+                mq.delay(50)
             end
         end
+        observedToons[botName] = nil
     else
-        for _, obsProp in pairs(observePropsConfig['ObservedProperties']) do
-            -- Add the observation if it is not set
-            if tostring(DanNet(botName).ObserveSet(obsProp['Name'])) == 'FALSE' then
-                mq.cmd.dobserve(botName..' -q '..obsProp['Name'])
+        if not observedToons[botName] then
+            for _, obsProp in pairs(settings['ObservedProperties']) do
+                -- Add the observation if it is not set
+                if tostring(DanNet(botName).ObserveSet(obsProp['Name'])) == 'FALSE' then
+                    CMD.dobserve(botName..' -q '..obsProp['Name'])
+                    mq.delay(50)
+                end
             end
+            observedToons[botName] = true
         end
     end
 end
 
 -- Verify all observed properties are set for the given toon
 function VerifyObservers(botName)
-    for _, obsProp in pairs(observePropsConfig['ObservedProperties']) do
+    for _, obsProp in pairs(settings['ObservedProperties']) do
         if tostring(DanNet(botName).ObserveSet(obsProp['Name'])) == 'FALSE' then
             return false
         end
@@ -203,12 +251,12 @@ end
 -- ImGui main function for rendering the UI window
 local HUDGUI = function()
     -- Save, for experimenting with different flag combos: bit = require('bit'); bit.bor(ImGuiWindowFlags.NoTitleBar, ImGuiWindowFlags.NoBackground)
-    ImGui.SetNextWindowSize(470, 0)
+    ImGui.SetNextWindowSize(windowWidth, 0)
     openGUI, shouldDrawGUI = ImGui.Begin('HUD GUI', openGUI, ImGuiWindowFlags.NoTitleBar)
     if shouldDrawGUI then
         ImGui.SetWindowFontScale(0.9)
-        ImGui.Columns(table.getn(columnInfo))
-        for _, column in pairs(columnInfo) do
+        ImGui.Columns(table.getn(settings['Columns']))
+        for _, column in pairs(settings['Columns']) do
             ImGui.CollapsingHeader(column['Name'], 256)
             ImGui.SetColumnWidth(-1, column['Width'])
             ImGui.NextColumn()
@@ -222,7 +270,7 @@ local HUDGUI = function()
             botID = botValues['Me.ID']
             botClass = botValues['Me.Class']
 
-            for _, column in pairs(columnInfo) do
+            for _, column in pairs(settings['Columns']) do
                 if column['Name'] == 'Name' then
                     -- Treat Name column special
                     -- Fill name column, name is clickable to nav to that spawn
@@ -236,7 +284,7 @@ local HUDGUI = function()
                         end
                         if ImGui.SmallButton(buttonText) then
                             -- nav to toon when clicking toons name
-                            mq.cmd.nav('id '..botID)
+                            CMD.nav('id '..botID)--..'|log=off')
                         end
                     else
                         ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
@@ -267,17 +315,19 @@ local HUDGUI = function()
                         end
                     end
                     ImGui.NextColumn()
-                end
-            end
+                end -- end column name condition
+            end -- end column loop
 
-        end
+        end -- end dataTable loop
         ImGui.End()
     end
 end
 
+
+LoadSettings()
+
 -- Initial setup of observers
--- peers list |peer1|peer2|peer3
-local peerTable = Split(tostring(DanNet.Peers('All')))
+local peerTable = Peers()
 for _, botName in pairs(peerTable) do
     print('Adding observed properties for: '..botName)
     ManageObservers(botName, false)
@@ -302,7 +352,7 @@ end)
 -- Main run loop to populate observed property data of toons
 while not terminate do
     currTime = os.time(os.date("!*t"))
-    peerTable = Split(tostring(DanNet.Peers('All')))
+    local peerTable = Peers()
     for botIdx, botName in pairs(peerTable) do
         -- Ensure observers are set for the toon
         if not VerifyObservers(botName) then
@@ -315,30 +365,34 @@ while not terminate do
 
         local botValues = {}
         -- Fill in data from this toons observed properties
-        for _, obsProp in pairs(observePropsConfig['ObservedProperties']) do
+        for _, obsProp in pairs(settings['ObservedProperties']) do
             botValues[obsProp['Name']] = tostring(DanNet(botName).Observe(obsProp['Name']))
         end
-        for _, spawnProp in pairs(observePropsConfig['SpawnProperties']) do
+        for _, spawnProp in pairs(settings['SpawnProperties']) do
             botValues[spawnProp['Name']] = tostring(Spawn(botValues['Me.ID'])[spawnProp['Name']])
         end
-        botValues['BotInZone'] = (botValues['Zone.ID'] == tostring(Zone.ID))
+        if peerGroup == 'all' then
+            botValues['BotInZone'] = (botValues['Zone.ID'] == tostring(Zone.ID))
+        else
+            botValues['BotInZone'] = true
+        end
         botValues['lastUpdated'] = currTime
         dataTable[botName] = botValues
     end
     -- Cleanup stale toon data
     for botName, botValues in pairs(dataTable) do
-        if os.difftime(currTime, botValues['lastUpdated']) > 30 then
+        if os.difftime(currTime, botValues['lastUpdated']) > staleDataTimeout then
             print('Removing stale toon data: '..botName)
             dataTable[botName] = nil
             ManageObservers(botName, true)
         end
     end
-    mq.delay(250) -- equivalent to '0.25s'
+    mq.delay(refreshInterval)
 end
 
 -- Cleanup observers before exiting
 -- Removing/re-adding observers seems a bit unreliable though...
-peerTable = Split(tostring(DanNet.Peers('All')))
+local peerTable = Peers()
 for _, botName in pairs(peerTable) do
     print('Removing observed properties for: '..botName)
     ManageObservers(botName, true)
