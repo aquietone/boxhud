@@ -14,6 +14,10 @@ A settings file can also be provided as an argument.
 Usage: /lua run boxhud [settings.lua]
 
 Changes:
+1.2:
+- Correct zone peer group when in instance and when zoning
+- Stop observing Me.ID, Me.Invis and Zone.ID and just use spawn data instead
+- Change left click button to /dex name /foreground
 1.1
 - Configuration options externalized
 1.0
@@ -40,6 +44,7 @@ local terminate = false
 local settings = {}
 -- Default DanNet peer group to use
 local peerGroup = 'all'
+local zoneID = nil
 -- Default observer polling interval (0.25 seconds)
 local refreshInterval = 250
 -- Default stale observed data timeout (60 seconds)
@@ -51,6 +56,9 @@ local observedToons = {}
 local windowWidth = 0
 
 -- Utility functions
+
+function print_msg(msg) print('\at[\ayBOXHUD\at] \at' .. msg) end
+function print_err(msg) print('\at[\ayBOXHUD\at] \ar' .. msg) end
 
 -- Create a table of {key:true, ..} from a list for checking a value
 -- is in the list 
@@ -87,18 +95,28 @@ function FileExists(path)
     if f ~= nil then io.close(f) return true else return false end
 end
 
+function GetZonePeerGroup()
+    local peerGroupsString = tostring(DanNet.Joined)
+    local peerGroups = Split(peerGroupsString)
+    for _, group in pairs(peerGroups) do
+        if group:find('zone_') then
+            return group
+        end
+    end
+end
+
 function ValidateSettings()
     if not settings['Columns'] then
-        print('ERROR: Missing \'Columns\' from settings')
+        print_err('ERROR: Missing \'Columns\' from settings')
         mq.exit()
     elseif not settings['ObservedProperties'] then
-        print('ERROR: Missing \'ObservedProperties\' from settings')
+        print_err('ERROR: Missing \'ObservedProperties\' from settings')
         mq.exit()
     elseif table.getn(settings['Columns']) == 0 then
-        print('ERROR: \'Columns\' contains no entries')
+        print_err('ERROR: \'Columns\' contains no entries')
         mq.exit()
     elseif table.getn(settings['ObservedProperties']) == 0 then
-        print('ERROR: \'ObservedProperties\' contains no entries')
+        print_err('ERROR: \'ObservedProperties\' contains no entries')
         mq.exit()
     end
 end
@@ -119,11 +137,11 @@ function LoadSettings()
     default_settings_path = lua_dir..'boxhud-settings.lua'
 
     if FileExists(settings_path) then
-        print('Loading settings from file: ' .. settings_file)
+        print_msg('Loading settings from file: ' .. settings_file)
         settings = require(settings_file:gsub('.lua', ''))
         ValidateSettings()
     else
-        print('Loading default settings from file: boxhud-settings')
+        print_msg('Loading default settings from file: boxhud-settings')
         -- Default settings
         settings = require('boxhud-settings')
         -- Copy defaults into toon specific settings
@@ -131,7 +149,8 @@ function LoadSettings()
     end
 
     if settings['PeerGroup'] and settings['PeerGroup'] == 'zone' then
-        peerGroup = 'zone_'..tostring(EverQuest.Server)..'_'..tostring(Zone.ShortName)
+        peerGroup = GetZonePeerGroup()
+        zoneID = tostring(Zone.ID)
     end
     if settings['RefreshInterval'] then
         refreshInterval = settings['RefreshInterval']
@@ -188,7 +207,7 @@ function SetColoredText(thresholds, value)
     -- Fill HP% column
     if thresholds ~= nil then
         if table.getn(thresholds) == 1 then
-            if value ~= 'null' and tonumber(value) >= thresholds[1] then
+            if tonumber(value) ~= nil and tonumber(value) >= thresholds[1] then
                 -- red if above threshold
                 ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
             else
@@ -196,10 +215,10 @@ function SetColoredText(thresholds, value)
                 ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
             end
         elseif table.getn(thresholds) == 2 then
-            if value ~= 'null' and tonumber(value) >= thresholds[2] then
+            if tonumber(value) ~= nil and tonumber(value) >= thresholds[2] then
                 -- red if above threshold
                 ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
-            elseif value ~= 'null' and tonumber(value) > thresholds[1] and tonumber(value) <= thresholds[2] then
+            elseif tonumber(value) ~= nil and tonumber(value) > thresholds[1] and tonumber(value) <= thresholds[2] then
                 -- yellow if between high and low
                 ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
             else
@@ -222,7 +241,7 @@ function SetColoredTextPct(thresholds, value)
     -- Fill HP% column
     if thresholds ~= nil then
         if table.getn(thresholds) == 1 then
-            if value ~= 'null' and tonumber(value) >= thresholds[1] then
+            if tonumber(value) ~= nil and tonumber(value) >= thresholds[1] then
                 -- green if above threshold
                 ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
             else
@@ -230,10 +249,10 @@ function SetColoredTextPct(thresholds, value)
                 ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
             end
         elseif table.getn(thresholds) == 2 then
-            if value ~= 'null' and tonumber(value) >= thresholds[2] then
+            if tonumber(value) ~= nil and tonumber(value) >= thresholds[2] then
                 -- green if above threshold
                 ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
-            elseif value ~= 'null' and tonumber(value) > thresholds[1] and tonumber(value) <= thresholds[2] then
+            elseif tonumber(value) ~= nil and tonumber(value) > thresholds[1] and tonumber(value) <= thresholds[2] then
                 -- yellow if nearby
                 ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
             else
@@ -273,7 +292,7 @@ local HUDGUI = function()
             for _, column in pairs(settings['Columns']) do
                 if column['Name'] == 'Name' then
                     -- Treat Name column special
-                    -- Fill name column, name is clickable to nav to that spawn
+                    -- Fill name column
                     if botInZone then
                         ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
                         local buttonText = nil
@@ -283,12 +302,21 @@ local HUDGUI = function()
                             buttonText = '('..botName..')'
                         end
                         if ImGui.SmallButton(buttonText) then
-                            -- nav to toon when clicking toons name
-                            CMD.nav('id '..botID)--..'|log=off')
+                            -- bring left clicked toon to foreground
+                            CMD.dex(botName..' /foreground')
+                        end
+                        if ImGui.IsItemHovered() and ImGui.IsMouseReleased(ImGuiMouseButton.ImGuiMouseButton_Right) then
+                            -- target the toon on right click
+                            CMD.target('id '..botID)
+                            -- nav to toon when right clicking toons name
+                            --CMD.nav('id '..botID)--..'|log=off')
                         end
                     else
                         ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
-                        ImGui.Text(botName)
+                        if ImGui.SmallButton(botName) then
+                            -- bring left clicked toon to foreground
+                            CMD.dex(botName..' /foreground')
+                        end
                     end
                     ImGui.PopStyleColor(1)
                     ImGui.NextColumn()
@@ -329,9 +357,15 @@ LoadSettings()
 -- Initial setup of observers
 local peerTable = Peers()
 for _, botName in pairs(peerTable) do
-    print('Adding observed properties for: '..botName)
+    --print_msg('Cleanup any previously set observers for: '..botName)
+    --ManageObservers(botName, true)
+    --print_msg('Waiting for observed properties to be removed for: '..botName)
+    --while VerifyObservers(botName) do
+    --    mq.delay(100)
+    --end
+    print_msg('Adding observed properties for: \ay'..botName)
     ManageObservers(botName, false)
-    print('Waiting for observed properties to be added for: '..botName)
+    print_msg('Waiting for observed properties to be added for: \ay'..botName)
     while not VerifyObservers(botName) do
         mq.delay(100)
     end
@@ -351,28 +385,44 @@ end)
 
 -- Main run loop to populate observed property data of toons
 while not terminate do
+    -- Update peerGroup if we've zoned and using the zone peer group
+    if peerGroup ~= 'all' and zoneID ~= tostring(Zone.ID) then
+        peerGroup = GetZonePeerGroup()
+        zoneID = tostring(Zone.ID)
+    end
     currTime = os.time(os.date("!*t"))
     local peerTable = Peers()
     for botIdx, botName in pairs(peerTable) do
         -- Ensure observers are set for the toon
-        if not VerifyObservers(botName) then
+        if not VerifyObservers(botName) or not observedToons[botName] then
+            --print_msg('Cleanup any previously set observers for: '..botName)
+            --ManageObservers(botName, true)
+            --print_msg('Waiting for observed properties to be removed for: '..botName)
+            --while VerifyObservers(botName) do
+            --    mq.delay(100)
+            --end
+            print_msg('Adding observed properties for: \ay'..botName)
             ManageObservers(botName, false)
             -- If observers were newly added, delay for them to initialize
+            print_msg('Waiting for observed properties to be added for: \ay'..botName)
             while not VerifyObservers(botName) do
                 mq.delay(100)
             end
         end
 
         local botValues = {}
+        botSpawnData = Spawn('='..botName)
+        botValues['Me.ID'] = tostring(botSpawnData.ID)
+        botValues['Me.Invis'] = tostring(botSpawnData.Invis)
         -- Fill in data from this toons observed properties
         for _, obsProp in pairs(settings['ObservedProperties']) do
             botValues[obsProp['Name']] = tostring(DanNet(botName).Observe(obsProp['Name']))
         end
         for _, spawnProp in pairs(settings['SpawnProperties']) do
-            botValues[spawnProp['Name']] = tostring(Spawn(botValues['Me.ID'])[spawnProp['Name']])
+            botValues[spawnProp['Name']] = tostring(Spawn('='..botName)[spawnProp['Name']])
         end
         if peerGroup == 'all' then
-            botValues['BotInZone'] = (botValues['Zone.ID'] == tostring(Zone.ID))
+            botValues['BotInZone'] = (botValues['Me.ID'] ~= 'null')
         else
             botValues['BotInZone'] = true
         end
@@ -382,23 +432,25 @@ while not terminate do
     -- Cleanup stale toon data
     for botName, botValues in pairs(dataTable) do
         if os.difftime(currTime, botValues['lastUpdated']) > staleDataTimeout then
-            print('Removing stale toon data: '..botName)
+            print_msg('Removing stale toon data: \ay'..botName)
             dataTable[botName] = nil
-            ManageObservers(botName, true)
+            --ManageObservers(botName, true)
         end
     end
     mq.delay(refreshInterval)
 end
 
+--[[
 -- Cleanup observers before exiting
 -- Removing/re-adding observers seems a bit unreliable though...
 local peerTable = Peers()
 for _, botName in pairs(peerTable) do
-    print('Removing observed properties for: '..botName)
+    print_msg('Removing observed properties for: '..botName)
     ManageObservers(botName, true)
     -- If observers were newly added, delay for them to initialize
-    print('Waiting for observers to be removed for: '..botName)
+    print_msg('Waiting for observers to be removed for: '..botName)
     while VerifyObservers(botName) do
         mq.delay(100)
     end
 end
+--]]
