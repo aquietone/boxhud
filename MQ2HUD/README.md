@@ -11,6 +11,7 @@ bash generate_hud.sh -x <x_offset> -y <y_offset> -n <num_clients>
 - *num_clients*: The maximum number of clients the HUD should be configured to display. Default: 24
 
 Example:
+
 ![](../images/netbots_hud.png)
 
 Can't take all the credit for this one. Its a combination of various examples found across forums and tweaked to my playstyle.
