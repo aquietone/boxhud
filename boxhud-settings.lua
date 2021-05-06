@@ -20,6 +20,9 @@ Settings file for boxhud.lua script.
                         Columns defined within a specific tab will appear only on that tab.
                         Properties:
                           - Name: (string)        Name of the column
+                          - Type: (string)        The type of the column data. May be either:
+                                                    - property: content is from an observed or spawn property
+                                                    - button: content is a button with user defined action
                           - Properties: (table)   Table of properties for this column
                                                   Valid keys:
                                                     - all: read this property name for all classes
@@ -52,7 +55,8 @@ return {
     -- Global columns to display on all tabs
     Columns = {
         { 
-            Name='Name', 
+            Name='Name',
+            Type='property',
             Properties=nil, 
             Thresholds=nil, 
             Percentage=false, 
@@ -67,6 +71,7 @@ return {
             Columns={
                 { 
                     Name='HP%', 
+                    Type='property',
                     Properties={all='Me.PctHPs'}, 
                     Thresholds={35,70}, 
                     Percentage=true, 
@@ -75,6 +80,7 @@ return {
                 },
                 { 
                     Name='MP%', 
+                    Type='property',
                     Properties={all='Me.PctMana'}, 
                     Thresholds={35,70}, 
                     Percentage=true, 
@@ -83,6 +89,7 @@ return {
                 },
                 { 
                     Name='EP%', 
+                    Type='property',
                     Properties={all='Me.PctEndurance'}, 
                     Thresholds={35,70}, 
                     Percentage=true, 
@@ -91,6 +98,7 @@ return {
                 },
                 { 
                     Name='Distance', 
+                    Type='property',
                     Properties={all='Distance3D'}, 
                     Thresholds={100,200}, 
                     Percentage=false, 
@@ -99,26 +107,16 @@ return {
                 },
                 { 
                     Name='Target', 
+                    Type='property',
                     Properties={all='Target.CleanName'}, 
                     Thresholds=nil, 
                     Percentage=false, 
                     InZone=true, 
                     Width=125 
                 },
-                --[[
-                { 
-                    Name='CombatState', 
-                    Properties={
-                        all='Me.CombatState'
-                    }, 
-                    Thresholds=nil, 
-                    Percentage=false, 
-                    InZone=false, 
-                    Width=70 
-                },
-                --]]
                 { 
                     Name='Spell/Disc', 
+                    Type='property',
                     Properties={
                         all='Me.Casting.Name',
                         melee='Me.ActiveDisc.Name'
@@ -135,6 +133,7 @@ return {
             Columns = {
                 {
                     Name='Macro',
+                    Type='property',
                     Properties={
                         all='Macro.Name'
                     },
@@ -145,6 +144,7 @@ return {
                 },
                 {
                     Name='Paused',
+                    Type='property',
                     Properties={
                         all='Macro.Paused'
                     },
@@ -156,6 +156,18 @@ return {
                     Percentage=false,
                     InZone=false,
                     Width=60
+                },
+                {
+                    Name='Pause',
+                    Type='button',
+                    Action='/dex #botName# /mqp',
+                    Width=50
+                },
+                {
+                    Name='End',
+                    Type='button',
+                    Action='/dex #botName# /end',
+                    Width=40
                 }
             }
         },
@@ -163,9 +175,10 @@ return {
             Name='XP',
             Columns = {
                 {
-                    Name='Exp (out of 10,000)',
+                    Name='Exp%',
+                    Type='property',
                     Properties={
-                        all='Me.EXP'
+                        all='Me.PctExp'
                     },
                     Thresholds=nil,
                     Percentage=false,
@@ -174,6 +187,7 @@ return {
                 },
                 {
                     Name='AA Unspent',
+                    Type='property',
                     Properties={
                         all='Me.AAPoints'
                     },
@@ -184,6 +198,46 @@ return {
                 }
             }
         }
+        --[[
+        {
+            Name='Examples',
+            Columns = {
+                { 
+                    Name='CombatState', 
+                    Type='property',
+                    Properties={
+                        all='Me.CombatState'
+                    }, 
+                    Thresholds=nil, 
+                    Percentage=false, 
+                    InZone=false, 
+                    Width=70 
+                },
+                { 
+                    Name='Junk Drink', 
+                    Type='property',
+                    Properties={
+                        all='FindItemCount[=Water Flask]'
+                    }, 
+                    Thresholds=nil, 
+                    Percentage=false, 
+                    InZone=false, 
+                    Width=125
+                },
+                { 
+                    Name='IVU', 
+                    Type='property',
+                    Properties={
+                        all='Me.Invis[UNDEAD]'
+                    }, 
+                    Thresholds=nil, 
+                    Percentage=false, 
+                    InZone=false, 
+                    Width=125
+                }
+            }
+        }
+        --]]
     },
 
     ObservedProperties = {
@@ -198,9 +252,12 @@ return {
         {Name='Target.CleanName'},
         {Name='Macro.Name'},
         {Name='Macro.Paused'},
-        {Name='Me.Exp'},
+        {Name='Me.PctExp'},
         {Name='Me.AAPoints'}
+        -- Other example properties
         --{Name='Me.CombatState'}
+        --{Name='FindItemCount[=Water Flask]'}
+        --{Name='Me.Invis[UNDEAD]'}
     },
 
     SpawnProperties = {

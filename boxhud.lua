@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.3 -- aquietone
+boxhud.lua 1.3.1 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer 
@@ -15,11 +15,22 @@ Individual character settings files will always take precedence over the default
 settings file.
 A specific settings file to use can also be passed in as an argument to the script.
 
+!!!!!
+IMPORTANT CONSIDERATIONS: Don't go crazy with the number of properties you observe.
+                          I don't know the practical limit to how many things across
+                          how many toons can be observed at once.
+!!!!!
+
 Usage: /lua run boxhud [settings.lua]
        /boxhud - toggle the UI window
        /boxhudend - end the script
 
 Changes:
+1.3.1
+- Small fixes
+- Properly escape some values for observed properties with [ ], etc.
+- Don't use DanNet.Joined to find zone group name, construct it instead.
+- Support buttons with user defined actions
 1.3
 - Tab support
 - Property mappings (see Macro.Paused example)
@@ -102,12 +113,11 @@ end
 -- regular zone: zone_server_shortname
 -- instance zone: zone_shortname_progress
 function GetZonePeerGroup()
-    local peerGroupsString = tostring(mq.TLO.DanNet.Joined)
-    local peerGroups = Split(peerGroupsString)
-    for _, group in pairs(peerGroups) do
-        if group:find('zone_') then
-            return group
-        end
+    local zoneName = tostring(mq.TLO.Zone.ShortName)
+    if zoneName:find('progress') then
+        return 'zone_'..zoneName
+    else
+        return 'zone_'..tostring(mq.TLO.EverQuest.Server)..'_'..zoneName
     end
 end
 
@@ -202,8 +212,8 @@ function ManageObservers(botName, drop)
     if drop then
         for _, obsProp in pairs(settings['ObservedProperties']) do
             -- Drop the observation if it is set
-            if tostring(mq.TLO.DanNet(botName).ObserveSet(obsProp['Name'])) == 'TRUE' then
-                mq.cmd.dobserve(botName..' -q '..obsProp['Name']..' -drop')
+            if tostring(mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')) == 'TRUE' then
+                mq.cmd.dobserve(botName..' -q "'..obsProp['Name']..'" -drop')
                 mq.delay(50)
             end
         end
@@ -212,8 +222,8 @@ function ManageObservers(botName, drop)
         if not observedToons[botName] then
             for _, obsProp in pairs(settings['ObservedProperties']) do
                 -- Add the observation if it is not set
-                if tostring(mq.TLO.DanNet(botName).ObserveSet(obsProp['Name'])) == 'FALSE' then
-                    mq.cmd.dobserve(botName..' -q '..obsProp['Name'])
+                if tostring(mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')) == 'FALSE' then
+                    mq.cmd.dobserve(botName..' -q "'..obsProp['Name']..'"')
                     mq.delay(50)
                 end
             end
@@ -225,7 +235,7 @@ end
 -- Verify all observed properties are set for the given toon
 function VerifyObservers(botName)
     for _, obsProp in pairs(settings['ObservedProperties']) do
-        if tostring(mq.TLO.DanNet(botName).ObserveSet(obsProp['Name'])) == 'FALSE' then
+        if tostring(mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')) == 'FALSE' then
             return false
         end
     end
@@ -365,28 +375,37 @@ function DrawHUDColumns(columns)
                 ImGui.PopStyleColor(1)
                 ImGui.NextColumn()
             else
-                if not column['InZone'] or (column['InZone'] and botInZone) then
-                    value = 'NULL'
-                    if column['Properties']['all'] then
-                        value = botValues[column['Properties']['all']]
-                    end
-                    if value == 'NULL' then
-                        if column['Properties']['caster'] and casters['botClass'] then
-                            value = botValues[column['Properties']['caster']]
-                        elseif column['Properties']['melee'] and not casters['botClass'] then
-                            value = botValues[column['Properties']['melee']]
+                -- Default column type is property (observed or spawn properties)
+                if not column['Type'] or column['Type'] == 'property' then
+                    if not column['InZone'] or (column['InZone'] and botInZone) then
+                        value = 'NULL'
+                        if column['Properties']['all'] then
+                            value = botValues[column['Properties']['all']]
                         end
-                    end
-                    thresholds = column['Thresholds']
-                    if value ~= 'NULL' then
-                        if column['Percentage'] then
-                            SetColoredTextPct(thresholds, value)
-                        else
-                            if column['Mappings'] and column['Mappings'][value] then
-                                value = column['Mappings'][value]
+                        if value == 'NULL' then
+                            if column['Properties']['caster'] and casters['botClass'] then
+                                value = botValues[column['Properties']['caster']]
+                            elseif column['Properties']['melee'] and not casters['botClass'] then
+                                value = botValues[column['Properties']['melee']]
                             end
-                            SetColoredText(thresholds, value)
                         end
+                        thresholds = column['Thresholds']
+                        if value ~= 'NULL' then
+                            if column['Percentage'] then
+                                SetColoredTextPct(thresholds, value)
+                            else
+                                if column['Mappings'] and column['Mappings'][value] then
+                                    value = column['Mappings'][value]
+                                end
+                                SetColoredText(thresholds, value)
+                            end
+                        end
+                    end
+                elseif column['Type'] == 'button' then
+                    if ImGui.SmallButton(column['Name']..'##'..botName) then
+                        -- bring left clicked toon to foreground
+                        print('Run command: '..column['Action']:gsub('#botName#', botName))
+                        mq.cmd.squelch(column['Action']:gsub('#botName#', botName))
                     end
                 end
                 ImGui.NextColumn()
@@ -446,8 +465,14 @@ for _, botName in pairs(peerTable) do
     print_msg('Adding observed properties for: \ay'..botName)
     ManageObservers(botName, false)
     print_msg('Waiting for observed properties to be added for: \ay'..botName)
+    local verifyStartTime = os.time(os.date("!*t"))
     while not VerifyObservers(botName) do
         mq.delay(100)
+        if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 10 then
+            print_err('Timed out verifying observers for \ay'..botName)
+            print_err('Exiting the script.')
+            mq.exit()
+        end
     end
 end
 
@@ -485,8 +510,14 @@ while not terminate do
             ManageObservers(botName, false)
             -- If observers were newly added, delay for them to initialize
             print_msg('Waiting for observed properties to be added for: \ay'..botName)
+            local verifyStartTime = os.time(os.date("!*t"))
             while not VerifyObservers(botName) do
                 mq.delay(100)
+                if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 10 then
+                    print_err('Timed out verifying observers for \ay'..botName)
+                    print_err('Exiting the script.')
+                    mq.exit()
+                end
             end
         end
 
@@ -496,7 +527,7 @@ while not terminate do
         botValues['Me.Invis'] = tostring(botSpawnData.Invis)
         -- Fill in data from this toons observed properties
         for _, obsProp in pairs(settings['ObservedProperties']) do
-            botValues[obsProp['Name']] = tostring(mq.TLO.DanNet(botName).Observe(obsProp['Name']))
+            botValues[obsProp['Name']] = tostring(mq.TLO.DanNet(botName).Observe('"'..obsProp['Name']..'"'))
         end
         for _, spawnProp in pairs(settings['SpawnProperties']) do
             botValues[spawnProp['Name']] = tostring(mq.TLO.Spawn('='..botName)[spawnProp['Name']])
