@@ -37,9 +37,10 @@ Toggle the window with:
 
 # Overview
 
-BoxHUD provides an alternative to a similar [MQ2NetBots/MQ2HUD based HUD](MQ2HUD/README.md). Instead, it uses observed properties from MQ2DanNet to watch various bits of information about all your peers.
+BoxHUD provides an alternative to a similar [MQ2NetBots/MQ2HUD based HUD](MQ2HUD/README.md). Instead, it uses observed properties from MQ2DanNet to watch various bits of information about all your peers. It is also still possible to use MQ2NetBots values if desired.
 
-Includes the following information by default:
+The default settings provided Includes the following properties:
+
 General tab:
 - Name -- in green if in same zone as the character running the script, in ( ) if invis, in red if not in same zone
 - HP% -- with % threshold based coloring, red < 35, yellow < 70, green > 70
@@ -48,24 +49,32 @@ General tab:
 - Distance -- if character is in same zone, displays distance away from the character, green if dist < 100, yellow < 200, red > 200
 - Target -- if character is in same zone, name of their target
 - Spell/Disc -- name of spell currently being cast or current running disc
+
 Macro tab:
 - Macro Name -- the name of the currently running macro
 - Paused -- shows PAUSED if the currently running macro is paused
 - Pause macro button -- sends `/dex name /mqp` to the character
 - End macro button -- sends `/dex name /end` to the character
+
 XP tab:
 - Exp% -- current level experience percentage
 - AA Unspent -- current number of unspent AAs
 
-Additionally, the character names are buttons which can be clicked to bring that character to the foreground. This is more just to play around with the capabilities we have now with an interactive window like this.
+Additionally, the character names are buttons with the following function:
+- Left click -- Brings the character to the foreground with `/dex toonname /foreground`.
+- Right click -- Opens a `Send Command` text input which will do `/dex toonname <text input>`
 
-Example: (names just replaced with `xxxxxx` for screenshot)
+These button actions are more just to play around with the capabilities we have now with an interactive window like this.
+
+Example:
 
 ![](images/example-tab1.png)
 
 ![](images/example-tab2.png)
 
 ![](images/example-tab3.png)
+
+![](images/example-popup.png)
 
 The window will dynamically grow/shrink based on peers available from the DanNet All or Zone peer group depending on how it is configured.
 The script takes a few seconds to start up as it waits for the DanNet observers to be ready before displaying the UI.
@@ -93,6 +102,7 @@ Each property column includes several settings, for example:
             Properties={caster='Me.PctMana',melee='Me.PctEndurance'},
             Thresholds={35,70},
             Percentage=true,
+            Ascending=true,
             InZone=false,
             Width=40
         },
@@ -138,6 +148,9 @@ The following properties are observed for the Name column, which is handled sepa
 
 ## SpawnProperties
 Columns may refer to spawn data, defined in `SpawnProperties`. Spawn data will be based on `${Spawn[observed character id].PropertyName}`
+
+## NetBotsProperties
+Columns may refer to MQ2NetBots properties as well.
 
 Some other configuration options include:
 
