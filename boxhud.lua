@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.4 -- aquietone
+boxhud.lua 1.4.1 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer 
@@ -26,6 +26,9 @@ Usage: /lua run boxhud [settings.lua]
        /boxhudend - end the script
 
 Changes:
+1.4.1
+- Fix for zone shortname formats
+- Fix text coloring
 1.4
 - Add in option to use NetBots properties incase people want them
 - Changes to text threshold based coloring, can now define ascending/descending
@@ -117,11 +120,9 @@ function Peers()
     return Split(tostring(mq.TLO.DanNet.Peers(peerGroup)))
 end
 
--- regular zone: zone_server_shortname
--- instance zone: zone_shortname_progress
 function GetZonePeerGroup()
     local zoneName = tostring(mq.TLO.Zone.ShortName)
-    if zoneName:find('progress') then
+    if zoneName:find('_') then
         return 'zone_'..zoneName
     else
         return 'zone_'..tostring(mq.TLO.EverQuest.Server)..'_'..zoneName
@@ -256,8 +257,12 @@ end
 
 function SetText(value, thresholds, ascending, percentage)
     if thresholds ~= nil then
+        local valueNum = tonumber(value)
+        if valueNum == nil then
+            return
+        end
         if table.getn(thresholds) == 1 then
-            if tonumber(value) ~= nil and tonumber(value) >= thresholds[1] then
+            if valueNum >= thresholds[1] then
                 if ascending then
                     -- green if above threshold
                     ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
@@ -275,7 +280,7 @@ function SetText(value, thresholds, ascending, percentage)
                 end
             end
         elseif table.getn(thresholds) == 2 then
-            if tonumber(value) ~= nil and tonumber(value) >= thresholds[2] then
+            if valueNum >= thresholds[2] then
                 if ascending then
                     -- green if above threshold
                     ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
@@ -283,7 +288,7 @@ function SetText(value, thresholds, ascending, percentage)
                     -- red if above threshold
                     ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
                 end
-            elseif tonumber(value) ~= nil and tonumber(value) > thresholds[1] and tonumber(value) <= thresholds[2] then
+            elseif valueNum >= thresholds[1] and valueNum < thresholds[2] then
                 -- yellow if between high and low
                 ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
             else
@@ -295,9 +300,11 @@ function SetText(value, thresholds, ascending, percentage)
                     ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
                 end
             end
+        else
+            ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
         end
     else
-        ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
+        ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
     end
     if percentage then
         ImGui.Text(value..'%%')
