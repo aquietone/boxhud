@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.4.1 -- aquietone
+boxhud.lua 1.4.2 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer 
@@ -26,6 +26,10 @@ Usage: /lua run boxhud [settings.lua]
        /boxhudend - end the script
 
 Changes:
+1.4.2
+- Fix gsub in button commands
+- Fix handling button commands with /noparse
+- Swap tostrings for mq.TLO.Property()
 1.4.1
 - Fix for zone shortname formats
 - Fix text coloring
@@ -117,15 +121,15 @@ end
 -- Return list of DanNet peers from the configured peer group
 -- peers list |peer1|peer2|peer3
 function Peers()
-    return Split(tostring(mq.TLO.DanNet.Peers(peerGroup)))
+    return Split(mq.TLO.DanNet.Peers(peerGroup)())
 end
 
 function GetZonePeerGroup()
-    local zoneName = tostring(mq.TLO.Zone.ShortName)
+    local zoneName = mq.TLO.Zone.ShortName()
     if zoneName:find('_') then
         return 'zone_'..zoneName
     else
-        return 'zone_'..tostring(mq.TLO.EverQuest.Server)..'_'..zoneName
+        return 'zone_'..mq.TLO.EverQuest.Server()..'_'..zoneName
     end
 end
 
@@ -161,7 +165,7 @@ end
 
 function LoadSettings()
     lua_dir = mq.TLO.MacroQuest.Path():gsub('\\', '/') .. '/lua/'
-    settings_file = arg[1] or 'boxhud-settings-'..string.lower(tostring(mq.TLO.Me.Name))..'.lua'
+    settings_file = arg[1] or 'boxhud-settings-'..string.lower(mq.TLO.Me.Name())..'.lua'
     settings_path = lua_dir..settings_file
     default_settings_path = lua_dir..'boxhud-settings.lua'
 
@@ -179,7 +183,7 @@ function LoadSettings()
 
     if settings['PeerGroup'] and settings['PeerGroup'] == 'zone' then
         peerGroup = GetZonePeerGroup()
-        zoneID = tostring(mq.TLO.Zone.ID)
+        zoneID = mq.TLO.Zone.ID()
     end
     if settings['RefreshInterval'] then
         refreshInterval = settings['RefreshInterval']
@@ -189,7 +193,7 @@ function LoadSettings()
     end
 
     -- turn off fullname mode in DanNet
-    if tostring(mq.TLO.DanNet.FullNames) == 'TRUE' then
+    if mq.TLO.DanNet.FullNames() then
         mq.cmd.dnet('fullnames off')
     end
 
@@ -225,7 +229,7 @@ function ManageObservers(botName, drop)
     if drop then
         for _, obsProp in pairs(settings['ObservedProperties']) do
             -- Drop the observation if it is set
-            if tostring(mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')) == 'TRUE' then
+            if mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() then
                 mq.cmd.dobserve(botName..' -q "'..obsProp['Name']..'" -drop')
                 mq.delay(50)
             end
@@ -235,7 +239,7 @@ function ManageObservers(botName, drop)
         if not observedToons[botName] then
             for _, obsProp in pairs(settings['ObservedProperties']) do
                 -- Add the observation if it is not set
-                if tostring(mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')) == 'FALSE' then
+                if not mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() then
                     mq.cmd.dobserve(botName..' -q "'..obsProp['Name']..'"')
                     mq.delay(50)
                 end
@@ -248,7 +252,7 @@ end
 -- Verify all observed properties are set for the given toon
 function VerifyObservers(botName)
     for _, obsProp in pairs(settings['ObservedProperties']) do
-        if tostring(mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')) == 'FALSE' then
+        if not mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() then
             return false
         end
     end
@@ -356,7 +360,7 @@ function DrawHUDColumns(columns)
                 if botInZone then
                     ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
                     local buttonText = nil
-                    if botInvis == 'FALSE' then
+                    if not botInvis then
                         buttonText = titleCase(botName)
                     else
                         buttonText = '('..titleCase(botName)..')'
@@ -417,9 +421,15 @@ function DrawHUDColumns(columns)
                     end
                 elseif column['Type'] == 'button' then
                     if ImGui.SmallButton(column['Name']..'##'..botName) then
-                        -- bring left clicked toon to foreground
-                        print('Run command: '..column['Action']:gsub('#botName#', botName))
-                        mq.cmd.squelch(column['Action']:gsub('#botName#', botName))
+                        local command = column['Action']:gsub('#botName#', botName)
+                        local noparseCmd = string.match(command, '/noparse (.*)')
+                        if noparseCmd then
+                            print_msg('Run command: '..command)
+                            mq.cmd.noparse(noparseCmd)
+                        else
+                            print_msg('Run command: '..command)
+                            mq.cmd.squelch(command)
+                        end
                     end
                 end
                 ImGui.NextColumn()
@@ -464,127 +474,135 @@ local HUDGUI = function()
     end
 end
 
-PluginCheck()
-LoadSettings()
+function main()
+    PluginCheck()
+    LoadSettings()
 
--- Initial setup of observers
-local peerTable = Peers()
-for _, botName in pairs(peerTable) do
-    --print_msg('Cleanup any previously set observers for: '..botName)
-    --ManageObservers(botName, true)
-    --print_msg('Waiting for observed properties to be removed for: '..botName)
-    --while VerifyObservers(botName) do
-    --    mq.delay(100)
-    --end
-    print_msg('Adding observed properties for: \ay'..botName)
-    ManageObservers(botName, false)
-    print_msg('Waiting for observed properties to be added for: \ay'..botName)
-    local verifyStartTime = os.time(os.date("!*t"))
-    while not VerifyObservers(botName) do
-        mq.delay(100)
-        if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 10 then
-            print_err('Timed out verifying observers for \ay'..botName)
-            print_err('Exiting the script.')
-            mq.exit()
+    mq.imgui.init('BOXHUDUI', HUDGUI)
+
+    mq.bind('/boxhud', function()
+        openGUI = not openGUI
+    end)
+
+    mq.bind('/boxhudend', function() 
+        mq.imgui.destroy('HUDGUI')
+        shouldDrawGUI = false
+        terminate = true
+    end)
+
+    -- Initial setup of observers
+    local peerTable = Peers()
+    for _, botName in pairs(peerTable) do
+        --print_msg('Cleanup any previously set observers for: '..botName)
+        --ManageObservers(botName, true)
+        --print_msg('Waiting for observed properties to be removed for: '..botName)
+        --while VerifyObservers(botName) do
+        --    mq.delay(100)
+        --end
+        print_msg('Adding observed properties for: \ay'..botName)
+        ManageObservers(botName, false)
+        print_msg('Waiting for observed properties to be added for: \ay'..botName)
+        local verifyStartTime = os.time(os.date("!*t"))
+        while not VerifyObservers(botName) do
+            mq.delay(100)
+            if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 10 then
+                print_err('Timed out verifying observers for \ay'..botName)
+                print_err('Exiting the script.')
+                mq.exit()
+            end
         end
     end
-end
 
-mq.imgui.init('BOXHUDUI', HUDGUI)
-
-mq.bind('/boxhud', function()
-    openGUI = not openGUI
-end)
-
-mq.bind('/boxhudend', function() 
-    mq.imgui.destroy('HUDGUI')
-    shouldDrawGUI = false
-    terminate = true
-end)
-
--- Main run loop to populate observed property data of toons
-while not terminate do
-    -- Update peerGroup if we've zoned and using the zone peer group
-    if peerGroup ~= 'all' and zoneID ~= tostring(mq.TLO.Zone.ID) then
-        peerGroup = GetZonePeerGroup()
-        zoneID = tostring(mq.TLO.Zone.ID)
-    end
-    currTime = os.time(os.date("!*t"))
-    local peerTable = Peers()
-    for botIdx, botName in pairs(peerTable) do
-        -- Ensure observers are set for the toon
-        if not VerifyObservers(botName) or not observedToons[botName] then
-            --print_msg('Cleanup any previously set observers for: '..botName)
-            --ManageObservers(botName, true)
-            --print_msg('Waiting for observed properties to be removed for: '..botName)
-            --while VerifyObservers(botName) do
-            --    mq.delay(100)
-            --end
-            print_msg('Adding observed properties for: \ay'..botName)
-            ManageObservers(botName, false)
-            -- If observers were newly added, delay for them to initialize
-            print_msg('Waiting for observed properties to be added for: \ay'..botName)
-            local verifyStartTime = os.time(os.date("!*t"))
-            while not VerifyObservers(botName) do
-                mq.delay(100)
-                if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 10 then
-                    print_err('Timed out verifying observers for \ay'..botName)
-                    print_err('Exiting the script.')
-                    mq.exit()
+    -- Main run loop to populate observed property data of toons
+    while not terminate do
+        -- Update peerGroup if we've zoned and using the zone peer group
+        if peerGroup ~= 'all' and zoneID ~= mq.TLO.Zone.ID() then
+            peerGroup = GetZonePeerGroup()
+            zoneID = mq.TLO.Zone.ID()
+        end
+        currTime = os.time(os.date("!*t"))
+        local peerTable = Peers()
+        for botIdx, botName in pairs(peerTable) do
+            -- Ensure observers are set for the toon
+            if not VerifyObservers(botName) or not observedToons[botName] then
+                --print_msg('Cleanup any previously set observers for: '..botName)
+                --ManageObservers(botName, true)
+                --print_msg('Waiting for observed properties to be removed for: '..botName)
+                --while VerifyObservers(botName) do
+                --    mq.delay(100)
+                --end
+                print_msg('Adding observed properties for: \ay'..botName)
+                ManageObservers(botName, false)
+                -- If observers were newly added, delay for them to initialize
+                print_msg('Waiting for observed properties to be added for: \ay'..botName)
+                local verifyStartTime = os.time(os.date("!*t"))
+                while not VerifyObservers(botName) do
+                    mq.delay(100)
+                    if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 10 then
+                        print_err('Timed out verifying observers for \ay'..botName)
+                        print_err('Exiting the script.')
+                        mq.exit()
+                    end
                 end
             end
-        end
 
-        local botValues = {}
-        botSpawnData = mq.TLO.Spawn('='..botName)
-        botValues['Me.ID'] = tostring(botSpawnData.ID)
-        botValues['Me.Invis'] = tostring(botSpawnData.Invis)
-        -- Fill in data from this toons observed properties
-        if settings['ObservedProperties'] then
-            for _, obsProp in pairs(settings['ObservedProperties']) do
-                botValues[obsProp['Name']] = tostring(mq.TLO.DanNet(botName).Observe('"'..obsProp['Name']..'"'))
+            local botValues = {}
+            botSpawnData = mq.TLO.Spawn('='..botName)
+            botValues['Me.ID'] = botSpawnData.ID()
+            botValues['Me.Invis'] = botSpawnData.Invis()
+            
+            -- Fill in data from this toons observed properties
+            if settings['ObservedProperties'] then
+                for _, obsProp in pairs(settings['ObservedProperties']) do
+                    botValues[obsProp['Name']] = mq.TLO.DanNet(botName).Observe('"'..obsProp['Name']..'"')()
+                end
+            end
+            if settings['NetBotsProperties'] then
+                for _, netbotsProp in pairs(settings['NetBotsProperties']) do
+                    botValues[netbotsProp['Name']] = mq.TLO.NetBots(titleCase(botName))[netbotsProp['Name']]()
+                end
+            end
+            if settings['SpawnProperties'] then
+                for _, spawnProp in pairs(settings['SpawnProperties']) do
+                    botValues[spawnProp['Name']] = mq.TLO.Spawn('='..botName)[spawnProp['Name']]()
+                    if type(botValues[spawnProp['Name']]) == 'number' then
+                        botValues[spawnProp['Name']] = tonumber(string.format("%.3f", botValues[spawnProp['Name']]))
+                    end
+                end
+            end
+            if peerGroup == 'all' then
+                botValues['BotInZone'] = (botValues['Me.ID'] ~= 'null')
+            else
+                botValues['BotInZone'] = true
+            end
+            botValues['lastUpdated'] = currTime
+            dataTable[botName] = botValues
+        end
+        -- Cleanup stale toon data
+        for botName, botValues in pairs(dataTable) do
+            if os.difftime(currTime, botValues['lastUpdated']) > staleDataTimeout then
+                print_msg('Removing stale toon data: \ay'..botName)
+                dataTable[botName] = nil
+                --ManageObservers(botName, true)
             end
         end
-        if settings['NetBotsProperties'] then
-            for _, netbotsProp in pairs(settings['NetBotsProperties']) do
-                botValues[netbotsProp['Name']] = tostring(mq.TLO.NetBots(titleCase(botName))[netbotsProp['Name']])
-            end
-        end
-        if settings['SpawnProperties'] then
-            for _, spawnProp in pairs(settings['SpawnProperties']) do
-                botValues[spawnProp['Name']] = tostring(mq.TLO.Spawn('='..botName)[spawnProp['Name']])
-            end
-        end
-        if peerGroup == 'all' then
-            botValues['BotInZone'] = (botValues['Me.ID'] ~= 'null')
-        else
-            botValues['BotInZone'] = true
-        end
-        botValues['lastUpdated'] = currTime
-        dataTable[botName] = botValues
+        mq.delay(refreshInterval)
     end
-    -- Cleanup stale toon data
-    for botName, botValues in pairs(dataTable) do
-        if os.difftime(currTime, botValues['lastUpdated']) > staleDataTimeout then
-            print_msg('Removing stale toon data: \ay'..botName)
-            dataTable[botName] = nil
-            --ManageObservers(botName, true)
+
+    --[[
+    -- Cleanup observers before exiting
+    -- Removing/re-adding observers seems a bit unreliable though...
+    local peerTable = Peers()
+    for _, botName in pairs(peerTable) do
+        print_msg('Removing observed properties for: '..botName)
+        ManageObservers(botName, true)
+        -- If observers were newly added, delay for them to initialize
+        print_msg('Waiting for observers to be removed for: '..botName)
+        while VerifyObservers(botName) do
+            mq.delay(100)
         end
     end
-    mq.delay(refreshInterval)
+    --]]
 end
 
---[[
--- Cleanup observers before exiting
--- Removing/re-adding observers seems a bit unreliable though...
-local peerTable = Peers()
-for _, botName in pairs(peerTable) do
-    print_msg('Removing observed properties for: '..botName)
-    ManageObservers(botName, true)
-    -- If observers were newly added, delay for them to initialize
-    print_msg('Waiting for observers to be removed for: '..botName)
-    while VerifyObservers(botName) do
-        mq.delay(100)
-    end
-end
---]]
+main()
