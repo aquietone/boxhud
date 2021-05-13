@@ -193,7 +193,7 @@ function LoadSettings()
     end
 
     -- turn off fullname mode in DanNet
-    if mq.TLO.DanNet.FullNames() then
+    if mq.TLO.DanNet.FullNames() == 1 then
         mq.cmd.dnet('fullnames off')
     end
 
@@ -229,7 +229,7 @@ function ManageObservers(botName, drop)
     if drop then
         for _, obsProp in pairs(settings['ObservedProperties']) do
             -- Drop the observation if it is set
-            if mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() then
+            if mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() == 1 then
                 mq.cmd.dobserve(botName..' -q "'..obsProp['Name']..'" -drop')
                 mq.delay(50)
             end
@@ -239,7 +239,7 @@ function ManageObservers(botName, drop)
         if not observedToons[botName] then
             for _, obsProp in pairs(settings['ObservedProperties']) do
                 -- Add the observation if it is not set
-                if not mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() then
+                if mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() == 0 then
                     mq.cmd.dobserve(botName..' -q "'..obsProp['Name']..'"')
                     mq.delay(50)
                 end
@@ -252,7 +252,7 @@ end
 -- Verify all observed properties are set for the given toon
 function VerifyObservers(botName)
     for _, obsProp in pairs(settings['ObservedProperties']) do
-        if not mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() then
+        if mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() == 0 then
             return false
         end
     end
@@ -345,7 +345,11 @@ function DrawHUDColumns(columns)
         ImGui.SetColumnWidth(-1, column['Width'])
         ImGui.NextColumn()
     end
-    for botName, botValues in pairs(dataTable) do
+    for _, botName in pairs(Peers()) do
+        local botValues = dataTable[botName]
+        if not botValues then
+            return
+        end
         -- Always read these properties for the toon
         -- as they are not specific to a column
         botInZone = botValues['BotInZone']
@@ -357,24 +361,21 @@ function DrawHUDColumns(columns)
             if column['Name'] == 'Name' then
                 -- Treat Name column special
                 -- Fill name column
+                local buttonText = titleCase(botName)
                 if botInZone then
-                    ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
-                    local buttonText = nil
                     if not botInvis then
+                        ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
                         buttonText = titleCase(botName)
                     else
+                        ImGui.PushStyleColor(ImGuiCol.Text, 0.26, 0.98, 0.98, 1)
                         buttonText = '('..titleCase(botName)..')'
-                    end
-                    if ImGui.SmallButton(buttonText) then
-                        -- bring left clicked toon to foreground
-                        mq.cmd.dex(botName..' /foreground')
                     end
                 else
                     ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
-                    if ImGui.SmallButton(titleCase(botName)) then
-                        -- bring left clicked toon to foreground
-                        mq.cmd.dex(botName..' /foreground')
-                    end
+                end
+                if ImGui.SmallButton(buttonText) then
+                    -- bring left clicked toon to foreground
+                    mq.cmd.dex(botName..' /foreground')
                 end
                 ImGui.PopStyleColor(1)
                                     
@@ -383,7 +384,7 @@ function DrawHUDColumns(columns)
                     text = ""
                     text, selected = ImGui.InputText("##input"..botName, text, 32)
                     if selected then
-                        print_msg('Sending command: /dex '..botName..' '..text)
+                        print_msg('Sending command: \ag/dex '..botName..' '..text)
                         mq.cmd.dex(botName..' '..text)
                         ImGui.CloseCurrentPopup()
                     end
@@ -424,10 +425,10 @@ function DrawHUDColumns(columns)
                         local command = column['Action']:gsub('#botName#', botName)
                         local noparseCmd = string.match(command, '/noparse (.*)')
                         if noparseCmd then
-                            print_msg('Run command: '..command)
+                            print_msg('Run command: \ag'..command)
                             mq.cmd.noparse(noparseCmd)
                         else
-                            print_msg('Run command: '..command)
+                            print_msg('Run command: \ag'..command)
                             mq.cmd.squelch(command)
                         end
                     end
@@ -571,7 +572,7 @@ function main()
                 end
             end
             if peerGroup == 'all' then
-                botValues['BotInZone'] = (botValues['Me.ID'] ~= 'null')
+                botValues['BotInZone'] = (botValues['Me.ID'] ~= nil)
             else
                 botValues['BotInZone'] = true
             end
