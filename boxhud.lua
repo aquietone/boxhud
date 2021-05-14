@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.4.2 -- aquietone
+boxhud.lua 1.4.4 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer 
@@ -26,6 +26,11 @@ Usage: /lua run boxhud [settings.lua]
        /boxhudend - end the script
 
 Changes:
+1.4.4
+- Fix for some columns showing |server_name instead of correct data
+- Make sure peer list is initialized before UI
+1.4.3
+- Fix conditions broken by 1.4.2 tostring() replacements
 1.4.2
 - Fix gsub in button commands
 - Fix handling button commands with /noparse
@@ -70,6 +75,7 @@ local terminate = false
 local settings = {}
 -- Default DanNet peer group to use
 local peerGroup = 'all'
+local peerTable = nil
 local zoneID = nil
 -- Default observer polling interval (0.25 seconds)
 local refreshInterval = 250
@@ -345,10 +351,10 @@ function DrawHUDColumns(columns)
         ImGui.SetColumnWidth(-1, column['Width'])
         ImGui.NextColumn()
     end
-    for _, botName in pairs(Peers()) do
+    for _, botName in pairs(peerTable) do
         local botValues = dataTable[botName]
         if not botValues then
-            return
+            goto continue
         end
         -- Always read these properties for the toon
         -- as they are not specific to a column
@@ -436,6 +442,7 @@ function DrawHUDColumns(columns)
                 ImGui.NextColumn()
             end -- end column name condition
         end -- end column loop
+        ::continue::
     end -- end dataTable loop
 end
 
@@ -479,6 +486,9 @@ function main()
     PluginCheck()
     LoadSettings()
 
+    -- Initialize peer list before the UI, since UI iterates over peer list
+    peerTable = Peers()
+
     mq.imgui.init('BOXHUDUI', HUDGUI)
 
     mq.bind('/boxhud', function()
@@ -492,7 +502,6 @@ function main()
     end)
 
     -- Initial setup of observers
-    local peerTable = Peers()
     for _, botName in pairs(peerTable) do
         --print_msg('Cleanup any previously set observers for: '..botName)
         --ManageObservers(botName, true)
@@ -522,7 +531,7 @@ function main()
             zoneID = mq.TLO.Zone.ID()
         end
         currTime = os.time(os.date("!*t"))
-        local peerTable = Peers()
+        peerTable = Peers()
         for botIdx, botName in pairs(peerTable) do
             -- Ensure observers are set for the toon
             if not VerifyObservers(botName) or not observedToons[botName] then
@@ -593,7 +602,7 @@ function main()
     --[[
     -- Cleanup observers before exiting
     -- Removing/re-adding observers seems a bit unreliable though...
-    local peerTable = Peers()
+    peerTable = Peers()
     for _, botName in pairs(peerTable) do
         print_msg('Removing observed properties for: '..botName)
         ManageObservers(botName, true)
