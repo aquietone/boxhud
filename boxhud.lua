@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.5.0 -- aquietone
+boxhud.lua 1.6.0 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer 
@@ -24,8 +24,24 @@ IMPORTANT CONSIDERATIONS: Don't go crazy with the number of properties you obser
 Usage: /lua run boxhud [settings.lua]
        /boxhud - toggle the UI window
        /boxhudend - end the script
+       /bhadmin - toggle admin mode. Only purpose is to hide the UI so it 
+                  doesn't error when resetting observers.
+       /bhadmin reset toonname - Reset observed properties for the specified toon.
+       /bhadmin anon - toggle showing names or class names in the Name column
+       /bhhelp - Display help output
+       /bhversion - Display the running version
 
 Changes:
+1.6.0
+- Add PeerSource to allow getting peer list from either dannet or netbots
+- Add "FromIDProperty" to spawn properties to allow getting spawn properties
+  for something other than botName. The referred property must be a Spawn ID.
+- Move /boxhudanon under new /bhadmin
+- Add some commands to reset observers under /bhadmin:
+  /bhadmin (enables admin mode, hides the UI)
+  /bhadmin reset toonname (resets observers for the toon toonname)
+- Add a /bhversion command
+- Add a /bhhelp command
 1.5.0
 - Add some right click actions on name buttons
 - Add /boxhudanon binding to replace names with class names in name column
@@ -70,6 +86,8 @@ Changes:
 - Initial release, static configuration UI
 
 --]]
+local VERSION = '1.6.0'
+
 local mq = require('mq')
 
 local arg = {...}
@@ -80,8 +98,10 @@ local shouldDrawGUI = true
 local terminate = false
 local settings = {}
 -- Default DanNet peer group to use
+local peerSource = 'dannet'
 local peerGroup = 'all'
 local peerTable = nil
+local classVarName = 'Me.Class'
 local zoneID = nil
 -- Default observer polling interval (0.25 seconds)
 local refreshInterval = 250
@@ -95,6 +115,7 @@ local windowWidth = 0
 local observeWaitMod = 1
 -- Set to 1 to use classname instead of player names
 local anonymize = false
+local adminMode = false
 
 -- Utility functions
 
@@ -103,13 +124,25 @@ local function print_err(msg) print('\at[\ayBOXHUD\at] \ar' .. msg) end
 
 -- Load required plugins
 local function PluginCheck()
-    if mq.TLO.DanNet == nil then
-        print_msg("Plugin \ayMQ2DanNet\ax is required. Loading it now.")
-        mq.cmd.plugin('mq2dannet noauto')
+    if peerSource == 'dannet' or (settings['ObservedProperties'] and table.getn(settings['ObservedProperties']) > 0) then
+        if mq.TLO.DanNet == nil then
+            print_msg("Plugin \ayMQ2DanNet\ax is required. Loading it now.")
+            mq.cmd.plugin('mq2dannet noauto')
+        end
+        -- turn off fullname mode in DanNet
+        if mq.TLO.DanNet.FullNames() == 1 then
+            mq.cmd.dnet('fullnames off')
+        end
     end
-    -- turn off fullname mode in DanNet
-    if mq.TLO.DanNet.FullNames() == 1 then
-        mq.cmd.dnet('fullnames off')
+    if peerSource == 'netbots' or (settings['NetBotsProperties'] and table.getn(settings['NetBotsProperties']) > 0) then
+        if mq.TLO.EQBC == nil then
+            print_msg("Plugin \ayMQ2EQBC\ax is required. Loading it now.")
+            mq.cmd.plugin('mq2eqbc noauto')
+        end
+        if mq.TLO.NetBots == nil then
+            print_msg("Plugin \ayMQ2NetBots\ax is required. Loading it now.")
+            mq.cmd.plugin('mq2netbots noauto')
+        end
     end
 end
 
@@ -122,8 +155,11 @@ local function Set(list)
 end
 
 -- list of classes to check against for things like displaying mana % versus endurance %
-local casters = Set { 'CLR', 'DRU', 'SHM', 'ENC', 'MAG', 'NEC', 'WIZ' }
-local melee = Set { 'BRD', 'ROG', 'MNK', 'BER', 'RNG', 'BST', 'WAR', 'SHD', 'PAL'}
+local casters = Set { 'cleric', 'clr', 'druid', 'dru', 'shaman', 'shm', 'enchanter', 'enc', 'magician', 'mag', 'necromancer', 'nec', 'wizard', 'wiz' }
+-- melee and hybrid overlap for compatibility. hybrids is checked before melee as it is a more specific subset of classes
+local melee = Set { 'rogue', 'rog', 'monk', 'mnk', 'berserker', 'ber', 'warrior', 'war', 'bard', 'brd', 'ranger', 'rng', 'beastlord', 'bst', 'shadow knight', 'shd', 'paladin', 'pal' }
+local hybrids = Set { 'bard', 'brd', 'ranger', 'rng', 'beastlord', 'bst', 'shadow knight', 'shd', 'paladin', 'pal' }
+local ranged = Set { 'ranger', 'rng' }
 
 -- Split a string using the provided separator, | by default
 local function Split(input, sep)
@@ -140,7 +176,15 @@ end
 -- Return list of DanNet peers from the configured peer group
 -- peers list |peer1|peer2|peer3
 local function Peers()
-    return Split(mq.TLO.DanNet.Peers(peerGroup)())
+    if peerSource == 'dannet' then
+        return Split(mq.TLO.DanNet.Peers(peerGroup)())
+    else
+        local t={}
+        for i=1,mq.TLO.NetBots.Counts() do
+            table.insert(t, mq.TLO.NetBots.Client.Arg(i)())
+        end
+        return t
+    end
 end
 
 local function GetZonePeerGroup()
@@ -161,22 +205,47 @@ local function CheckRequiredSettings()
     if not settings['Columns'] then
         print_err('ERROR: Missing \'Columns\' from settings')
         mq.exit()
-    elseif not settings['ObservedProperties'] then
-        print_err('ERROR: Missing \'ObservedProperties\' from settings')
-        mq.exit()
     elseif table.getn(settings['Columns']) == 0 then
         print_err('ERROR: \'Columns\' contains no entries')
-        mq.exit()
-    elseif table.getn(settings['ObservedProperties']) == 0 then
-        print_err('ERROR: \'ObservedProperties\' contains no entries')
         mq.exit()
     end
 end
 
 local function CheckOptionalSettings()
-    if settings['PeerGroup'] and settings['PeerGroup'] == 'zone' then
-        peerGroup = GetZonePeerGroup()
-        zoneID = mq.TLO.Zone.ID()
+    if settings['PeerSource'] then
+        peerSource = settings['PeerSource']
+    end
+    if peerSource == 'dannet' then
+        if settings['DanNetPeerGroup'] and settings['DanNetPeerGroup'] == 'zone' then
+            peerGroup = GetZonePeerGroup()
+            zoneID = mq.TLO.Zone.ID()
+        elseif settings['PeerGroup'] and settings['PeerGroup'] == 'zone' then
+            peerGroup = GetZonePeerGroup()
+            zoneID = mq.TLO.Zone.ID()
+        end
+        local classPropertyFound = false
+        for _, obsProp in pairs(settings['ObservedProperties']) do
+            if obsProp['Name'] == 'Me.Class' or obsProp['Name'] == 'Me.Class.ShortName' then
+                classPropertyFound = true
+                classVarName = obsProp['Name']
+            end
+        end
+        if not classPropertyFound then
+            classVarName = 'Me.Class.ShortName'
+            table.insert(settings['ObservedProperties'], {Name='Me.Class.ShortName'})
+        end
+    else
+        local classPropertyFound = false
+        for _, netBotsProp in pairs(settings['NetBotsProperties']) do
+            if netBotsProp['Name'] == 'Class' then
+                classPropertyFound = true
+                classVarName = netBotsProp['Name']
+            end
+        end
+        if not classPropertyFound then
+            classVarName = 'Class'
+            table.insert(settings['NetBotsProperties'], {Name='Class'})
+        end
     end
     if settings['RefreshInterval'] then
         refreshInterval = settings['RefreshInterval']
@@ -379,8 +448,10 @@ local function DrawHUDColumns(columns)
         -- as they are not specific to a column
         local botInZone = botValues['BotInZone']
         local botInvis = botValues['Me.Invis']
-        local botID = botValues['Me.ID']
-        local botClass = botValues['Me.Class.ShortName']
+        local botClass = botValues[classVarName]
+        if botClass then
+            botClass = botClass:lower()
+        end
 
         if anonymize then
             botName = botClass
@@ -441,6 +512,11 @@ local function DrawHUDColumns(columns)
                         mq.cmd.taskadd(name)
                         ImGui.CloseCurrentPopup()
                     end
+                    if ImGui.SmallButton("Reset Obs##"..name) then
+                        print_msg('Resetting observed properties for: \ay'..name)
+                        ManageObservers(name, true)
+                        ImGui.CloseCurrentPopup()
+                    end
                     ImGui.Text('Send Command to '..botName..': ')
                     local textInput = ""
                     textInput, selected = ImGui.InputText("##input"..name, textInput, 32)
@@ -463,6 +539,10 @@ local function DrawHUDColumns(columns)
                         if value == 'NULL' then
                             if column['Properties'][botClass] then
                                 value = botValues[column['Properties'][botClass]]
+                            elseif column['Properties']['ranged'] and ranged[botClass] then
+                                value = botValues[column['Properties']['ranged']]
+                            elseif column['Properties']['hybrids'] and hybrids[botClass] then
+                                value = botValues[column['Properties']['hybrids']]
                             elseif column['Properties']['caster'] and casters[botClass] then
                                 value = botValues[column['Properties']['caster']]
                             elseif column['Properties']['melee'] and melee[botClass] then
@@ -534,15 +614,51 @@ local HUDGUI = function()
     end
 end
 
-local function main()
-    PluginCheck()
-    LoadSettingsFile()
+local Admin = function(action, name)
+    if action == nil then
+        adminMode = not adminMode
+        openGUI = not adminMode
+        print_msg('Setting \ayadminMode\ax = \ay'..tostring(adminMode))
+    elseif action == 'anon' then
+        anonymize = not anonymize
+    elseif action  == 'reset' then
+        if not adminMode then
+            print_err('\ayadminMode\ax must be enabled')
+            return
+        end
+        if name == nil then
+            print_msg('Resetting observed properties for: \ayALL')
+            for _, botName in pairs(peerTable) do
+                --print_msg('Cleanup any previously set observers for: '..botName)
+                ManageObservers(botName, true)
+            end
+        else
+            print_msg('Resetting observed properties for: \ay'..name)
+            ManageObservers(name, true)
+        end
+    end
+end
 
-    -- Initialize peer list before the UI, since UI iterates over peer list
-    peerTable = Peers()
-    observeWaitMod = 1+table.getn(peerTable)/10
+local Help = function()
+    print_msg('Available commands:')
+    print('\ao    /bhhelp\a-w -- Displays this help output')
+    print('\ao    /bhversion\a-w -- Displays the version')
+    print('\ao    /boxhud\a-w -- Toggle the display')
+    print('\ao    /boxhudend\a-w -- End the script')
+    print('\ao    /bhadmin\a-w -- Enable admin mode')
+    print('\ao    /bhadmin anon\a-w -- Enable anon mode')
+    print('\ao    /bhadmin reset all\a-w -- Reset DanNet Observed Properties for all toons')
+    print('\ao    /bhadmin reset <name>\a-w -- Reset DanNet Observed Properties for <name>')
+end
 
-    mq.imgui.init('BOXHUDUI', HUDGUI)
+local ShowVersion = function()
+    print_msg('Version '..VERSION)
+end
+
+local function SetupBindings()
+    mq.bind('/bhversion', ShowVersion)
+
+    mq.bind('/bhhelp', Help)
 
     mq.bind('/boxhud', function()
         openGUI = not openGUI
@@ -554,28 +670,34 @@ local function main()
         terminate = true
     end)
 
-    mq.bind('/boxhudanon', function()
-        anonymize = not anonymize
-    end)
+    mq.bind('/bhadmin', Admin)
+end
+
+local function main()
+    LoadSettingsFile()
+    PluginCheck()
+    SetupBindings()
+
+    -- Initialize peer list before the UI, since UI iterates over peer list
+    peerTable = Peers()
+    observeWaitMod = 1+table.getn(peerTable)/10
+
+    mq.imgui.init('BOXHUDUI', HUDGUI)
 
     -- Initial setup of observers
-    for _, botName in pairs(peerTable) do
-        --print_msg('Cleanup any previously set observers for: '..botName)
-        --ManageObservers(botName, true)
-        --print_msg('Waiting for observed properties to be removed for: '..botName)
-        --while VerifyObservers(botName) do
-        --    mq.delay(100)
-        --end
-        print_msg('Adding observed properties for: \ay'..botName)
-        ManageObservers(botName, false)
-        print_msg('Waiting for observed properties to be added for: \ay'..botName)
-        local verifyStartTime = os.time(os.date("!*t"))
-        while not VerifyObservers(botName) do
-            mq.delay(100)
-            if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 20 then
-                print_err('Timed out verifying observers for \ay'..botName)
-                print_err('Exiting the script.')
-                mq.exit()
+    if settings['ObservedProperties'] and table.getn(settings['ObservedProperties']) > 0 then
+        for _, botName in pairs(peerTable) do
+            print_msg('Adding observed properties for: \ay'..botName)
+            ManageObservers(botName, false)
+            print_msg('Waiting for observed properties to be added for: \ay'..botName)
+            local verifyStartTime = os.time(os.date("!*t"))
+            while not VerifyObservers(botName) do
+                mq.delay(100)
+                if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 20 then
+                    print_err('Timed out verifying observers for \ay'..botName)
+                    print_err('Exiting the script.')
+                    mq.exit()
+                end
             end
         end
     end
@@ -583,7 +705,7 @@ local function main()
     -- Main run loop to populate observed property data of toons
     while not terminate do
         -- Update peerGroup if we've zoned and using the zone peer group
-        if peerGroup ~= 'all' and zoneID ~= mq.TLO.Zone.ID() then
+        if peerSource == 'dannet' and peerGroup ~= 'all' and zoneID ~= mq.TLO.Zone.ID() then
             peerGroup = GetZonePeerGroup()
             zoneID = mq.TLO.Zone.ID()
         end
@@ -591,24 +713,20 @@ local function main()
         peerTable = Peers()
         for botIdx, botName in pairs(peerTable) do
             -- Ensure observers are set for the toon
-            if not VerifyObservers(botName) or not observedToons[botName] then
-                --print_msg('Cleanup any previously set observers for: '..botName)
-                --ManageObservers(botName, true)
-                --print_msg('Waiting for observed properties to be removed for: '..botName)
-                --while VerifyObservers(botName) do
-                --    mq.delay(100)
-                --end
-                print_msg('Adding observed properties for: \ay'..botName)
-                ManageObservers(botName, false)
-                -- If observers were newly added, delay for them to initialize
-                print_msg('Waiting for observed properties to be added for: \ay'..botName)
-                local verifyStartTime = os.time(os.date("!*t"))
-                while not VerifyObservers(botName) do
-                    mq.delay(100)
-                    if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 20 then
-                        print_err('Timed out verifying observers for \ay'..botName)
-                        print_err('Exiting the script.')
-                        mq.exit()
+            if settings['ObservedProperties'] and table.getn(settings['ObservedProperties']) > 0 then
+                if not VerifyObservers(botName) or not observedToons[botName] then
+                    print_msg('Adding observed properties for: \ay'..botName)
+                    ManageObservers(botName, false)
+                    -- If observers were newly added, delay for them to initialize
+                    print_msg('Waiting for observed properties to be added for: \ay'..botName)
+                    local verifyStartTime = os.time(os.date("!*t"))
+                    while not VerifyObservers(botName) do
+                        mq.delay(100)
+                        if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 20 then
+                            print_err('Timed out verifying observers for \ay'..botName)
+                            print_err('Exiting the script.')
+                            mq.exit()
+                        end
                     end
                 end
             end
@@ -626,14 +744,19 @@ local function main()
             end
             if settings['NetBotsProperties'] then
                 for _, netbotsProp in pairs(settings['NetBotsProperties']) do
-                    botValues[netbotsProp['Name']] = mq.TLO.NetBots(TitleCase(botName))[netbotsProp['Name']]()
+                    -- tostring instead of ending with () because class returned a number instead of class string
+                    botValues[netbotsProp['Name']] = tostring(mq.TLO.NetBots(TitleCase(botName))[netbotsProp['Name']])
                 end
             end
             if settings['SpawnProperties'] then
                 for _, spawnProp in pairs(settings['SpawnProperties']) do
-                    botValues[spawnProp['Name']] = mq.TLO.Spawn('='..botName)[spawnProp['Name']]()
-                    if type(botValues[spawnProp['Name']]) == 'number' then
-                        botValues[spawnProp['Name']] = tonumber(string.format("%.3f", botValues[spawnProp['Name']]))
+                    if spawnProp['FromIDProperty'] then
+                        botValues[spawnProp['Name']] = mq.TLO.Spawn('id '..botValues[spawnProp['FromIDProperty']])[spawnProp['Name']]()
+                    else
+                        botValues[spawnProp['Name']] = mq.TLO.Spawn('='..botName)[spawnProp['Name']]()
+                        if type(botValues[spawnProp['Name']]) == 'number' then
+                            botValues[spawnProp['Name']] = tonumber(string.format("%.3f", botValues[spawnProp['Name']]))
+                        end
                     end
                 end
             end
@@ -655,21 +778,6 @@ local function main()
         end
         mq.delay(refreshInterval)
     end
-
-    --[[
-    -- Cleanup observers before exiting
-    -- Removing/re-adding observers seems a bit unreliable though...
-    peerTable = Peers()
-    for _, botName in pairs(peerTable) do
-        print_msg('Removing observed properties for: '..botName)
-        ManageObservers(botName, true)
-        -- If observers were newly added, delay for them to initialize
-        print_msg('Waiting for observers to be removed for: '..botName)
-        while VerifyObservers(botName) do
-            mq.delay(100)
-        end
-    end
-    --]]
 end
 
 main()
