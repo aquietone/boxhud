@@ -1,3 +1,17 @@
+1.6.0
+- Add PeerSource to allow getting peer list from either dannet or netbots
+- Add "FromIDProperty" to spawn properties to allow getting spawn properties
+  for something other than botName. The referred property must be a Spawn ID.
+  For example:
+    NetBots property: {Name='TargetID'}
+    Spawn property:   {Name='CleanName',FromIDProperty='TargetID'}
+    Then assign a column to display property 'CleanName'
+- Move /boxhudanon under new /bhadmin
+- Add some commands to reset observers under /bhadmin:
+  /bhadmin (enables admin mode, hides the UI)
+  /bhadmin reset toonname (resets observers for the toon toonname)
+- Add a /bhversion command
+- Add a /bhhelp command
 1.5.0
 - Add some right click actions on name buttons
 - Add /boxhudanon binding to replace names with class names in name column
