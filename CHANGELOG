@@ -1,3 +1,5 @@
+1.6.1
+- Add sorting by columns
 1.6.0
 - Add PeerSource to allow getting peer list from either dannet or netbots
 - Add "FromIDProperty" to spawn properties to allow getting spawn properties
