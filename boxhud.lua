@@ -27,6 +27,7 @@ Usage: /lua run boxhud [settings.lua]
 
 Changes:
 1.6.0
+- Add sorting by column
 - Add PeerSource to allow getting peer list from either dannet or netbots
 - Add "FromIDProperty" to spawn properties to allow getting spawn properties
   for something other than botName. The referred property must be a Spawn ID.
@@ -113,6 +114,16 @@ local windowWidth = 0
 local anonymize = false
 local adminMode = false
 local adminPeerSelected = 0
+
+local sortAsc = function(a, b) return a < b end
+local sortDesc = function(a, b) return a > b end
+local sortBy = nil
+local sortedPeers = {}
+local sortDir = true
+local sortFuncs = {
+    [true]=sortAsc,
+    [false]=sortDesc
+}
 
 -- Utility functions
 
@@ -528,7 +539,8 @@ local function DrawColumnProperty(botValues, botClass, botInZone, column)
             value = botValues[column['Properties']['caster']]
         elseif column['Properties']['melee'] and melee[botClass] then
             value = botValues[column['Properties']['melee']]
-        elseif column['Properties']['all'] then
+        end
+        if (value == 'NULL' or value == '') and column['Properties']['all'] then
             value = botValues[column['Properties']['all']]
         end
         local thresholds = column['Thresholds']
@@ -560,13 +572,52 @@ local function DrawHUDColumns(columns)
     for _, column in pairs(columns) do
         if column['Name'] == 'Name' then
             ImGui.CollapsingHeader(column['Name']..' ('..table.getn(peerTable)..')', 256)
+            if ImGui.IsItemClicked() then
+                print_msg('Sort by \ayName')
+                sortBy = nil
+            end
         elseif column['Type'] ~= 'button' then
             ImGui.CollapsingHeader(column['Name'], 256)
+            if ImGui.IsItemClicked() then
+                if column['Properties']['all'] then
+                    print_msg('Sort by \ay'..column['Properties']['all'])
+                    sortBy = column['Properties']['all']
+                    sortDir = not sortDir
+                else
+                    print_msg('Sorting by \ay'..column['Name']..'\ax is not supported')
+                end
+            end
         end
         ImGui.SetColumnWidth(-1, column['Width'])
         ImGui.NextColumn()
     end
-    for _, name in pairs(peerTable) do
+    if sortBy ~= nil then
+        function getKeysSortedByValue(tbl, sortFunction)
+            local keys = {}
+            for key in pairs(tbl) do
+                table.insert(keys, key)
+            end
+
+            table.sort(keys, function(a, b)
+                if tbl[a][sortBy] == nil and tbl[b][sortBy] == nil then
+                    return true
+                end
+                if tbl[a][sortBy] == nil then
+                    return true
+                end
+                if tbl[b][sortBy] == nil then
+                    return true
+                end
+                return sortFunction(tbl[a][sortBy], tbl[b][sortBy])
+            end)
+
+            return keys
+        end
+        sorted = getKeysSortedByValue(dataTable, sortFuncs[sortDir])
+    else
+        sorted = peerTable
+    end
+    for _, name in pairs(sorted) do
         local botName = name
         local botValues = dataTable[botName]
         if not botValues then
