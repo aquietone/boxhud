@@ -6,7 +6,9 @@ A Lua / ImGui boxing HUD for EverQuest.
 
 - MQNext
 - MQ2Lua
-- MQ2DanNet
+- Either or both of:
+  - MQ2DanNet (to use using DanNet peers/observers)
+  - MQ2EQBC+MQ2NetBots (to use netbots data)
 
 # Installation
 
