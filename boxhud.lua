@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.6.1 -- aquietone
+boxhud.lua 1.6.0 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer 
@@ -26,9 +26,8 @@ Usage: /lua run boxhud [settings.lua]
        /bhversion - Display the running version
 
 Changes:
-1.6.1
-- Add sorting by column
 1.6.0
+- Add sorting by column
 - Add PeerSource to allow getting peer list from either dannet or netbots
 - Add "FromIDProperty" to spawn properties to allow getting spawn properties
   for something other than botName. The referred property must be a Spawn ID.
@@ -125,6 +124,24 @@ local sortFuncs = {
     [true]=sortAsc,
     [false]=sortDesc
 }
+local getKeysSortedByValue = function(tbl, sortFunction)
+    local keys = {}
+    for key in pairs(tbl) do
+        table.insert(keys, key)
+    end
+
+    table.sort(keys, function(a, b)
+        if tbl[a][sortBy] == nil then
+            return false
+        end
+        if tbl[b][sortBy] == nil then
+            return true
+        end
+        return sortFunction(tbl[a][sortBy], tbl[b][sortBy])
+    end)
+
+    return keys
+end
 
 -- Utility functions
 
@@ -593,28 +610,11 @@ local function DrawHUDColumns(columns)
         ImGui.NextColumn()
     end
     if sortBy ~= nil then
-        function getKeysSortedByValue(tbl, sortFunction)
-            local keys = {}
-            for key in pairs(tbl) do
-                table.insert(keys, key)
-            end
-
-            table.sort(keys, function(a, b)
-                if tbl[a][sortBy] == nil then
-                    return false
-                end
-                if tbl[b][sortBy] == nil then
-                    return true
-                end
-                return sortFunction(tbl[a][sortBy], tbl[b][sortBy])
-            end)
-
-            return keys
-        end
         sorted = getKeysSortedByValue(dataTable, sortFuncs[sortDir])
     else
         sorted = peerTable
     end
+    
     for _, name in pairs(sorted) do
         local botName = name
         local botValues = dataTable[botName]
@@ -778,7 +778,11 @@ local function UpdateBotValues(botName, currTime)
     if IsUsingNetBots() then
         for _, netbotsProp in pairs(settings['NetBotsProperties']) do
             -- tostring instead of ending with () because class returned a number instead of class string
-            botValues[netbotsProp['Name']] = tostring(mq.TLO.NetBots(TitleCase(botName))[netbotsProp['Name']])
+            if netbotsProp['Name']:find('Class') then
+                botValues[netbotsProp['Name']] = tostring(mq.TLO.NetBots(TitleCase(botName))[netbotsProp['Name']])
+            else
+                botValues[netbotsProp['Name']] = mq.TLO.NetBots(TitleCase(botName))[netbotsProp['Name']]()
+            end
         end
     end
     if settings['SpawnProperties'] then
