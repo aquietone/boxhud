@@ -250,6 +250,19 @@ local function Peers()
     end
 end
 
+local botInPeerList = function(botName)
+    -- peer list is being used directly if sortBy == nil
+    if sortBy == nil then
+        return true
+    end
+    for _,peerName in pairs(peerTable) do
+        if peerName == botName then
+            return true
+        end
+    end
+    return false
+end
+
 local function GetZonePeerGroup()
     local zoneName = mq.TLO.Zone.ShortName()
     if zoneName:find('_') then
@@ -618,7 +631,7 @@ local function DrawHUDColumns(columns)
     for _, name in pairs(sorted) do
         local botName = name
         local botValues = dataTable[botName]
-        if not botValues then
+        if not botValues or not botInPeerList(botName) then
             goto continue
         end
         -- Always read these properties for the toon
