@@ -90,7 +90,7 @@ local mq = require('mq')
 local arg = {...}
 
 -- Control variables
-local VERSION = '1.6.1'
+local VERSION = '1.6.0'
 local openGUI = true
 local shouldDrawGUI = true
 local terminate = false
@@ -124,10 +124,12 @@ local sortFuncs = {
     [true]=sortAsc,
     [false]=sortDesc
 }
-local getKeysSortedByValue = function(tbl, sortFunction)
+local getKeysSortedByValue = function(tbl, sortFunction, peerTableInverted)
     local keys = {}
     for key in pairs(tbl) do
-        table.insert(keys, key)
+        if peerTableInverted[key] then
+            table.insert(keys, key)
+        end
     end
 
     table.sort(keys, function(a, b)
@@ -591,31 +593,21 @@ local function DrawHUDColumns(columns)
         if column['Name'] == 'Name' then
             ImGui.CollapsingHeader(column['Name']..' ('..table.getn(peerTable)..')', 256)
             if ImGui.IsItemClicked() then
-                print_msg('Sort by \ayName')
                 sortBy = nil
             end
         elseif column['Type'] ~= 'button' then
             ImGui.CollapsingHeader(column['Name'], 256)
             if ImGui.IsItemClicked() then
                 if column['Properties']['all'] then
-                    print_msg('Sort by \ay'..column['Properties']['all'])
                     sortBy = column['Properties']['all']
                     sortDir = not sortDir
-                else
-                    print_msg('Sorting by \ay'..column['Name']..'\ax is not supported')
                 end
             end
         end
         ImGui.SetColumnWidth(-1, column['Width'])
         ImGui.NextColumn()
     end
-    if sortBy ~= nil then
-        sorted = getKeysSortedByValue(dataTable, sortFuncs[sortDir])
-    else
-        sorted = peerTable
-    end
-    
-    for _, name in pairs(sorted) do
+    for _, name in pairs(sortedPeers) do
         local botName = name
         local botValues = dataTable[botName]
         if not botValues then
@@ -842,6 +834,7 @@ local function main()
         end
         local currTime = os.time(os.date("!*t"))
         peerTable = Peers()
+        local peerTableInverted = {}
         for botIdx, botName in pairs(peerTable) do
             -- Ensure observers are set for the toon
             if IsUsingDanNet() then
@@ -851,6 +844,12 @@ local function main()
             end
 
             UpdateBotValues(botName, currTime)
+            peerTableInverted[botName] = true
+        end
+        if sortBy ~= nil then
+            sortedPeers = getKeysSortedByValue(dataTable, sortFuncs[sortDir], peerTableInverted)
+        else
+            sortedPeers = peerTable
         end
         CleanupStaleData(currTime)
         mq.delay(refreshInterval)
