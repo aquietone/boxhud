@@ -1,3 +1,5 @@
+1.7.1
+- Fixes to Push/PopID for context menus and buttons in table
 1.7.0
 - Update to use ImGui Table API
 1.6.0
