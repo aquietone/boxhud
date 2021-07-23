@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.7.1 -- aquietone
+boxhud.lua 1.7.3 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer 
@@ -26,6 +26,10 @@ Usage: /lua run boxhud [settings.lua]
        /bhversion - Display the running version
 
 Changes:
+1.7.3
+- Fix for toons being randomly removed from the table while sorting by something other than the default Name column
+1.7.2
+- Remove debug accidentally left in 1.7.1 which caused an immediate crash
 1.7.1
 - fix Push/PopID usage so context menus and buttons in table work properly
 1.7.0
@@ -99,7 +103,7 @@ require 'ImGui'
 local arg = {...}
 
 -- Control variables
-local VERSION = '1.7.1'
+local VERSION = '1.7.3'
 local openGUI = true
 local shouldDrawGUI = true
 local terminate = false
@@ -171,6 +175,10 @@ local function TableConcat(t1, t2)
         table.insert(t, v)
     end
     return t
+end
+
+local function TableClone(org)
+    return {unpack(org)}
 end
 
 -- lists of classes to check against for things like displaying mana % versus endurance %
@@ -598,7 +606,7 @@ end
 
 local function DrawHUDColumns(columns, tabName)
     local flags = bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Reorderable, ImGuiTableFlags.Hideable, ImGuiTableFlags.MultiSortable,
-            ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY, ImGuiTableFlags.ContextMenuInBody)
+            ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY)
     if ImGui.BeginTable('##bhtable'..tabName, table.getn(columns), flags, 0, 0, 0.0) then
         for i, column in pairs(columns) do
             if column['Name'] == 'Name' then
@@ -616,7 +624,7 @@ local function DrawHUDColumns(columns, tabName)
                 if #peerTable > 1 then
                     current_sort_specs = sort_specs
                     current_columns = columns
-                    sortedPeers = peerTable
+                    sortedPeers = TableClone(peerTable)
                     table.sort(sortedPeers, CompareWithSortSpecs)
                     current_sort_specs = nil
                     current_columns = nil
@@ -630,7 +638,7 @@ local function DrawHUDColumns(columns, tabName)
 
         local clipper = ImGuiListClipper.new()
         if sortedPeers == nil then
-            sortedPeers = peerTable
+            sortedPeers = TableClone(peerTable)
         end
         clipper:Begin(table.getn(sortedPeers))
         while clipper:Step() do

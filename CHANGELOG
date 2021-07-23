@@ -1,3 +1,7 @@
+1.7.3
+- Fix for toons being randomly removed from the table while sorting by something other than the default Name column
+1.7.2
+- Remove debug accidentally left in 1.7.1 which caused an immediate crash
 1.7.1
 - Fixes to Push/PopID for context menus and buttons in table
 1.7.0
