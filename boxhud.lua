@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.7.0 -- aquietone
+boxhud.lua 1.7.1 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer 
@@ -26,6 +26,8 @@ Usage: /lua run boxhud [settings.lua]
        /bhversion - Display the running version
 
 Changes:
+1.7.1
+- fix Push/PopID usage so context menus and buttons in table work properly
 1.7.0
 - lua table updates
 1.6.1
@@ -89,13 +91,15 @@ Changes:
 - Initial release, static configuration UI
 
 --]]
+--- @type mq
 local mq = require('mq')
+--- @type ImGui
 require 'ImGui'
 
 local arg = {...}
 
 -- Control variables
-local VERSION = '1.7.0'
+local VERSION = '1.7.1'
 local openGUI = true
 local shouldDrawGUI = true
 local terminate = false
@@ -238,9 +242,9 @@ end
 local function GetZonePeerGroup()
     local zoneName = mq.TLO.Zone.ShortName()
     if zoneName:find('_') then
-        return 'zone_'..zoneName
+        return string.format('zone_%s', zoneName)
     else
-        return 'zone_'..mq.TLO.EverQuest.Server()..'_'..zoneName
+        return string.format('zone_%s_%s', mq.TLO.EverQuest.Server(), zoneName)
     end
 end
 
@@ -299,7 +303,7 @@ end
 
 local function LoadSettingsFile()
     local lua_dir = mq.TLO.MacroQuest.Path():gsub('\\', '/') .. '/lua/'
-    local settings_file = arg[1] or 'boxhud-settings-'..string.lower(mq.TLO.Me.Name())..'.lua'
+    local settings_file = arg[1] or string.format('boxhud-settings-%s.lua', string.lower(mq.TLO.Me.Name()))
     local settings_path = lua_dir..settings_file
     local default_settings_path = lua_dir..'boxhud-settings.lua'
 
@@ -323,7 +327,7 @@ local function ManageObservers(botName, drop)
         for _, obsProp in pairs(settings['ObservedProperties']) do
             -- Drop the observation if it is set
             if mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() == 1 then
-                mq.cmd.dobserve(botName..' -q "'..obsProp['Name']..'" -drop')
+                mq.cmd.dobserve(string.format('%s -q "%s" -drop', botName, obsProp['Name']))
                 mq.delay(50*observeWaitMod)
             end
         end
@@ -333,7 +337,7 @@ local function ManageObservers(botName, drop)
             for _, obsProp in pairs(settings['ObservedProperties']) do
                 -- Add the observation if it is not set
                 if mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() == 0 then
-                    mq.cmd.dobserve(botName..' -q "'..obsProp['Name']..'"')
+                    mq.cmd.dobserve(string.format('%s -q "%s"', botName, obsProp['Name']))
                     mq.delay(50*observeWaitMod)
                 end
             end
@@ -420,7 +424,7 @@ local function SetText(value, thresholds, ascending, percentage)
 end
 
 local function DrawContextMenu(name, botName)
-    if ImGui.BeginPopupContextItem("popup##"..name) then
+    if ImGui.BeginPopupContextItem("##popup"..name) then
         if ImGui.SmallButton("Target##"..name) then
             mq.cmd.target(name)
             ImGui.CloseCurrentPopup()
@@ -464,7 +468,7 @@ local function DrawContextMenu(name, botName)
         textInput, selected = ImGui.InputText("##input"..name, textInput, 32)
         if selected then
             print_msg('Sending command: \ag/dex '..botName..' '..textInput)
-            mq.cmd.dex(name..' '..textInput)
+            mq.cmd.dex(string.format('%s %s', name, textInput))
             ImGui.CloseCurrentPopup()
         end
         ImGui.EndPopup()
@@ -474,11 +478,11 @@ end
 local function DrawNameButton(name, botName, botInZone, botInvis)
     -- Treat Name column special
     -- Fill name column
-    local buttonText = TitleCase(botName..'##'..name)
+    local buttonText = TitleCase(botName)
     if botInZone then
         if not botInvis then
             ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
-            buttonText = TitleCase(botName)
+            --buttonText = TitleCase(botName)
         else
             ImGui.PushStyleColor(ImGuiCol.Text, 0.26, 0.98, 0.98, 1)
             buttonText = '('..TitleCase(botName)..')'
@@ -486,11 +490,12 @@ local function DrawNameButton(name, botName, botInZone, botInvis)
     else
         ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
     end
+
     if ImGui.SmallButton(buttonText..'##'..name) then
-        -- bring left clicked toon to foreground
         mq.cmd.dex(name..' /foreground')
     end
     ImGui.PopStyleColor(1)
+    -- Context menu not working when using table API
     DrawContextMenu(name, botName)
 end
 
@@ -591,10 +596,10 @@ local function CompareWithSortSpecs(a, b)
     return a < b
 end
 
-local function DrawHUDColumns(columns)
+local function DrawHUDColumns(columns, tabName)
     local flags = bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Reorderable, ImGuiTableFlags.Hideable, ImGuiTableFlags.MultiSortable,
-            ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY)
-    if ImGui.BeginTable('##table', table.getn(columns), flags, 0, 0, 0.0) then
+            ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY, ImGuiTableFlags.ContextMenuInBody)
+    if ImGui.BeginTable('##bhtable'..tabName, table.getn(columns), flags, 0, 0, 0.0) then
         for i, column in pairs(columns) do
             if column['Name'] == 'Name' then
                 ImGui.TableSetupColumn('Name',         bit32.bor(ImGuiTableColumnFlags.DefaultSort, ImGuiTableColumnFlags.WidthFixed),   -1.0, i)
@@ -643,9 +648,10 @@ local function DrawHUDColumns(columns)
                     if anonymize then
                         botName = botClass
                     end
-                    ImGui.PushID(item)
+                    ImGui.PushID(clipName)
                     ImGui.TableNextRow()
                     ImGui.TableNextColumn()
+
                     for i,column in pairs(columns) do
                         if column['Name'] == 'Name' then
                             DrawNameButton(clipName, botName, botInZone, botInvis)
@@ -665,23 +671,25 @@ local function DrawHUDColumns(columns)
                 end
             end
         end
-
+        clipper:End()
         ImGui.EndTable()
-    end   
+    end
 end
 
 local function DrawHUDTabs()
     if ImGui.BeginTabBar('BOXHUDTABS') then
         for _, tab in pairs(settings['Tabs']) do
+            ImGui.PushID(tab['Name'])
             if ImGui.BeginTabItem(tab['Name']) then
                 if tab['Columns'] and #tab['Columns'] > 0 then
-                    DrawHUDColumns(TableConcat(settings['Columns'], tab['Columns']))
+                    DrawHUDColumns(TableConcat(settings['Columns'], tab['Columns']), tab['Name'])
                     ImGui.EndTabItem()
                 else
                     ImGui.Text('No columns defined for tab')
                     ImGui.EndTabItem()
                 end
             end
+            ImGui.PopID()
         end
 
         -- Admin tab only allows resetting observers, so only show if dannet is being used
@@ -708,7 +716,7 @@ local HUDGUI = function()
         if settings['Tabs'] and #settings['Tabs'] > 0 then
             DrawHUDTabs()
         elseif settings['Columns'] and #settings['Columns'] > 0 then
-            DrawHUDColumns(settings['Columns'])
+            DrawHUDColumns(settings['Columns'], 'notabs')
         end
 
         ImGui.End()
