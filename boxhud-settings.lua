@@ -43,7 +43,6 @@ Settings file for boxhud.lua script.
                           - Ascending: (boolean)  Set to true if higher value is better (green)
                                                   For example, PctHPs Ascending=true so 100% hp is green
                           - Inzone: (boolean)     Only use this property when BotInZone == true
-                          - Width: (number)       Column width
 
 - ObservedProperties:   List of properties to create observations for
 
@@ -73,8 +72,7 @@ return {
             Properties=nil, 
             Thresholds=nil, 
             Percentage=false, 
-            InZone=false, 
-            Width=80
+            InZone=false
         }
     },
 
@@ -89,8 +87,7 @@ return {
                     Thresholds={35,70}, 
                     Percentage=true, 
                     Ascending=true,
-                    InZone=false, 
-                    Width=40 
+                    InZone=false
                 },
                 { 
                     Name='MP%', 
@@ -99,8 +96,7 @@ return {
                     Thresholds={35,70}, 
                     Percentage=true, 
                     Ascending=true,
-                    InZone=false, 
-                    Width=40 
+                    InZone=false
                 },
                 { 
                     Name='EP%', 
@@ -109,8 +105,7 @@ return {
                     Thresholds={35,70}, 
                     Percentage=true,
                     Ascending=true,
-                    InZone=false, 
-                    Width=40 
+                    InZone=false
                 },
                 { 
                     Name='Distance', 
@@ -119,8 +114,7 @@ return {
                     Thresholds={100,200}, 
                     Percentage=false, 
                     Ascending=false,
-                    InZone=true, 
-                    Width=60 
+                    InZone=true
                 },
                 { 
                     Name='Target', 
@@ -128,8 +122,7 @@ return {
                     Properties={all='Target.CleanName'}, 
                     Thresholds=nil, 
                     Percentage=false, 
-                    InZone=true, 
-                    Width=125 
+                    InZone=true
                 },
                 { 
                     Name='Spell/Disc', 
@@ -140,8 +133,7 @@ return {
                     }, 
                     Thresholds=nil, 
                     Percentage=false, 
-                    InZone=false, 
-                    Width=125
+                    InZone=false
                 }
             }
         },
@@ -156,8 +148,7 @@ return {
                     },
                     Thresholds=nil,
                     Percentage=false,
-                    InZone=false,
-                    Width=120
+                    InZone=false
                 },
                 {
                     Name='Paused',
@@ -171,20 +162,17 @@ return {
                     },
                     Thresholds=nil,
                     Percentage=false,
-                    InZone=false,
-                    Width=60
+                    InZone=false
                 },
                 {
                     Name='Pause',
                     Type='button',
-                    Action='/dex #botName# /mqp',
-                    Width=50
+                    Action='/dex #botName# /mqp'
                 },
                 {
                     Name='End',
                     Type='button',
-                    Action='/dex #botName# /end',
-                    Width=40
+                    Action='/dex #botName# /end'
                 }
             }
         },
@@ -200,8 +188,7 @@ return {
                     Thresholds={33,66},
                     Percentage=true,
                     Ascending=true,
-                    InZone=false,
-                    Width=50
+                    InZone=false
                 },
                 {
                     Name='AA Unspent',
@@ -212,8 +199,7 @@ return {
                     Thresholds={50,100},
                     Percentage=false,
                     Ascending=false,
-                    InZone=false,
-                    Width=80
+                    InZone=false
                 }
             }
         }
@@ -229,8 +215,7 @@ return {
                     }, 
                     Thresholds=nil, 
                     Percentage=false, 
-                    InZone=false, 
-                    Width=70 
+                    InZone=false
                 },
                 { 
                     Name='Junk Drink', 
@@ -240,8 +225,7 @@ return {
                     }, 
                     Thresholds=nil, 
                     Percentage=false, 
-                    InZone=false, 
-                    Width=125
+                    InZone=false
                 },
                 { 
                     Name='IVU', 
@@ -251,8 +235,7 @@ return {
                     }, 
                     Thresholds=nil, 
                     Percentage=false, 
-                    InZone=false, 
-                    Width=125
+                    InZone=false
                 }
             }
         }
@@ -269,8 +252,7 @@ return {
                     }, 
                     Thresholds=nil, 
                     Percentage=false, 
-                    InZone=false, 
-                    Width=50 
+                    InZone=false
                 },
                 { 
                     Name='Casting', 
@@ -280,8 +262,7 @@ return {
                     }, 
                     Thresholds=nil, 
                     Percentage=false, 
-                    InZone=false, 
-                    Width=125
+                    InZone=false
                 },
                 { 
                     Name='Invis', 
@@ -291,8 +272,7 @@ return {
                     }, 
                     Thresholds=nil, 
                     Percentage=false, 
-                    InZone=false, 
-                    Width=50
+                    InZone=false
                 }
             }
         }
