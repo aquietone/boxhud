@@ -1,3 +1,17 @@
+1.8.0
+- Add handling for observing TLOs that may not be present on all toons
+  Relies on defining dependencies between observed properties. For example:
+    If you have the MQ2Monk, MQ2Eskay and MQ2Rogue plugins, which add TLO `CWTN`, and you want to observe `CWTN.Mode`, then it may interfere
+    with macros running on toons without a CWTN class plugin loaded, like bards.
+    This can be handled by defining the observed property as:
+```
+    {
+        Name='CWTN.Mode',
+        DependsOnName='Me.Class.ShortName',
+        DependsOnValue='MNK,SHD,ROG'
+    }
+```
+    This will result in the `CWTN.Mode` property only being observed on monks, shadow knights and rogues.
 1.7.3
 - Fix for toons being randomly removed from the table while sorting by something other than the default Name column
 1.7.2
