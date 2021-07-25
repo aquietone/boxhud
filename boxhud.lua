@@ -113,7 +113,7 @@ local peerSource = 'dannet'
 local peerGroup = 'all'
 local peerTable = nil
 local peersDirty = false
-local classVarName = 'Me.Class'
+local classVarName = 'Me.Class.ShortName'
 local zoneID = nil
 -- Default observer polling interval (0.25 seconds)
 local refreshInterval = 250
@@ -328,26 +328,58 @@ local function LoadSettingsFile()
     end
 end
 
+local function ShouldObserveProperty(botName, obsProp)
+    if not obsProp['DependsOnName'] then
+        -- Does not depend on another property being observed
+        return true
+    elseif not obsProp['DependsOnValue'] or obsProp['DependsOnValue'] == '' then
+        -- Does not care what the value is of the property, just that it is observed
+        return true
+    elseif obsProp['DependsOnValue']:find(mq.TLO.DanNet(botName).Observe(string.format('"%s"', obsProp['DependsOnName']))()) ~= nil then
+        -- The value of the dependent property matches
+        return true
+    end
+    -- Do not observe the property
+    return false
+end
+
+local function AddObserver(botName, obsProp, delay)
+    if obsProp['DependsOnName'] then
+        for _,prop in pairs(settings['ObservedProperties']) do
+            if prop['Name'] == obsProp['DependsOnName'] then
+                AddObserver(botName, prop, delay)
+            end
+        end
+    end
+    if ShouldObserveProperty(botName, obsProp) then
+        -- Add the observation if it is not set
+        if mq.TLO.DanNet(botName).ObserveSet(string.format('"%s"', obsProp['Name']))() == 0 then
+            mq.cmd.dobserve(string.format('%s -q "%s"', botName, obsProp['Name']))
+            mq.delay(50*delay)
+        end
+    end
+end
+
+local function RemoveObserver(botName, obsProp, delay)
+    -- Drop the observation if it is set
+    if mq.TLO.DanNet(botName).ObserveSet(string.format('"%s"', obsProp['Name']))() == 1 then
+        mq.cmd.dobserve(string.format('%s -q "%s" -drop', botName, obsProp['Name']))
+        mq.delay(50*observeWaitMod)
+    end
+end
+
 -- Add or remove observers for the given toon
 local function ManageObservers(botName, drop)
-    local observeWaitMod = 1+table.getn(peerTable)/10
+    local delay = 1+table.getn(peerTable)/10
     if drop then
         for _, obsProp in pairs(settings['ObservedProperties']) do
-            -- Drop the observation if it is set
-            if mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() == 1 then
-                mq.cmd.dobserve(string.format('%s -q "%s" -drop', botName, obsProp['Name']))
-                mq.delay(50*observeWaitMod)
-            end
+            RemoveObserver(botName, obsProp, delay)
         end
         observedToons[botName] = nil
     else
         if not observedToons[botName] then
             for _, obsProp in pairs(settings['ObservedProperties']) do
-                -- Add the observation if it is not set
-                if mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() == 0 then
-                    mq.cmd.dobserve(string.format('%s -q "%s"', botName, obsProp['Name']))
-                    mq.delay(50*observeWaitMod)
-                end
+                AddObserver(botName, obsProp, delay)
             end
             observedToons[botName] = true
         end
@@ -357,8 +389,10 @@ end
 -- Verify all observed properties are set for the given toon
 local function VerifyObservers(botName)
     for _, obsProp in pairs(settings['ObservedProperties']) do
-        if mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() == 0 then
-            return false
+        if ShouldObserveProperty(botName, obsProp) then
+            if mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() == 0 then
+                return false
+            end
         end
     end
     return true
@@ -798,7 +832,11 @@ local function UpdateBotValues(botName, currTime)
     -- Fill in data from this toons observed properties
     if IsUsingDanNet() then
         for _, obsProp in pairs(settings['ObservedProperties']) do
-            botValues[obsProp['Name']] = mq.TLO.DanNet(botName).Observe('"'..obsProp['Name']..'"')()
+            if ShouldObserveProperty(botName, obsProp) then
+                botValues[obsProp['Name']] = mq.TLO.DanNet(botName).Observe('"'..obsProp['Name']..'"')()
+            else
+                botValues[obsProp['Name']] = ''
+            end
         end
     end
     if IsUsingNetBots() then

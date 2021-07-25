@@ -45,6 +45,12 @@ Settings file for boxhud.lua script.
                           - Inzone: (boolean)     Only use this property when BotInZone == true
 
 - ObservedProperties:   List of properties to create observations for
+                        Properties:
+                          - Name: (string)
+                          - DependsOnName: (string)  Name of observed property used to check whether this
+                                                     observer should be added
+                          - DependsOnValue: (string) Acceptable values of the depended upon property
+                                                     for this observer to be added
 
 - SpawnProperties:      List of Spawn properties which are based on spawn data of the observed Me.ID
                         Properties:
@@ -174,6 +180,18 @@ return {
                     Type='button',
                     Action='/dex #botName# /end'
                 }
+                --[[
+                {
+                    Name='CWTN Paused',
+                    Type='property',
+                    Properties={
+                        all='CWTN.Paused'
+                    },
+                    Thresholds=nil,
+                    Percentage=false,
+                    InZone=false
+                }
+                --]]
             }
         },
         {
@@ -292,6 +310,11 @@ return {
         {Name='Me.PctExp'},
         {Name='Me.AAPoints'}
         -- Other example properties
+        --{
+        --    Name='CWTN.Paused', 
+        --    DependsOnName='Me.Class.ShortName', 
+        --    DependsOnValue='MNK,ROG,WAR,SHD,MAG,ENC,CLR'
+        --}
         --{Name='Me.CombatState'}
         --{Name='FindItemCount[=Water Flask]'}
         --{Name='Me.Invis[UNDEAD]'}
