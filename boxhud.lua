@@ -38,7 +38,10 @@ Changes:
        DependsOnName='Me.Class.ShortName',
        DependsOnValue='MNK,SHD,ROG'
      }
-
+     
+- Set initial window size if window has default 32x32 size.
+- Exit if game state is not INGAME.
+- Append character name to window ID so characters can have separate window settings.
 1.7.3
 - Fix for toons being randomly removed from the table while sorting by something other than the default Name column
 1.7.2
