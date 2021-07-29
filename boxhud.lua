@@ -38,10 +38,12 @@ Changes:
        DependsOnName='Me.Class.ShortName',
        DependsOnValue='MNK,SHD,ROG'
      }
-     
+
 - Set initial window size if window has default 32x32 size.
 - Exit if game state is not INGAME.
 - Append character name to window ID so characters can have separate window settings.
+- Add strict settings validation to try and make sure data is correct
+- Update button command handling a bit for crashes
 1.7.3
 - Fix for toons being randomly removed from the table while sorting by something other than the default Name column
 1.7.2
@@ -145,7 +147,7 @@ local adminMode = false
 local adminPeerSelected = 0
 local initialRun = true
 math.randomseed(os.time())
-local tableRandom = math.random()
+local tableRandom = math.random(1,100)
 
 -- Utility functions
 
@@ -277,6 +279,10 @@ end
 
 local function CheckOptionalSettings()
     if settings['PeerSource'] then
+        if settings['PeerSource'] ~= 'dannet' and  settings['PeerSource'] ~= 'netbots' then
+            print_err('PeerSource must be either \'dannet\' or \'netbots\'')
+            mq.exit()
+        end
         peerSource = settings['PeerSource']
     end
     if peerSource == 'dannet' then
@@ -311,10 +317,10 @@ local function CheckOptionalSettings()
             table.insert(settings['NetBotsProperties'], {Name='Class'})
         end
     end
-    if settings['RefreshInterval'] then
+    if settings['RefreshInterval'] and type(settings['RefreshInterval']) == 'number' then
         refreshInterval = settings['RefreshInterval']
     end
-    if settings['StaleDataTimeout'] then
+    if settings['StaleDataTimeout'] and type(settings['StaleDataTimeout']) == 'number' then
         staleDataTimeout = settings['StaleDataTimeout']
     end
 end
@@ -326,6 +332,203 @@ local function CopySettingsFile(default_settings, new_settings)
     f = io.open(new_settings, 'w')
     f:write(defaults)
     io.close(f)
+end
+
+local propertyList = {}
+local function IsObservedPropertyValid(obsProp, idx)
+    if not obsProp['Name'] or type(obsProp['Name']) ~= 'string' then
+        print_err(string.format('[ObservedProperties %s] Observed Properties must have a \'Name\' property of type \'string\'. Name=%s', idx, obsProp['Name']))
+        return false
+    else
+        if obsProp['DependsOnName'] and not propertyList[obsProp['DependsOnName']] then
+            print_err(string.format('[ObservedProperties %s] \'DependsOnName\' must refer to another observed property name. DependsOnName=%s', obsProp['Name'], obsProp['DependsOnName']))
+            return false
+        end
+        if obsProp['DependsOnValue'] and not obsProp['DependsOnName'] then
+            print_err(string.format('[ObservedProperties %s] \'DependsOnValue\' requires \'DependsOnName\' to also be set', obsProp['Name']))
+            return false
+        end
+        if not propertyList[obsProp['Name']] then
+            propertyList[obsProp['Name']] = 1
+        else
+            print_err(string.format('[ObservedProperties %s] Duplicate property name found. ObservedProperties[%d].Name=\'%s\' must be unique among Observed, NetBots and Spawn properties.', obsProp['Name'], idx, obsProp['Name']))
+            return false
+        end
+    end
+    return true
+end
+
+local function IsNetBotsPropertyValid(nbProp, idx)
+    if not nbProp['Name'] or type(nbProp['Name']) ~= 'string' then
+        print_err(string.format('[NetBotsProperties %d] NetBots Properties must have a \'Name\' property of type \'string\'. Name=%s', idx, nbProp['Name']))
+        return false
+    else
+        if not propertyList[nbProp['Name']] then
+            propertyList[nbProp['Name']] = 1
+        else
+            print_err(string.format('[NetBotsProperties %s] Duplicate property name found. NetBotsProperties[%d].Name=\'%s\' must be unique among Observed, NetBots and Spawn properties.', nbProp['Name'], idx, nbProp['Name']))
+            return false
+        end
+    end
+    return true
+end
+
+local function IsSpawnPropertyValid(spawnProp, idx)
+    if not spawnProp['Name'] or type(spawnProp['Name']) ~= 'string' then
+        print_err(string.format('[SpawnProperties %d] Spawn Properties must have a \'Name\' property of type \'string\'. Name=%s', idx, spawnProp['Name']))
+        return false
+    else
+        if spawnProp['FromIDProperty'] and not propertyList[spawnProp['Name']] then
+            print_err(string.format('[SpawnProperties %s] \'FromIDProperty\' must refer to a valid Observed or NetBots property. FromIDProperty=%s', spawnProp['Name'], spawnProp['FromIDProperty']))
+            return false
+        end
+        if not propertyList[spawnProp['Name']] then
+            propertyList[spawnProp['Name']] = 1
+        else
+            print_err(string.format('[SpawnProperties %s] Duplicate property name found. SpawnProperties[%d].Name=\'%s\' must be unique among Observed, NetBots and Spawn properties.', spawnProp['Name'], idx, spawnProp['Name']))
+            return false
+        end
+    end
+    return true
+end
+
+local function IsColumnPropertiesValid(properties, columnName)
+    local valid = true
+    for _,propName in pairs(properties) do
+        if not propertyList[propName] then
+            print_err(string.format('[Column %s] Column \'Properties\' must reference a valid \'Observed\', \'NetBots\' or \'Spawn\' property. Name=%s', columnName, propName))
+            valid = false
+        end
+    end
+    return valid
+end
+
+local function IsColumnMappingsValid(mappings)
+    local valid = true
+    -- what makes a mapping invalid?
+    return valid
+end
+
+local function IsColumnThresholdsValid(thresholds, columnName)
+    if #thresholds > 2 then
+        print_err(string.format('[Column %s] Column \'Thresholds\' may contain either 1 or 2 number values, no more', columnName))
+        return false
+    else
+        for threshholdIdx, value in ipairs(thresholds) do
+            if type(value) ~= 'number' then
+                print_err(string.format('[Column %s] Column \'Thresholds\' values must be numbers in ascending order', columnName))
+                return false
+            end
+            if thresholdIdx == 2 and value < thresholds[1] then
+                print_err(string.format('[Column %s] Column \'Thresholds\' values must be in ascending order', columnName))
+                return false
+            end
+        end
+    end
+    return true
+end
+
+local function IsColumnValid(column, idx)
+    local columnType = 'property'
+    if not column['Name'] or type(column['Name']) ~= 'string' then
+        print_err(string.format('[Column %d] Columns must have a \'Name\' property of type \'string\'. Name=%s', idx, column['Name']))
+        return false
+    elseif column['Name'] == 'Name' then
+        -- special case name column
+        return true
+    end
+    if column['Type'] then
+        if type(column['Type']) ~= 'string' or (column['Type'] ~= 'button' and column['Type'] ~= 'property') then
+            print_err(string.format('[Column %d] Column Type must be \'property\' or \'button\'. Type=%s', idx, column['Type']))
+            return false
+        else
+            columnType = column['Type']
+        end
+    end
+    local valid = true
+    if columnType == 'property' then
+        if not column['Properties'] or type(column['Properties']) ~= 'table' then
+            print_err(string.format('[Column %s] Property Columns must have a \'Properties\' table', column['Name']))
+            valid = false
+        elseif not IsColumnPropertiesValid(column['Properties'], column['Name']) then
+            valid = false
+        end
+        if column['Mappings'] then
+            if type(column['Mappings']) ~= 'table' then
+                print_err(string.format('[Column %s] Column \'Mappings\' must be a table', column['Name']))
+                valid = false
+            elseif not IsColumnMappingsValid(column['Mappings']) then
+                valid = false
+            end
+        end
+        if column['Thresholds'] then 
+            if type(column['Thresholds']) ~= 'table' then
+                print_err(string.format('[Column %s] Column \'Thresholds\' must be a table', column['Name']))
+                valid = false
+            elseif not IsColumnThresholdsValid(column['Thresholds'], column['Name']) then
+                valid = false
+            end
+        end
+        if column['Percentage'] ~= nil and type(column['Percentage']) ~= 'boolean' then
+            print_err(string.format('[Column %s] Columns \'Percentage\' must be true or false', column['Name']))
+            valid = false
+        end
+        if column['Ascending'] ~= nil and type(column['Ascending']) ~= 'boolean' then
+            print_err(string.format('[Column %s] Columns \'Ascending\' must be true or false', column['Name']))
+            valid = false
+        end
+        if column['InZone'] ~= nil and type(column['InZone']) ~= 'boolean' then
+            print_err(string.format('[Column %s] Column \'InZone\' must be true or false', column['Name']))
+            valid = false
+        end
+    elseif columnType == 'button' then
+        if not column['Action'] or type(column['Action']) ~= 'string' then
+            print_err(string.format('[Column %s] Button Columns must have an \'Actions\' property', column['Name']))
+            valid = false
+        end
+    end
+    return valid
+end
+
+local function IsTabValid(tab, idx)
+    local valid = true
+    if not tab['Name'] or type(tab['Name']) ~= 'string' then
+        print_err(string.format('[Tab %d] Tabs must have a \'Name\' property of type \'string\'. Name=%s', idx, tab['Name']))
+        return false
+    end
+    if tab['Columns'] then
+        if type(tab['Columns']) == 'table' then
+            for columnIdx,column in pairs(tab['Columns']) do
+                valid = IsColumnValid(column, columnIdx) and valid
+            end
+        else
+            return false
+        end
+    end
+    return valid
+end
+
+local function ValidateSettings()
+    local valid = true
+    for idx,obsProp in pairs(settings['ObservedProperties']) do
+        valid = IsObservedPropertyValid(obsProp, idx) and valid
+    end
+    for idx,nbProp in pairs(settings['NetBotsProperties']) do
+        valid = IsNetBotsPropertyValid(nbProp, idx) and valid
+    end
+    for idx,spawnProp in pairs(settings['SpawnProperties']) do
+        valid = IsSpawnPropertyValid(spawnProp, idx) and valid
+    end
+    for idx,column in pairs(settings['Columns']) do
+        valid = IsColumnValid(column, idx) and valid
+    end
+    for idx,tab in pairs(settings['Tabs']) do
+        valid = IsTabValid(tab, idx) and valid
+    end
+    if not valid then
+        print_err('Exiting due to invalid configuration. Review the output above.')
+        mq.exit()
+    end
 end
 
 local function LoadSettingsFile()
@@ -345,6 +548,8 @@ local function LoadSettingsFile()
         -- Copy defaults into toon specific settings
         CopySettingsFile(default_settings_path, settings_path)
     end
+
+    ValidateSettings()
 end
 
 local function ShouldObserveProperty(botName, obsProp)
@@ -383,7 +588,7 @@ local function RemoveObserver(botName, obsProp, delay)
     -- Drop the observation if it is set
     if mq.TLO.DanNet(botName).ObserveSet(string.format('"%s"', obsProp['Name']))() == 1 then
         mq.cmd.dobserve(string.format('%s -q "%s" -drop', botName, obsProp['Name']))
-        mq.delay(50*observeWaitMod)
+        mq.delay(50*delay)
     end
 end
 
@@ -487,55 +692,57 @@ end
 local function DrawContextMenu(name, botName)
     if ImGui.BeginPopupContextItem("##popup"..name) then
         if ImGui.SmallButton("Target##"..name) then
-            mq.cmd.target(name)
             ImGui.CloseCurrentPopup()
+            mq.cmd.target(name)
         end
         ImGui.SameLine()
         if ImGui.SmallButton("Nav To##"..name) then
-            mq.cmd.nav('spawn '..name)
             ImGui.CloseCurrentPopup()
+            mq.cmd.nav('spawn '..name)
         end
         ImGui.SameLine()
         if ImGui.SmallButton("Come To Me##"..name) then
-            mq.cmd.dex(name..' /nav id ${Me.ID} log=critical')
             ImGui.CloseCurrentPopup()
+            mq.cmd.dex(name..' /nav id ${Me.ID} log=critical')
         end
         if ImGui.SmallButton("G Inv##"..name) then
-            mq.cmd.invite(name)
             ImGui.CloseCurrentPopup()
+            mq.cmd.invite(name)
         end
         ImGui.SameLine()
         if ImGui.SmallButton("R Inv##"..name) then
-            mq.cmd.raidinvite(name)
             ImGui.CloseCurrentPopup()
+            mq.cmd.raidinvite(name)
         end
         ImGui.SameLine()
         if ImGui.SmallButton("DZAdd##"..name) then
-            mq.cmd.dzadd(name)
             ImGui.CloseCurrentPopup()
+            mq.cmd.dzadd(name)
         end
         ImGui.SameLine()
         if ImGui.SmallButton("TAdd##"..name) then
-            mq.cmd.taskadd(name)
             ImGui.CloseCurrentPopup()
+            mq.cmd.taskadd(name)
         end
         if ImGui.SmallButton("Reset Obs##"..name) then
             print_msg('Resetting observed properties for: \ay'..name)
-            ManageObservers(name, true)
             ImGui.CloseCurrentPopup()
+            ManageObservers(name, true)
         end
         ImGui.Text('Send Command to '..botName..': ')
         local textInput = ""
         textInput, selected = ImGui.InputText("##input"..name, textInput, 32)
         if selected then
             print_msg('Sending command: \ag/dex '..botName..' '..textInput)
-            mq.cmd.dex(string.format('%s %s', name, textInput))
             ImGui.CloseCurrentPopup()
+            mq.cmd.dex(string.format('%s %s', name, textInput))
         end
         ImGui.EndPopup()
     end
 end
 
+local storedCommand = nil
+local storedCommandNoParse = false
 local function DrawNameButton(name, botName, botInZone, botInvis)
     -- Treat Name column special
     -- Fill name column
@@ -553,7 +760,7 @@ local function DrawNameButton(name, botName, botInZone, botInvis)
     end
 
     if ImGui.SmallButton(buttonText..'##'..name) then
-        mq.cmd.dex(name..' /foreground')
+        storedCommand = string.format('/dex %s /foreground', name)
     end
     ImGui.PopStyleColor(1)
     -- Context menu not working when using table API
@@ -593,10 +800,11 @@ local function DrawColumnButton(name, columnName, columnAction)
         local noparseCmd = string.match(command, '/noparse (.*)')
         if noparseCmd then
             print_msg('Run command: \ag'..command)
-            mq.cmd.noparse(noparseCmd)
+            storedCommand = noparseCmd
+            storedCommandNoParse = true
         else
             print_msg('Run command: \ag'..command)
-            mq.cmd.squelch(command)
+            storedCommand = command
         end
     end
 end
@@ -770,6 +978,9 @@ end
 
 -- ImGui main function for rendering the UI window
 local HUDGUI = function()
+    if mq.TLO.Me.CleanName() == 'load' then
+        return
+    end
     openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..mq.TLO.Me.CleanName(), openGUI, ImGuiWindowFlags.NoTitleBar)
     if shouldDrawGUI then
         if initialRun and ImGui.GetWindowHeight() == 32 and ImGui.GetWindowWidth() == 32 then
@@ -836,7 +1047,7 @@ local function SetupBindings()
     end)
 
     mq.bind('/boxhudend', function() 
-        mq.imgui.destroy('HUDGUI')
+        mq.imgui.destroy('BOXHUDUI')
         shouldDrawGUI = false
         terminate = true
     end)
@@ -900,9 +1111,22 @@ local function CleanupStaleData(currTime)
     end
 end
 
-local CheckGameState = function()
+local function SendCommand()
+    if storedCommandNoParse then
+        mq.cmd.noparse(storedCommand)
+    else
+        mq.cmd.squelch(storedCommand)
+    end
+    storedCommandNoParse = false
+    storedCommand = nil
+end
+
+local function CheckGameState()
     if mq.TLO.MacroQuest.GameState() ~= 'INGAME' then
         print_err('\arNot in game, stopping boxhud.\ax')
+        openGUI = false
+        shouldDrawGUI = false
+        mq.imgui.destroy('BOXHUDUI')
         mq.exit()
     end
 end
@@ -927,6 +1151,9 @@ local function main()
     -- Main run loop to populate observed property data of toons
     while not terminate do
         CheckGameState()
+        if storedCommand then
+            SendCommand()
+        end
         -- Update peerGroup if we've zoned and using the zone peer group
         if peerSource == 'dannet' and peerGroup ~= 'all' and zoneID ~= mq.TLO.Zone.ID() then
             peerGroup = GetZonePeerGroup()
