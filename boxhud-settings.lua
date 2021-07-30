@@ -183,15 +183,43 @@ return {
                 }
                 --[[
                 {
-                    Name='CWTN Paused',
+                    Name='Macro',
                     Type='property',
                     Properties={
-                        all='CWTN.Paused'
+                        all='Macro.Name',
+                        war='CWTN.Mode',
+                        ber='CWTN.Mode',
+                        bst='CWTN.Mode',
+                        shd='CWTN.Mode',
+                        clr='CWTN.Mode',
+                        shm='CWTN.Mode',
+                        rog='CWTN.Mode'
                     },
                     Thresholds=nil,
                     Percentage=false,
                     InZone=false
-                }
+                },
+                {
+                    Name='Paused',
+                    Type='property',
+                    Properties={
+                        all='Macro.Paused',
+                        war='CWTN.Paused',
+                        ber='CWTN.Paused',
+                        bst='CWTN.Paused',
+                        shd='CWTN.Paused',
+                        clr='CWTN.Paused',
+                        shm='CWTN.Paused',
+                        rog='CWTN.Paused'
+                    },
+                    Mappings={
+                        TRUE='PAUSED',
+                        FALSE=''
+                    },
+                    Thresholds=nil,
+                    Percentage=false,
+                    InZone=false
+                },
                 --]]
             }
         },
@@ -300,6 +328,7 @@ return {
 
     ObservedProperties = {
         -- Column specific
+        {Name='Me.Class.ShortName'},
         {Name='Me.PctHPs'},
         {Name='Me.PctMana'},
         {Name='Me.PctEndurance'},
@@ -314,7 +343,12 @@ return {
         --{
         --    Name='CWTN.Paused', 
         --    DependsOnName='Me.Class.ShortName', 
-        --    DependsOnValue='MNK,ROG,WAR,SHD,MAG,ENC,CLR'
+        --    DependsOnValue='MNK,ROG,WAR,SHD,MAG,ENC,CLR,BST,SHM'
+        --},
+        --{
+        --    Name='CWTN.Mode', 
+        --    DependsOnName='Me.Class.ShortName', 
+        --    DependsOnValue='MNK,ROG,WAR,SHD,MAG,ENC,CLR,BST,SHM'
         --}
         --{Name='Me.CombatState'}
         --{Name='FindItemCount[=Water Flask]'}

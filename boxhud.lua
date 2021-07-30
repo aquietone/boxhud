@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.8.0 -- aquietone
+boxhud.lua 1.8.1 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer 
@@ -26,18 +26,19 @@ Usage: /lua run boxhud [settings.lua]
        /bhversion - Display the running version
 
 Changes:
+1.8.1
+- Updated for RG build 216 changes
+- Switch to use mq.cmd and mq.cmdf
+- Updates to some conditions due to type changes
 1.8.0
 - Add handling for observing TLOs that may not be present on all toons
   Relies on defining dependencies between observed properties. For example:
     If you have the MQ2Monk, MQ2Eskay and MQ2Rogue plugins, which add TLO `CWTN`, and you want to observe `CWTN.Mode`, then it may interfere
     with macros running on toons without a CWTN class plugin loaded, like bards.
-    This can be handled by defining the observed property as:
+    This can be handled by defining the observed properties like:
 
-     {
-       Name='CWTN.Mode',
-       DependsOnName='Me.Class.ShortName',
-       DependsOnValue='MNK,SHD,ROG'
-     }
+     { Name='Me.Class.ShortName' },
+     { Name='CWTN.Mode', DependsOnName='Me.Class.ShortName', DependsOnValue='MNK,SHD,ROG' }
 
 - Set initial window size if window has default 32x32 size.
 - Exit if game state is not INGAME.
@@ -121,7 +122,7 @@ require 'ImGui'
 local arg = {...}
 
 -- Control variables
-local VERSION = '1.8.0'
+local VERSION = '1.8.1'
 local openGUI = true
 local shouldDrawGUI = true
 local terminate = false
@@ -227,21 +228,21 @@ local function PluginCheck()
     if IsUsingDanNet() then
         if not mq.TLO.Plugin('mq2dannet').IsLoaded() then
             print_msg("Plugin \ayMQ2DanNet\ax is required. Loading it now.")
-            mq.cmd.plugin('mq2dannet noauto')
+            mq.cmd('/plugin mq2dannet noauto')
         end
         -- turn off fullname mode in DanNet
-        if mq.TLO.DanNet.FullNames() == 1 then
-            mq.cmd.dnet('fullnames off')
+        if mq.TLO.DanNet.FullNames() then
+            mq.cmd('/dnet fullnames off')
         end
     end
     if IsUsingNetBots() then
         if not mq.TLO.Plugin('mq2eqbc').IsLoaded() then
             print_msg("Plugin \ayMQ2EQBC\ax is required. Loading it now.")
-            mq.cmd.plugin('mq2eqbc noauto')
+            mq.cmd('/plugin mq2eqbc noauto')
         end
         if not mq.TLO.Plugin('mq2netbots').IsLoaded() then
             print_msg("Plugin \ayMQ2NetBots\ax is required. Loading it now.")
-            mq.cmd.plugin('mq2netbots noauto')
+            mq.cmd('/plugin mq2netbots noauto')
         end
     end
 end
@@ -559,12 +560,29 @@ local function ShouldObserveProperty(botName, obsProp)
     elseif not obsProp['DependsOnValue'] or obsProp['DependsOnValue'] == '' then
         -- Does not care what the value is of the property, just that it is observed
         return true
-    elseif obsProp['DependsOnValue']:find(mq.TLO.DanNet(botName).Observe(string.format('"%s"', obsProp['DependsOnName']))()) ~= nil then
-        -- The value of the dependent property matches
-        return true
+    elseif obsProp['DependsOnValue'] then
+        local dependentValue = mq.TLO.DanNet(botName).Observe(string.format('"%s"', obsProp['DependsOnName']))()
+        if dependentValue and obsProp['DependsOnValue']:find(dependentValue) ~= nil then
+            -- The value of the dependent property matches
+            return true
+        end
     end
     -- Do not observe the property
     return false
+end
+
+-- Verify all observed properties are set for the given toon
+local function VerifyDependencyObserver(botName, obsProp)
+    local verifyStartTime = os.time(os.date("!*t"))
+    while not mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() do
+        mq.delay(100)
+        if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 20 then
+            print_err('Timed out verifying observer for \ay'..botName)
+            print_err('Exiting the script.')
+            mq.exit()
+        end
+    end
+    return
 end
 
 local function AddObserver(botName, obsProp, delay)
@@ -572,23 +590,24 @@ local function AddObserver(botName, obsProp, delay)
         for _,prop in pairs(settings['ObservedProperties']) do
             if prop['Name'] == obsProp['DependsOnName'] then
                 AddObserver(botName, prop, delay)
+                VerifyDependencyObserver(botName, prop)
             end
         end
     end
     if ShouldObserveProperty(botName, obsProp) then
         -- Add the observation if it is not set
-        if mq.TLO.DanNet(botName).ObserveSet(string.format('"%s"', obsProp['Name']))() == 0 then
-            mq.cmd.dobserve(string.format('%s -q "%s"', botName, obsProp['Name']))
-            mq.delay(50*delay)
+        if not mq.TLO.DanNet(botName).ObserveSet(string.format('"%s"', obsProp['Name']))() then
+            mq.cmdf('/dobserve %s -q "%s"', botName, obsProp['Name'])
+            mq.delay(100*delay)
         end
     end
 end
 
 local function RemoveObserver(botName, obsProp, delay)
     -- Drop the observation if it is set
-    if mq.TLO.DanNet(botName).ObserveSet(string.format('"%s"', obsProp['Name']))() == 1 then
-        mq.cmd.dobserve(string.format('%s -q "%s" -drop', botName, obsProp['Name']))
-        mq.delay(50*delay)
+    if mq.TLO.DanNet(botName).ObserveSet(string.format('"%s"', obsProp['Name']))() then
+        mq.cmdf('/dobserve %s -q "%s" -drop', botName, obsProp['Name'])
+        mq.delay(100*delay)
     end
 end
 
@@ -614,7 +633,7 @@ end
 local function VerifyObservers(botName)
     for _, obsProp in pairs(settings['ObservedProperties']) do
         if ShouldObserveProperty(botName, obsProp) then
-            if mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() == 0 then
+            if not mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() then
                 return false
             end
         end
@@ -623,9 +642,8 @@ local function VerifyObservers(botName)
 end
 
 local function AddAndVerifyObservers(botName)
-    print_msg('Adding observed properties for: \ay'..botName)
-    ManageObservers(botName, false)
     print_msg('Waiting for observed properties to be added for: \ay'..botName)
+    ManageObservers(botName, false)
     local verifyStartTime = os.time(os.date("!*t"))
     while not VerifyObservers(botName) do
         mq.delay(100)
@@ -635,6 +653,7 @@ local function AddAndVerifyObservers(botName)
             mq.exit()
         end
     end
+    print_msg('Added observed properties for: \ay'..botName)
 end
 
 local function SetText(value, thresholds, ascending, percentage)
@@ -689,45 +708,46 @@ local function SetText(value, thresholds, ascending, percentage)
     ImGui.PopStyleColor(1)
 end
 
+local resetObserversName = nil
 local function DrawContextMenu(name, botName)
     if ImGui.BeginPopupContextItem("##popup"..name) then
         if ImGui.SmallButton("Target##"..name) then
             ImGui.CloseCurrentPopup()
-            mq.cmd.target(name)
+            mq.cmdf('/target %s', name)
         end
         ImGui.SameLine()
         if ImGui.SmallButton("Nav To##"..name) then
             ImGui.CloseCurrentPopup()
-            mq.cmd.nav('spawn '..name)
+            mq.cmdf('/nav spawn %s', name)
         end
         ImGui.SameLine()
         if ImGui.SmallButton("Come To Me##"..name) then
             ImGui.CloseCurrentPopup()
-            mq.cmd.dex(name..' /nav id ${Me.ID} log=critical')
+            mq.cmdf('/dex %s /nav id ${Me.ID} log=critical', name)
         end
         if ImGui.SmallButton("G Inv##"..name) then
             ImGui.CloseCurrentPopup()
-            mq.cmd.invite(name)
+            mq.cmdf('/invite %s', name)
         end
         ImGui.SameLine()
         if ImGui.SmallButton("R Inv##"..name) then
             ImGui.CloseCurrentPopup()
-            mq.cmd.raidinvite(name)
+            mq.cmdf('/raidinvite %s', name)
         end
         ImGui.SameLine()
         if ImGui.SmallButton("DZAdd##"..name) then
             ImGui.CloseCurrentPopup()
-            mq.cmd.dzadd(name)
+            mq.cmdf('/dzadd %s', name)
         end
         ImGui.SameLine()
         if ImGui.SmallButton("TAdd##"..name) then
             ImGui.CloseCurrentPopup()
-            mq.cmd.taskadd(name)
+            mq.cmdf('/taskadd %s', name)
         end
         if ImGui.SmallButton("Reset Obs##"..name) then
             print_msg('Resetting observed properties for: \ay'..name)
             ImGui.CloseCurrentPopup()
-            ManageObservers(name, true)
+            resetObserversName = name
         end
         ImGui.Text('Send Command to '..botName..': ')
         local textInput = ""
@@ -735,14 +755,13 @@ local function DrawContextMenu(name, botName)
         if selected then
             print_msg('Sending command: \ag/dex '..botName..' '..textInput)
             ImGui.CloseCurrentPopup()
-            mq.cmd.dex(string.format('%s %s', name, textInput))
+            mq.cmdf('/dex %s %s', name, textInput)
         end
         ImGui.EndPopup()
     end
 end
 
 local storedCommand = nil
-local storedCommandNoParse = false
 local function DrawNameButton(name, botName, botInZone, botInvis)
     -- Treat Name column special
     -- Fill name column
@@ -760,7 +779,7 @@ local function DrawNameButton(name, botName, botInZone, botInvis)
     end
 
     if ImGui.SmallButton(buttonText..'##'..name) then
-        storedCommand = string.format('/dex %s /foreground', name)
+        storedCommand = string.format('/squelch /dex %s /foreground', name)
     end
     ImGui.PopStyleColor(1)
     -- Context menu not working when using table API
@@ -796,16 +815,8 @@ end
 
 local function DrawColumnButton(name, columnName, columnAction)
     if ImGui.SmallButton(columnName..'##'..name) then
-        local command = columnAction:gsub('#botName#', name)
-        local noparseCmd = string.match(command, '/noparse (.*)')
-        if noparseCmd then
-            print_msg('Run command: \ag'..command)
-            storedCommand = noparseCmd
-            storedCommandNoParse = true
-        else
-            print_msg('Run command: \ag'..command)
-            storedCommand = command
-        end
+        storedCommand = columnAction:gsub('#botName#', name)
+        print_msg('Run command: \ag'..storedCommand)
     end
 end
 
@@ -827,9 +838,9 @@ local function CompareWithSortSpecs(a, b)
         if column['Name'] == 'Name' or not column['Properties'] or not column['Properties']['all'] then
             aVal = a
             bVal = b
-        elseif dataTable[a] and dataTable[a][column['Properties']['all']] and dataTable[b] and dataTable[b][column['Properties']['all']] then
-            aVal = dataTable[a][column['Properties']['all']]
-            bVal = dataTable[b][column['Properties']['all']]
+        elseif dataTable[a] and dataTable[b] then
+            aVal = dataTable[a][column['Properties']['all']] or -1
+            bVal = dataTable[b][column['Properties']['all']] or -1
         else
             aVal = a
             bVal = b
@@ -868,7 +879,7 @@ end
 local function DrawHUDColumns(columns, tabName)
     local flags = bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Reorderable, ImGuiTableFlags.Hideable, ImGuiTableFlags.MultiSortable,
             ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY, ImGuiTableFlags.NoSavedSettings)
-    if ImGui.BeginTable('##bhtable'..tabName..tostring(tableRandom), table.getn(columns), flags, 0, 0, 0.0) then
+    if ImGui.BeginTable('##bhtable'..tabName..tostring(tableRandom), #columns, flags, 0, 0, 0.0) then
         for i, column in pairs(columns) do
             if column['Name'] == 'Name' then
                 ImGui.TableSetupColumn('Name',         bit32.bor(ImGuiTableColumnFlags.DefaultSort, ImGuiTableColumnFlags.WidthFixed),   -1.0, i)
@@ -968,7 +979,7 @@ local function DrawHUDTabs()
                 ImGui.SameLine()
                 if ImGui.Button('Reset') then
                     print_msg('Resetting observed properties for: \ay'..peerTable[adminPeerSelected+1])
-                    ManageObservers(peerTable[adminPeerSelected+1], true)
+                    resetObserversName = peerTable[adminPeerSelected+1]
                 end
             end
         end
@@ -1112,12 +1123,7 @@ local function CleanupStaleData(currTime)
 end
 
 local function SendCommand()
-    if storedCommandNoParse then
-        mq.cmd.noparse(storedCommand)
-    else
-        mq.cmd.squelch(storedCommand)
-    end
-    storedCommandNoParse = false
+    mq.cmdf(storedCommand)
     storedCommand = nil
 end
 
@@ -1164,7 +1170,11 @@ local function main()
         for botIdx, botName in pairs(peerTable) do
             -- Ensure observers are set for the toon
             if IsUsingDanNet() then
-                if not VerifyObservers(botName) or not observedToons[botName] then
+                if resetObserversName == botName then
+                    resetObserversName = nil
+                    ManageObservers(botName, true)
+                    AddAndVerifyObservers(botName)
+                elseif not VerifyObservers(botName) or not observedToons[botName] then
                     AddAndVerifyObservers(botName)
                 end
             end
