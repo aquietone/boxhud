@@ -1,3 +1,5 @@
+2.0.0
+- Refactor settings and project structure
 1.8.1
 - Updated for RG build 216 changes
 - Switch to use mq.cmd and mq.cmdf
