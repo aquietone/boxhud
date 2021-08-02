@@ -4,6 +4,7 @@ local mq = require('mq')
 local converter = require('boxhud.settings-converter')
 dofile('boxhud/persistence.lua')
 
+local lyaml = require('lyaml.init')
 local utils = {}
 
 SETTINGS = {}
@@ -360,6 +361,7 @@ function LoadSettings(arg)
     local boxhud_dir = lua_dir .. '/boxhud'
     local settings_file = arg[1] or string.format('boxhud-settings-%s.lua', string.lower(mq.TLO.Me.Name()))
     local settings_path = string.format('%s/%s', boxhud_dir, settings_file)
+    local yaml_settings_path = string.format('%s/boxhud-settings.yaml', boxhud_dir)
     local old_settings_path = string.format('%s/%s', lua_dir, settings_file)
     local default_settings_path = string.format('%s/%s', boxhud_dir, 'boxhud-settings.lua')
 
@@ -393,6 +395,17 @@ function LoadSettings(arg)
         persistence.store(new_settings_path, SETTINGS)
     end
     ValidateSettings()
+
+    --[[
+    f = io.open(yaml_settings_path, 'w')
+    f:write(lyaml.dump({SETTINGS}))
+    io.close(f)
+    f = io.open(yaml_settings_path, 'r')
+    local contents = f:read('*a')
+    io.close(f)
+    SETTINGS = lyaml.load(contents)
+    ValidateSettings()
+    --]]
 end
 
 return utils
