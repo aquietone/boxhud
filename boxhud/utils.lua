@@ -9,6 +9,8 @@ local utils = {}
 
 VERSION = '2.0.0'
 
+SETTINGS_FILE = nil
+
 SETTINGS = {}
 PEER_SOURCE = 'dannet'
 -- Default DanNet peer group to use
@@ -396,21 +398,21 @@ end
 function LoadSettings(arg)
     local lua_dir = mq.TLO.MacroQuest.Path():gsub('\\', '/') .. '/lua'
     local boxhud_dir = lua_dir .. '/boxhud'
-    local settings_file = arg[1] or string.format('boxhud-settings-%s.lua', string.lower(mq.TLO.Me.Name()))
-    local settings_path = string.format('%s/%s', boxhud_dir, settings_file)
+    SETTINGS_FILE = arg[1] or string.format('boxhud-settings-%s.lua', string.lower(mq.TLO.Me.Name()))
+    local settings_path = string.format('%s/%s', boxhud_dir, SETTINGS_FILE)
     local yaml_settings_path = string.format('%s/boxhud-settings.yaml', boxhud_dir)
-    local old_settings_path = string.format('%s/%s', lua_dir, settings_file)
+    local old_settings_path = string.format('%s/%s', lua_dir, SETTINGS_FILE)
     local default_settings_path = string.format('%s/%s', boxhud_dir, 'boxhud-settings.lua')
 
     if FileExists(settings_path) then
-        print_msg('Loading settings from file: ' .. settings_file)
-        SETTINGS = require(string.format('boxhud.%s', settings_file:gsub('.lua', '')))
+        print_msg('Loading settings from file: ' .. SETTINGS_FILE)
+        SETTINGS = require(string.format('boxhud.%s', SETTINGS_FILE:gsub('.lua', '')))
     elseif FileExists(old_settings_path) then
         -- copy old settings to new location in boxhud folder
-        print_msg(string.format('Moving lua/%s to lua/boxhud/%s', settings_file, settings_file))
+        print_msg(string.format('Moving lua/%s to lua/boxhud/%s', SETTINGS_FILE, SETTINGS_FILE))
         CopyFile(old_settings_path, settings_path)
-        print_msg('Loading settings from file: ' .. settings_file)
-        SETTINGS = require(string.format('boxhud.%s', settings_file:gsub('.lua', '')))
+        print_msg('Loading settings from file: ' .. SETTINGS_FILE)
+        SETTINGS = require(string.format('boxhud.%s', SETTINGS_FILE:gsub('.lua', '')))
         --os.remove(old_settings_path)
 
         --local new_settings_path = string.format('%s/%s', boxhud_dir, 'newsettings.lua')
@@ -426,9 +428,9 @@ function LoadSettings(arg)
 
     if not SETTINGS['SchemaVersion'] or SETTINGS['SchemaVersion'] < 2 then
         SETTINGS = ConvertSettings(SETTINGS)
-        --local backup_settings_path = string.format('%s/%s.bak', boxhud_dir, settings_file)
+        --local backup_settings_path = string.format('%s/%s.bak', boxhud_dir, SETTINGS_FILE)
         --CopyFile(settings_path, backup_settings_path)
-        --local new_settings_path = string.format('%s/%s', boxhud_dir, settings_file)
+        --local new_settings_path = string.format('%s/%s', boxhud_dir, SETTINGS_FILE)
         --persistence.store(new_settings_path, SETTINGS)
     end
     ValidateSettings()
@@ -443,6 +445,14 @@ function LoadSettings(arg)
     SETTINGS = lyaml.load(contents)
     ValidateSettings()
     --]]
+end
+
+function SaveSettings()
+    print(SETTINGS_FILE)
+    local lua_dir = mq.TLO.MacroQuest.Path():gsub('\\', '/') .. '/lua'
+    local boxhud_dir = lua_dir .. '/boxhud'
+    local settings_path = string.format('%s/%s', boxhud_dir, SETTINGS_FILE)
+    persistence.store(settings_path, SETTINGS)
 end
 
 return utils
