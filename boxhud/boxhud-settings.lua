@@ -64,6 +64,8 @@ Settings file for boxhud.lua script.
 --]]
 
 return {
+    SchemaVersion = 2,
+
     PeerSource = 'dannet',
     DanNetPeerGroup = 'zone',
 
@@ -73,217 +75,245 @@ return {
 
     -- Global columns to display on all tabs
     Columns = {
-        { 
-            Name='Name',
+        ['Name'] = { 
             Type='property',
             Properties=nil, 
             Thresholds=nil, 
             Percentage=false, 
             InZone=false
+        },
+        ['HP%'] = {
+            Type='property',
+            Properties={all='Me.PctHPs'}, 
+            Thresholds={35,70}, 
+            Percentage=true, 
+            Ascending=true,
+            InZone=false
+        },
+        ['MP%'] = {
+            Type='property',
+            Properties={all='Me.PctMana'}, 
+            Thresholds={35,70}, 
+            Percentage=true, 
+            Ascending=true,
+            InZone=false
+        },
+        ['EP%'] = {
+            Type='property',
+            Properties={all='Me.PctEndurance'}, 
+            Thresholds={35,70}, 
+            Percentage=true,
+            Ascending=true,
+            InZone=false
+        },
+        ['Distance'] = {
+            Type='property',
+            Properties={all='Distance3D'}, 
+            Thresholds={100,200}, 
+            Percentage=false, 
+            Ascending=false,
+            InZone=true
+        },
+        ['Target'] = {
+            Type='property',
+            Properties={all='Target.CleanName'}, 
+            Thresholds=nil, 
+            Percentage=false, 
+            InZone=true
+        },
+        ['Spell/Disc'] = {
+            Type='property',
+            Properties={
+                all='Me.Casting.Name',
+                melee='Me.ActiveDisc.Name'
+            }, 
+            Thresholds=nil, 
+            Percentage=false, 
+            InZone=false
+        },
+        ['Macro'] = {
+            Type='property',
+            Properties={
+                all='Macro.Name'
+            },
+            Thresholds=nil,
+            Percentage=false,
+            InZone=false
+        },
+        ['Paused'] = {
+            Type='property',
+            Properties={
+                all='Macro.Paused'
+            },
+            Mappings={
+                TRUE='PAUSED',
+                FALSE=''
+            },
+            Thresholds=nil,
+            Percentage=false,
+            InZone=false
+        },
+        ['Pause'] = {
+            Type='button',
+            Action='/dex #botName# /mqp'
+        },
+        ['End'] = {
+            Type='button',
+            Action='/dex #botName# /end'
+        },
+        ['Exp%'] = {
+            Type='property',
+            Properties={
+                all='Me.PctExp'
+            },
+            Thresholds={33,66},
+            Percentage=true,
+            Ascending=true,
+            InZone=false
+        },
+        ['AA Unspent'] = {
+            Type='property',
+            Properties={
+                all='Me.AAPoints'
+            },
+            Thresholds={50,100},
+            Percentage=false,
+            Ascending=false,
+            InZone=false
         }
+        --[[ Example columns
+        ['Macro'] = {
+            Type='property',
+            Properties={
+                all='Macro.Name',
+                war='CWTN.Mode',
+                ber='CWTN.Mode',
+                bst='CWTN.Mode',
+                shd='CWTN.Mode',
+                clr='CWTN.Mode',
+                shm='CWTN.Mode',
+                rog='CWTN.Mode'
+            },
+            Thresholds=nil,
+            Percentage=false,
+            InZone=false
+        },
+        ['Paused'] = {
+            Type='property',
+            Properties={
+                all='Macro.Paused',
+                war='CWTN.Paused',
+                ber='CWTN.Paused',
+                bst='CWTN.Paused',
+                shd='CWTN.Paused',
+                clr='CWTN.Paused',
+                shm='CWTN.Paused',
+                rog='CWTN.Paused'
+            },
+            Mappings={
+                TRUE='PAUSED',
+                FALSE=''
+            },
+            Thresholds=nil,
+            Percentage=false,
+            InZone=false
+        },
+        ['CombatState'] = {
+            Type='property',
+            Properties={
+                all='Me.CombatState'
+            }, 
+            Thresholds=nil, 
+            Percentage=false, 
+            InZone=false
+        },
+        ['Junk Drink'] = {
+            Type='property',
+            Properties={
+                all='FindItemCount[=Water Flask]'
+            }, 
+            Thresholds=nil, 
+            Percentage=false, 
+            InZone=false
+        },
+        ['IVU'] = {
+            Type='property',
+            Properties={
+                all='Me.Invis[UNDEAD]'
+            }, 
+            Thresholds=nil, 
+            Percentage=false, 
+            InZone=false
+        }
+        -- NetBots example columns
+        ['InZone'] = {
+            Type='property',
+            Properties={
+                all='InZone'
+            }, 
+            Thresholds=nil, 
+            Percentage=false, 
+            InZone=false
+        },
+        ['Casting'] = {
+            Type='property',
+            Properties={
+                all='Casting'
+            }, 
+            Thresholds=nil, 
+            Percentage=false, 
+            InZone=false
+        },
+        ['Invis'] = {
+            Type='property',
+            Properties={
+                all='Invis'
+            }, 
+            Thresholds=nil, 
+            Percentage=false, 
+            InZone=false
+        }
+        --]]
     },
 
     Tabs = {
         {
             Name='General',
             Columns={
-                { 
-                    Name='HP%', 
-                    Type='property',
-                    Properties={all='Me.PctHPs'}, 
-                    Thresholds={35,70}, 
-                    Percentage=true, 
-                    Ascending=true,
-                    InZone=false
-                },
-                { 
-                    Name='MP%', 
-                    Type='property',
-                    Properties={all='Me.PctMana'}, 
-                    Thresholds={35,70}, 
-                    Percentage=true, 
-                    Ascending=true,
-                    InZone=false
-                },
-                { 
-                    Name='EP%', 
-                    Type='property',
-                    Properties={all='Me.PctEndurance'}, 
-                    Thresholds={35,70}, 
-                    Percentage=true,
-                    Ascending=true,
-                    InZone=false
-                },
-                { 
-                    Name='Distance', 
-                    Type='property',
-                    Properties={all='Distance3D'}, 
-                    Thresholds={100,200}, 
-                    Percentage=false, 
-                    Ascending=false,
-                    InZone=true
-                },
-                { 
-                    Name='Target', 
-                    Type='property',
-                    Properties={all='Target.CleanName'}, 
-                    Thresholds=nil, 
-                    Percentage=false, 
-                    InZone=true
-                },
-                { 
-                    Name='Spell/Disc', 
-                    Type='property',
-                    Properties={
-                        all='Me.Casting.Name',
-                        melee='Me.ActiveDisc.Name'
-                    }, 
-                    Thresholds=nil, 
-                    Percentage=false, 
-                    InZone=false
-                }
+                'Name',
+                'HP%',
+                'MP%',
+                'EP%',
+                'Distance',
+                'Target',
+                'Spell/Disc'
             }
         },
         {
             Name='Macros',
             Columns = {
-                {
-                    Name='Macro',
-                    Type='property',
-                    Properties={
-                        all='Macro.Name'
-                    },
-                    Thresholds=nil,
-                    Percentage=false,
-                    InZone=false
-                },
-                {
-                    Name='Paused',
-                    Type='property',
-                    Properties={
-                        all='Macro.Paused'
-                    },
-                    Mappings={
-                        TRUE='PAUSED',
-                        FALSE=''
-                    },
-                    Thresholds=nil,
-                    Percentage=false,
-                    InZone=false
-                },
-                {
-                    Name='Pause',
-                    Type='button',
-                    Action='/dex #botName# /mqp'
-                },
-                {
-                    Name='End',
-                    Type='button',
-                    Action='/dex #botName# /end'
-                }
-                --[[
-                {
-                    Name='Macro',
-                    Type='property',
-                    Properties={
-                        all='Macro.Name',
-                        war='CWTN.Mode',
-                        ber='CWTN.Mode',
-                        bst='CWTN.Mode',
-                        shd='CWTN.Mode',
-                        clr='CWTN.Mode',
-                        shm='CWTN.Mode',
-                        rog='CWTN.Mode'
-                    },
-                    Thresholds=nil,
-                    Percentage=false,
-                    InZone=false
-                },
-                {
-                    Name='Paused',
-                    Type='property',
-                    Properties={
-                        all='Macro.Paused',
-                        war='CWTN.Paused',
-                        ber='CWTN.Paused',
-                        bst='CWTN.Paused',
-                        shd='CWTN.Paused',
-                        clr='CWTN.Paused',
-                        shm='CWTN.Paused',
-                        rog='CWTN.Paused'
-                    },
-                    Mappings={
-                        TRUE='PAUSED',
-                        FALSE=''
-                    },
-                    Thresholds=nil,
-                    Percentage=false,
-                    InZone=false
-                },
-                --]]
+                'Name',
+                'Macro',
+                'Paused',
+                'Pause',
+                'End'
             }
         },
         {
             Name='XP',
             Columns = {
-                {
-                    Name='Exp%',
-                    Type='property',
-                    Properties={
-                        all='Me.PctExp'
-                    },
-                    Thresholds={33,66},
-                    Percentage=true,
-                    Ascending=true,
-                    InZone=false
-                },
-                {
-                    Name='AA Unspent',
-                    Type='property',
-                    Properties={
-                        all='Me.AAPoints'
-                    },
-                    Thresholds={50,100},
-                    Percentage=false,
-                    Ascending=false,
-                    InZone=false
-                }
+                'Name',
+                'Exp%',
+                'AA Unspent'
             }
         }
         --[[
         {
             Name='Examples',
             Columns = {
-                { 
-                    Name='CombatState', 
-                    Type='property',
-                    Properties={
-                        all='Me.CombatState'
-                    }, 
-                    Thresholds=nil, 
-                    Percentage=false, 
-                    InZone=false
-                },
-                { 
-                    Name='Junk Drink', 
-                    Type='property',
-                    Properties={
-                        all='FindItemCount[=Water Flask]'
-                    }, 
-                    Thresholds=nil, 
-                    Percentage=false, 
-                    InZone=false
-                },
-                { 
-                    Name='IVU', 
-                    Type='property',
-                    Properties={
-                        all='Me.Invis[UNDEAD]'
-                    }, 
-                    Thresholds=nil, 
-                    Percentage=false, 
-                    InZone=false
-                }
+                'CombatState',
+                'Junk Drink',
+                'IVU'
             }
         }
         --]]
@@ -291,79 +321,46 @@ return {
         {
             Name='NetBotsExamples',
             Columns = {
-                { 
-                    Name='InZone', 
-                    Type='property',
-                    Properties={
-                        all='InZone'
-                    }, 
-                    Thresholds=nil, 
-                    Percentage=false, 
-                    InZone=false
-                },
-                { 
-                    Name='Casting', 
-                    Type='property',
-                    Properties={
-                        all='Casting'
-                    }, 
-                    Thresholds=nil, 
-                    Percentage=false, 
-                    InZone=false
-                },
-                { 
-                    Name='Invis', 
-                    Type='property',
-                    Properties={
-                        all='Invis'
-                    }, 
-                    Thresholds=nil, 
-                    Percentage=false, 
-                    InZone=false
-                }
+                'InZone',
+                'Casting',
+                'Invis'
             }
         }
         --]]
     },
 
-    ObservedProperties = {
+    Properties = {
         -- Column specific
-        {Name='Me.Class.ShortName'},
-        {Name='Me.PctHPs'},
-        {Name='Me.PctMana'},
-        {Name='Me.PctEndurance'},
-        {Name='Me.Casting.Name'},
-        {Name='Me.ActiveDisc.Name'},
-        {Name='Target.CleanName'},
-        {Name='Macro.Name'},
-        {Name='Macro.Paused'},
-        {Name='Me.PctExp'},
-        {Name='Me.AAPoints'}
+        ['Me.Class.ShortName'] = { Type='Observed' },
+        ['Me.PctHPs'] = { Type='Observed' },
+        ['Me.PctMana'] = { Type='Observed' },
+        ['Me.PctEndurance'] = { Type='Observed' },
+        ['Me.Casting.Name'] = { Type='Observed' },
+        ['Me.ActiveDisc.Name'] = { Type='Observed' },
+        ['Target.CleanName'] = { Type='Observed' },
+        ['Macro.Name'] = { Type='Observed' },
+        ['Macro.Paused'] = { Type='Observed' },
+        ['Me.PctExp'] = { Type='Observed' },
+        ['Me.AAPoints'] = { Type='Observed' },
+        ['Distance3D'] = { Type='Spawn' }
         -- Other example properties
-        --{
-        --    Name='CWTN.Paused', 
-        --    DependsOnName='Me.Class.ShortName', 
+        --['CTWN.Paused'] = {
+        --    Type='Observed',
+        --    DependsOnName='Me.Class.ShortName',
         --    DependsOnValue='MNK,ROG,WAR,SHD,MAG,ENC,CLR,BST,SHM'
         --},
-        --{
-        --    Name='CWTN.Mode', 
-        --    DependsOnName='Me.Class.ShortName', 
+        --['CWTN.Mode'] = {
+        --    Type='Observed',
+        --    DependsOnName='Me.Class.ShortName',
         --    DependsOnValue='MNK,ROG,WAR,SHD,MAG,ENC,CLR,BST,SHM'
-        --}
-        --{Name='Me.CombatState'}
-        --{Name='FindItemCount[=Water Flask]'}
-        --{Name='Me.Invis[UNDEAD]'}
-    },
-
-    SpawnProperties = {
-        {Name='Distance3D'}
-    },
-
-    NetBotsProperties = {
+        --},
+        --['Me.CombatState'] = { Type='Observed'},
+        --['FindItemCount[=Water Flask]'] = { Type='Observed'] },
+        --['Me.Invis[UNDEAD]'] = { Type='Observed' }
         -- Example netbots properties
-        --{Name='TargetID'},
-        --{Name='InZone'},
-        --{Name='Casting'},
-        --{Name='Invis'}
+        --['TargetID'} = { Type='NetBots' },
+        --['InZone'} = { Type='NetBots' },
+        --['Casting'} = { Type='NetBots' },
+        --['Invis'] = { Type='NetBots' }
     }
 }

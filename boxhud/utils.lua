@@ -7,6 +7,8 @@ dofile('boxhud/persistence.lua')
 local lyaml = require('lyaml.init')
 local utils = {}
 
+VERSION = '2.0.0'
+
 SETTINGS = {}
 PEER_SOURCE = 'dannet'
 -- Default DanNet peer group to use
@@ -135,51 +137,57 @@ local function GetZonePeerGroup()
     end
 end
 
-local function ValidateProperty(propName, propSettings, idx)
-    if not propName or type(propName) ~= 'string' then
-        print_err(string.format('[%s %s] Property name is invalid. Must be a string', propSettings['Type'], propName))
-        return false
+function ValidateProperty(propName, propSettings, idx)
+    local message = nil
+    if not propName or type(propName) ~= 'string' or string.len(propName) == 0 then
+        message = 'Property name is invalid. Name must be a non-empty string'
+        print_err(string.format('[%s %s] %s', propSettings['Type'], propName, message))
+        return false, message
     else
         if propSettings['Type'] == 'Observed' then
             if propSettings['DependsOnName'] and not SETTINGS['Properties'][propSettings['DependsOnName']] then
-                print_err(string.format(
+                message = string.format(
                         '[Properties %s] \'DependsOnName\' must refer to another observed property name. DependsOnName=%s', 
                         propName, propSettings['DependsOnName'])
-                    )
-                return false
+                print_err(message)
+                return false, message
             end
             if propSettings['DependsOnValue'] and not propSettings['DependsOnName'] then
-                print_err(string.format('[Properties %s] \'DependsOnValue\' requires \'DependsOnName\' to also be set', propName))
-                return false
+                message = string.format('[Properties %s] \'DependsOnValue\' requires \'DependsOnName\' to also be set', propName)
+                print_err(message)
+                return false, message
             end
             isUsingDanNet = true
         elseif propSettings['Type'] == 'Spawn' then
-            if propSettings['FromIDProperty'] and not SETTINGS['Properties'][property['FromIDProperty']] then
-                print_err(string.format(
+            if propSettings['FromIDProperty'] and not SETTINGS['Properties'][propSettings['FromIDProperty']] then
+                message = string.format(
                         '[Properties %s] \'FromIDProperty\' must refer to a valid Observed or NetBots property. FromIDProperty=%s',
                         propName, propSettings['FromIDProperty'])
-                    )
-                return false
+                print_err(message)
+                return false, message
             end
         elseif propSettings['Type'] == 'NetBots' then
             isUsingNetBots = true
         else
-            print_err(string.format('[Properties %s] Property type not supported. Type=%s', propName, propSettings['Type']))
-            return false
+            message = string.format('[Properties %s] Property type not supported. Type=%s', propName, propSettings['Type'])
+            print_err(message)
+            return false, message
         end
     end
-    return true
+    return true, nil
 end
 
 local function ValidateColumnProperties(properties, columnName)
+    local message = nil
     local valid = true
     for _,propName in pairs(properties) do
         if not SETTINGS['Properties'][propName] then
-            print_err(string.format('[Column %s] Column \'Properties\' must reference a valid \'Observed\', \'NetBots\' or \'Spawn\' property. Name=%s', columnName, propName))
+            message = string.format('Column \'Properties\' must reference a valid \'Observed\', \'NetBots\' or \'Spawn\' property. Name=%s', propName)
+            print_err(string.format('[Column %s] %s', columnName, message))
             valid = false
         end
     end
-    return valid
+    return valid, message
 end
 
 local function ValidateColumnMappings(mappings)
@@ -189,37 +197,44 @@ local function ValidateColumnMappings(mappings)
 end
 
 local function ValidateColumnThresholds(thresholds, columnName)
+    local message = nil
     if #thresholds > 2 then
-        print_err(string.format('[Column %s] Column \'Thresholds\' may contain either 1 or 2 number values, no more', columnName))
-        return false
+        message = 'Column \'Thresholds\' may contain either 1 or 2 number values, no more'
+        print_err(string.format('[Column %s] %s', columnName, message))
+        return false, message
     else
-        for threshholdIdx, value in ipairs(thresholds) do
+        for thresholdIdx, value in ipairs(thresholds) do
             if type(value) ~= 'number' then
-                print_err(string.format('[Column %s] Column \'Thresholds\' values must be numbers in ascending order', columnName))
-                return false
+                message = 'Column \'Thresholds\' values must be numbers in ascending order'
+                print_err(string.format('[Column %s] %s', columnName, message))
+                return false, message
             end
-            if threshholdIdx == 2 and value < thresholds[1] then
-                print_err(string.format('[Column %s] Column \'Thresholds\' values must be in ascending order', columnName))
-                return false
+            if thresholdIdx == 2 and value < thresholds[1] then
+                message = 'Column \'Thresholds\' values must be numbers in ascending order'
+                print_err(string.format('[Column %s] %s', columnName, message))
+                return false, message
             end
         end
     end
-    return true
+    return true, message
 end
 
-local function ValidateColumn(columnName, columnSettings)
+function ValidateColumn(columnName, columnSettings)
+    local message = nil
     local columnType = 'property'
-    if not columnName or type(columnName) ~= 'string' then
-        print_err(string.format('[Column %s] Columns name is invalid. Must be a string.', columnName))
-        return false
+    if not columnName or type(columnName) ~= 'string' or string.len(columnName) == 0 then
+        message = 'Columns name is invalid. Name must be a non-empty string.'
+        print_err(string.format('[Column %s] %s', columnName, message))
+        return false, message
     elseif columnName == 'Name' then
         -- special case name column
-        return true
+        return true, nil
     end
     if columnSettings['Type'] then
         if type(columnSettings['Type']) ~= 'string' or (columnSettings['Type'] ~= 'button' and columnSettings['Type'] ~= 'property') then
-            print_err(string.format('[Column %s] Column Type must be \'property\' or \'button\'. Type=%s', columnName, columnSettings['Type']))
-            return false
+            message = string.format('Column Type must be \'property\' or \'button\'. Type=%s', columnSettings['Type'])
+            print_err(string.format('[Column %s] %s', columnName, message))
+            return false, message
         else
             columnType = columnSettings['Type']
         end
@@ -227,67 +242,89 @@ local function ValidateColumn(columnName, columnSettings)
     local valid = true
     if columnType == 'property' then
         if not columnSettings['Properties'] or type(columnSettings['Properties']) ~= 'table' then
-            print_err(string.format('[Column %s] Property Columns must have a \'Properties\' table', columnName))
+            message = 'Property Columns must have a \'Properties\' table'
+            print_err(string.format('[Column %s] %s', columnName, message))
             valid = false
-        elseif not ValidateColumnProperties(columnSettings['Properties'], columnName) then
-            valid = false
+        else
+            local ok, m1 = ValidateColumnProperties(columnSettings['Properties'], columnName)
+            if not ok then
+                message = m1
+                valid = false
+            end
         end
         if columnSettings['Mappings'] then
             if type(columnSettings['Mappings']) ~= 'table' then
-                print_err(string.format('[Column %s] Column \'Mappings\' must be a table', columnName))
+                message = 'Column \'Mappings\' must be a table'
+                print_err(string.format('[Column %s] %s', columnName, message))
                 valid = false
-            elseif not ValidateColumnMappings(columnSettings['Mappings']) then
-                valid = false
+            else
+                local ok, m1 = ValidateColumnMappings(columnSettings['Mappings'])
+                if not ok then
+                    message = m1
+                    valid = false
+                end
             end
         end
         if columnSettings['Thresholds'] then 
             if type(columnSettings['Thresholds']) ~= 'table' then
-                print_err(string.format('[Column %s] Column \'Thresholds\' must be a table', columnName))
+                message = 'Column \'Thresholds\' must be a table'
+                print_err(string.format('[Column %s] %s', columnName, message))
                 valid = false
-            elseif not ValidateColumnThresholds(columnSettings['Thresholds'], columnName) then
-                valid = false
+            else
+                local ok, m1 = ValidateColumnThresholds(columnSettings['Thresholds'], columnName)
+                if not ok then
+                    message = m1
+                    valid = false
+                end
             end
         end
         if columnSettings['Percentage'] ~= nil and type(columnSettings['Percentage']) ~= 'boolean' then
-            print_err(string.format('[Column %s] Columns \'Percentage\' must be true or false', columnName))
+            message = 'Columns \'Percentage\' must be true or false'
+            print_err(string.format('[Column %s] %s', columnName, message))
             valid = false
         end
         if columnSettings['Ascending'] ~= nil and type(columnSettings['Ascending']) ~= 'boolean' then
-            print_err(string.format('[Column %s] Columns \'Ascending\' must be true or false', columnName))
+            message = 'Columns \'Ascending\' must be true or false'
+            print_err(string.format('[Column %s] %s', columnName, message))
             valid = false
         end
         if columnSettings['InZone'] ~= nil and type(columnSettings['InZone']) ~= 'boolean' then
-            print_err(string.format('[Column %s] Column \'InZone\' must be true or false', columnName))
+            message = 'Column \'InZone\' must be true or false'
+            print_err(string.format('[Column %s] %s', columnName, message))
             valid = false
         end
     elseif columnType == 'button' then
         if not columnSettings['Action'] or type(columnSettings['Action']) ~= 'string' then
-            print_err(string.format('[Column %s] Button Columns must have an \'Actions\' property', columnName))
+            message = 'Button Columns must have an \'Actions\' property'
+            print_err(string.format('[Column %s] %s', columnName, message))
             valid = false
         end
     end
-    return valid
+    return valid, message
 end
 
-local function ValidateTab(tab, idx)
+function ValidateTab(tab, idx)
+    local message = nil
     local valid = true
-    if not tab['Name'] or type(tab['Name']) ~= 'string' then
-        print_err(string.format('[Tab %d] Tabs must have a \'Name\' property of type \'string\'. Name=%s', idx, tab['Name']))
-        return false
+    if not tab['Name'] or type(tab['Name']) ~= 'string' or string.len(tab['Name']) == 0 then
+        message = string.format('Tabs \'Name\' must be a non-empty \'string\'. Name=%s', tab['Name'])
+        print_err(string.format('[Tab %d] %s', idx, message))
+        return false, message
     end
     if tab['Columns'] then
         if type(tab['Columns']) == 'table' then
             for columnIdx,column in pairs(tab['Columns']) do
                 if not SETTINGS['Columns'][column] then
+                    message = 'tab includes bad column name'
                     print_err('tab includes bad column name')
                     valid = false
                 end
             end
         else
-            return false
+            return false, 'Tab \'Columns\' is an unexpected format. \'Columns\' must be a table.'
         end
     end
-    return valid
+    return valid, message
 end
 
 local function ValidateOptionalSettings()
@@ -342,13 +379,13 @@ local function ValidateSettings()
     local valid = true
     valid = valid and ValidateOptionalSettings()
     for propName,propSettings in pairs(SETTINGS['Properties']) do
-        valid = ValidateProperty(propName, propSettings) and valid
+        valid,_ = ValidateProperty(propName, propSettings) and valid
     end
     for columnName,columnSettings in pairs(SETTINGS['Columns']) do
-        valid = ValidateColumn(columnName, columnSettings) and valid
+        valid,_ = ValidateColumn(columnName, columnSettings) and valid
     end
     for idx,tab in pairs(SETTINGS['Tabs']) do
-        valid = ValidateTab(tab, idx) and valid
+        valid,_ = ValidateTab(tab, idx) and valid
     end
     if not valid then
         print_err('Exiting due to invalid configuration. Review the output above.')
@@ -367,13 +404,13 @@ function LoadSettings(arg)
 
     if FileExists(settings_path) then
         print_msg('Loading settings from file: ' .. settings_file)
-        SETTINGS = require(string.format('boxhud/%s', settings_file:gsub('.lua', '')))
+        SETTINGS = require(string.format('boxhud.%s', settings_file:gsub('.lua', '')))
     elseif FileExists(old_settings_path) then
         -- copy old settings to new location in boxhud folder
         print_msg(string.format('Moving lua/%s to lua/boxhud/%s', settings_file, settings_file))
         CopyFile(old_settings_path, settings_path)
         print_msg('Loading settings from file: ' .. settings_file)
-        SETTINGS = require(string.format('boxhud/%s', settings_file:gsub('.lua', '')))
+        SETTINGS = require(string.format('boxhud.%s', settings_file:gsub('.lua', '')))
         --os.remove(old_settings_path)
 
         --local new_settings_path = string.format('%s/%s', boxhud_dir, 'newsettings.lua')
@@ -382,17 +419,17 @@ function LoadSettings(arg)
     else
         print_msg('Loading default settings from file: boxhud-settings')
         -- Default settings
-        SETTINGS = require('boxhud/boxhud-settings')
+        SETTINGS = require('boxhud.boxhud-settings')
         -- Copy defaults into toon specific settings
         CopyFile(default_settings_path, settings_path)
     end
 
     if not SETTINGS['SchemaVersion'] or SETTINGS['SchemaVersion'] < 2 then
         SETTINGS = ConvertSettings(SETTINGS)
-        local backup_settings_path = string.format('%s/%s.bak', boxhud_dir, settings_file)
-        CopyFile(settings_path, backup_settings_path)
-        local new_settings_path = string.format('%s/%s', boxhud_dir, settings_file)
-        persistence.store(new_settings_path, SETTINGS)
+        --local backup_settings_path = string.format('%s/%s.bak', boxhud_dir, settings_file)
+        --CopyFile(settings_path, backup_settings_path)
+        --local new_settings_path = string.format('%s/%s', boxhud_dir, settings_file)
+        --persistence.store(new_settings_path, SETTINGS)
     end
     ValidateSettings()
 

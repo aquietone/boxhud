@@ -35,7 +35,6 @@ require('boxhud.configpanel')
 local arg = {...}
 
 -- Control variables
-local VERSION = '2.0.0'
 local openGUI = true
 local shouldDrawGUI = true
 local terminate = false
@@ -44,8 +43,6 @@ local peerTable = nil
 local peersDirty = false
 -- Stores all live observed toon information that will be displayed
 local dataTable = {}
--- Tracks what toons observers have been added for to avoid adding multiple times
-local observedToons = {}
 -- Set to 1 to use classname instead of player names
 local anonymize = false
 local adminMode = false
@@ -113,7 +110,7 @@ end
 -- Return whether or not all expected observers are set for a toon 
 local function VerifyObservers(botName)
     for propName, propSettings in pairs(SETTINGS['Properties']) do
-        if ShouldObserveProperty(botName, propSettings) then
+        if propSettings['Type'] == 'Observed' and ShouldObserveProperty(botName, propSettings) then
             if not IsObserverSet(botName, propName, propSettings) then
                 return false
             end
@@ -171,18 +168,14 @@ local function ManageObservers(botName, drop)
                 RemoveObserver(botName, propName, propSettings)
             end
         end
-        observedToons[botName] = nil
         print_msg('Removed observed properties for: \ay'..botName)
     else
-        if not observedToons[botName] then
-            for propName, propSettings in pairs(SETTINGS['Properties']) do
-                if propSettings['Type'] == 'Observed' then
-                    AddObserver(botName, propName, propSettings)
-                end
+        for propName, propSettings in pairs(SETTINGS['Properties']) do
+            if propSettings['Type'] == 'Observed' then
+                AddObserver(botName, propName, propSettings)
             end
-            observedToons[botName] = true
-            print_msg('Added observed properties for: \ay'..botName)
         end
+        print_msg('Added observed properties for: \ay'..botName)
     end
 end
 
@@ -299,7 +292,6 @@ local function DrawNameButton(name, botName, botInZone, botInvis)
     if botInZone then
         if not botInvis then
             ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
-            --buttonText = TitleCase(botName)
         else
             ImGui.PushStyleColor(ImGuiCol.Text, 0.26, 0.98, 0.98, 1)
             buttonText = '('..TitleCase(botName)..')'
@@ -411,7 +403,7 @@ local function DrawHUDColumns(columns, tabName)
     local flags = bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Reorderable, ImGuiTableFlags.Hideable, ImGuiTableFlags.MultiSortable,
             ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY, ImGuiTableFlags.NoSavedSettings)
     if ImGui.BeginTable('##bhtable'..tabName..tostring(tableRandom), #columns, flags, 0, 0, 0.0) then
-        for i, columnName in pairs(columns) do
+        for i, columnName in ipairs(columns) do
             local column = SETTINGS['Columns'][columnName]
             if columnName == 'Name' then
                 ImGui.TableSetupColumn('Name',     bit32.bor(ImGuiTableColumnFlags.DefaultSort, ImGuiTableColumnFlags.WidthFixed),   -1.0, i)
@@ -462,7 +454,7 @@ local function DrawHUDColumns(columns, tabName)
                     ImGui.PushID(clipName)
                     ImGui.TableNextRow()
                     ImGui.TableNextColumn()
-                    for i,columnName in pairs(columns) do
+                    for i,columnName in ipairs(columns) do
                         local column = SETTINGS['Columns'][columnName]
                         if columnName == 'Name' then
                             DrawNameButton(clipName, botName, botInZone, botInvis)
@@ -489,7 +481,7 @@ end
 
 local function DrawHUDTabs()
     if ImGui.BeginTabBar('BOXHUDTABS') then
-        for _, tab in pairs(SETTINGS['Tabs']) do
+        for _, tab in ipairs(SETTINGS['Tabs']) do
             ImGui.PushID(tab['Name'])
             if ImGui.BeginTabItem(tab['Name']) then
                 if tab['Columns'] and #tab['Columns'] > 0 then
@@ -504,6 +496,7 @@ local function DrawHUDTabs()
         end
 
         -- Admin tab only allows resetting observers, so only show if dannet is being used
+        
         if IsUsingDanNet() then
             if ImGui.BeginTabItem('Admin') then
                 ImGui.Text('Reset Observers for:')
@@ -516,6 +509,7 @@ local function DrawHUDTabs()
                 ImGui.EndTabItem()
             end
         end
+
 
         if ImGui.BeginTabItem('Configuration') then
             ConfigurationTab()
@@ -535,11 +529,11 @@ local HUDGUI = function()
             ImGui.SetWindowSize(460, 177)
             initialRun = false
         end
-        if SETTINGS['Tabs'] and #SETTINGS['Tabs'] > 0 then
+        --if SETTINGS['Tabs'] and #SETTINGS['Tabs'] > 0 then
             DrawHUDTabs()
         --elseif SETTINGS['Columns'] and #SETTINGS['Columns'] > 0 then
         --    DrawHUDColumns(SETTINGS['Columns'], 'notabs')
-        end
+        --end
 
         ImGui.End()
     end
@@ -705,7 +699,7 @@ local function main()
                     resetObserversName = nil
                     ManageObservers(botName, true)
                     ManageObservers(botName, false)
-                elseif not VerifyObservers(botName) or not observedToons[botName] then
+                elseif not VerifyObservers(botName) then
                     ManageObservers(botName, false)
                 end
             end
