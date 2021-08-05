@@ -7,7 +7,7 @@ dofile('boxhud/persistence.lua')
 --local lyaml = require('lyaml.init')
 local utils = {}
 
-VERSION = '2.0.0'
+VERSION = '2.0.1'
 
 SETTINGS_FILE = nil
 

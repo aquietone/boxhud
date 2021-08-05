@@ -1,3 +1,8 @@
+2.0.1
+- Add info text on config panel when nothing selected
+- Add peer group to admin tab
+- Text wrap config error messages
+- Right align percent numbers
 2.0.0
 - Add in game configuration of tabs, columns and properties
 - Rearrange configuration a bit

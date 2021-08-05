@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.0.0 -- aquietone
+boxhud.lua 2.0.1 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -221,11 +221,13 @@ local function SetText(value, thresholds, ascending, percentage)
     else -- white, no thresholds defined
         ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
     end
-    if percentage then value = value..'%%' end
     if tonumber(value) then
         -- right align number values
+        if percentage then value = value..'%' end
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetColumnWidth() - ImGui.CalcTextSize(tostring(value)) 
             - ImGui.GetScrollX())
+        -- CalcTextSize doesn't consider that `%%` is used to escape the % sign, so add the second % after.
+        if percentage then value = value..'%' end
     end
     ImGui.Text(value)
     ImGui.PopStyleColor(1)
@@ -499,6 +501,9 @@ local function DrawHUDTabs()
         
         if IsUsingDanNet() then
             if ImGui.BeginTabItem('Admin') then
+                ImGui.Text('DanNet Peer Group: ')
+                ImGui.SameLine()
+                ImGui.TextColored(0, 1, 0, 1, PEER_GROUP)
                 ImGui.Text('Reset Observers for:')
                 adminPeerSelected, clicked = ImGui.Combo("##combo", adminPeerSelected, peerTable, #peerTable, 5)
                 ImGui.SameLine()
