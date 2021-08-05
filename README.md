@@ -12,7 +12,7 @@ A Lua / ImGui boxing HUD for EverQuest.
 
 # Installation
 
-Add `boxhud.lua` and `boxhud-settings.lua` to the `lua` folder of your MQ directory.
+Add `boxhud.lua` and the `boxhud` folder to the `lua` folder of your MQ directory.
 
 # Usage
 
@@ -28,13 +28,19 @@ Stop the script with:
 ```
 or
 ```
-lua stop boxhud
+/lua stop boxhud
 ```
 
 Toggle the window with:
 
 ```
 /boxhud
+```
+
+Show help output:
+
+```
+/bhhelp
 ```
 
 # Overview
@@ -66,7 +72,7 @@ Additionally, the character names are buttons with the following function:
 - Left click -- Brings the character to the foreground with `/dex toonname /foreground`.
 - Right click -- Opens a context menu with some helpful buttons specific to the selected toon. Also includes a `Send Command` text input which will do `/dex toonname <text input>`
 
-These button actions are more just to play around with the capabilities we have now with an interactive window like this. 
+These button actions are more just to play around with the capabilities provided by lua and ImGui. 
 
 Example:
 
@@ -75,8 +81,6 @@ Example:
 ![](images/example-tab2.png)
 
 ![](images/example-tab3.png)
-
-![](images/example-tab4.png)
 
 Context menu on Name column:  
 ![](images/example-popup.png)
@@ -90,17 +94,104 @@ Hide columns using the table menu:
 Click and drag headers to rearrange table columns:  
 ![](images/example-tablerearrange.png)
 
+Configuration:  
+![](images/example-add-observed.png)
+
+![](images/example-add-column.png)
+
+![](images/example-add-tab.png)
+
+![](images/example-general-settings.png)
+
+![](images/example-save-pending.png)
+
+![](images/example-save-none.png)
+
+![](images/example-height-tall.png)
+
+![](images/example-height-short.png)
+
 The script takes a few seconds to start up as it waits for the DanNet observers to be ready.
 Characters which log off or for some reason stop being available will go stale and be removed from the table after 30 seconds.
 
 # Configuration
-The configuration is stored in a separate Lua file, which is then included with `settings = require('boxhud-settings')`.
+The configuration is stored in a separate Lua file, which is then included with `settings = require('boxhud.boxhud-settings')`.
 
 By default, `boxhud-settings.lua` is included with the script. Upon startup, it will be copied to a character specific file `boxhud-settings-charactername.lua`.
 An existing `boxhud-settings-charactername.lua` will always take precedence over `boxhud-settings.lua`.
 A settings filename can also be provided when starting the script like `lua run boxhud boxhud-settings.lua`
 
 Note that since the settings are another lua file, its expecting the settings file to also be in the lua folder, rather than the config folder.
+
+Boxhud configuration is broken up into 3 main sections: Properties, Columns and Tabs.
+
+- Properties define what data you want to watch in the HUD. These can include DanNet observed properties, NetBots properties and Spawn properties.
+- Columns define the display settings for a given property, such as whether it should only show for toons in the same zone as you, or whether it is a percentage value. They can also be used to define value mappings to display different text based on the value returned for a property.
+- Tabs define a group of columns to be displayed together.
+
+## Properties
+There are 3 types of properties: Observed, NetBots and Spawn.
+
+### Observed properties
+
+```
+  Properties = {
+    ['Me.PctHPs'] = { Type='Observed' }
+  }
+```
+
+Observed properties define a property for which a DanNet observer should be created for each toon, to monitor the value of that property from each toon.
+
+Observing properties which are not defined on a toon can impact running macros. To avoid this, there are some optional settings which can be added to Observed property definitions to define conditions for when to create the observer for a given toon.
+
+```
+  Properties = {
+    ['CWTN.Mode'] = {
+      Type='Observed',
+      DependsOnName='Me.Class.ShortName',
+      DependsOnValue='MNK,ROG,WAR,SHD,MAG,ENC,CLR,BST,SHM'
+    }
+  }
+```
+
+The example above would observe `CWTN.Mode` only on toons whose class is listed in `DependsOnValue`, which are the classes that have CWTN plugins available.
+
+### NetBots properties
+
+```
+  Properties = {
+    ['PctMana'] = { Type='NetBots' }
+  }
+```
+
+NetBots properties define a property to get from NetBots for each toon.
+
+### Spawn properties
+
+```
+  Properties = {
+    ['Distance3D'] = { Type='Spawn' }
+  }
+```
+
+Spawn properties define a property to read from the Spawn data for each toon. These will only work for toons that are in the same zone as only they would have Spawn data available.
+
+### Properties summary
+
+All 3 types of properties can be mixed together, provided they have unique names. Combining the 3 example properties above, we would have:
+
+```
+  Properties = {
+    ['Me.PctHPs'] = { Type='Observed' },
+    ['PctMana'] = { Type='NetBots' },
+    ['Distance3D'] = { Type='Spawn' },
+    ['CWTN.Mode'] = {
+      Type='Observed',
+      DependsOnName='Me.Class.ShortName',
+      DependsOnValue='MNK,ROG,WAR,SHD,MAG,ENC,CLR,BST,SHM'
+    }
+  }
+```
 
 ## Columns
 Columns can have two types, `property` or `button`.
@@ -109,31 +200,28 @@ Columns can have two types, `property` or `button`.
 Each property column includes several settings, for example:
 
 ```
-        {
-            Name='MP%',
+        ['MP%'] = {
             Type='property'
-            Properties={caster='Me.PctMana',melee='Me.PctEndurance'},
+            Properties={caster='Me.PctMana'},
             Thresholds={35,70},
             Percentage=true,
             Ascending=true,
-            InZone=false,
-            Width=40
+            InZone=false
         },
 ```
 
-Each column lists the observed property or properties which it uses to populate its data.
+Each column lists the property or properties which it uses to populate its data.
 More details on each setting can be found in the provided `boxhud-settings.lua`.
 Note that the `Name` column is treated as a special case.
 
 ### Button Columns
-Each button column includes several settings, for example:
+Each button column specifies the command to run on click, for example:
 
 ```
         {
             Name='Pause',
             Type='button',
-            Action='/dex #botName# /mqp',
-            Width=50
+            Action='/dex #botName# /mqp'
         },
 ```
 
@@ -147,27 +235,20 @@ Each tab includes a name and list of columns to be included in that tab, for exa
         Name='General',
         Columns={
             {
-                Name='HP%',
+                'HP%',
+                'MP%',
                 ...
             }
         }
     },
 ```
 
-## ObservedProperties
-Each observed property must be in the `ObservedProperties` list.
-The following properties are observed for the Name column, which is handled separately from the rest:
-- *Me.Class.ShortName*
-
-## SpawnProperties
-Columns may refer to spawn data, defined in `SpawnProperties`. Spawn data will be based on `${Spawn[observed character id].PropertyName}`
-
-## NetBotsProperties
-Columns may refer to MQ2NetBots properties as well.
-
 Some other configuration options include:
 
-## PeerGroup
+## PeerSource
+This can be set to **dannet** or **netbots** to specify whether the list of peers to display in the HUD should come from **MQ2DanNet** or **MQ2NetBots**.
+
+## DanNetPeerGroup
 This can be set to **all** or **zone** to use either the DanNet All peer group or the zone specific peer group.
 **Default**: zone
 
