@@ -360,8 +360,8 @@ local function DrawPropertySettings()
     if propSettings ~= nil then
         ImGui.TextColored(1, 0, 1, 1, selectedItem)
         ImGui.Separator()
-        if ImGui.SmallButton('Edit##'..selectedItem) then
-            if selectedItem ~= 'Me.Class.ShortName' then
+        if selectedItem ~= 'Me.Class.ShortName' then
+            if ImGui.SmallButton('Edit##'..selectedItem) then
                 newPropertyName = selectedItem
                 if propSettings['Type'] == 'Observed' then
                     typeRadioValue = 1
@@ -375,11 +375,8 @@ local function DrawPropertySettings()
                 end
                 selectedItemType = 'addnewproperty'
             end
-        end
-        ImGui.SameLine()
-        if ImGui.SmallButton('Delete##'..selectedItem) then
-            if selectedItem ~= 'Me.Class.ShortName' then -- do not allow deleting class
-                -- TODO: ref check
+            ImGui.SameLine()
+            if ImGui.SmallButton('Delete##'..selectedItem) then
                 if not PropertyReferences(selectedItem, false) then
                     SETTINGS['Properties'][selectedItem] = nil
                     selectedItemType = nil
@@ -642,8 +639,8 @@ local function DrawColumnSettings()
     if columnSettings ~= nil then
         ImGui.TextColored(1, 0, 1, 1, selectedItem)
         ImGui.Separator()
-        if ImGui.SmallButton('Edit##'..selectedItem) then
-            if selectedItem ~= 'Name' then
+        if selectedItem ~= 'Name' then
+            if ImGui.SmallButton('Edit##'..selectedItem) then
                 newColumnName = selectedItem
                 if columnSettings['Type'] == 'property' then
                     typeRadioValue = 1
@@ -680,11 +677,8 @@ local function DrawColumnSettings()
                 end
                 selectedItemType = 'addnewcolumn'
             end
-        end
-        ImGui.SameLine()
-        if ImGui.SmallButton('Delete##'..selectedItem) then
-            if selectedItem ~= 'Name' then -- Don't allow deleting name column
-                -- TODO: ref check
+            ImGui.SameLine()
+            if ImGui.SmallButton('Delete##'..selectedItem) then
                 if not ColumnReferences(selectedItem, false) then
                     SETTINGS['Columns'][selectedItem] = nil
                     selectedItemType = nil

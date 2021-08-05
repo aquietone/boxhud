@@ -21,7 +21,6 @@ REFRESH_INTERVAL = 250
 -- Default stale observed data timeout (60 seconds)
 STALE_DATA_TIMEOUT = 60
 
-local zoneID = nil
 local isUsingDanNet = false
 local isUsingNetBots = false
 
@@ -123,19 +122,18 @@ function DoTablesMatch(a, b)
     return table.concat(a) == table.concat(b)
 end
 
-function ZoneCheck()
-    if PEER_SOURCE == 'dannet' and PEER_GROUP ~= 'all' and zoneID ~= mq.TLO.Zone.ID() then
-        PEER_GROUP = GetZonePeerGroup()
-        zoneID = mq.TLO.Zone.ID()
-    end
-end
-
 local function GetZonePeerGroup()
     local zoneName = mq.TLO.Zone.ShortName()
     if zoneName:find('_') then
         return string.format('zone_%s', zoneName)
     else
         return string.format('zone_%s_%s', mq.TLO.EverQuest.Server(), zoneName)
+    end
+end
+
+function ZoneCheck()
+    if PEER_SOURCE == 'dannet' and PEER_GROUP ~= 'all' then
+        PEER_GROUP = GetZonePeerGroup()
     end
 end
 
@@ -341,7 +339,6 @@ local function ValidateOptionalSettings()
         isUsingDanNet = true
         if SETTINGS['DanNetPeerGroup'] and SETTINGS['DanNetPeerGroup'] == 'zone' then
             PEER_GROUP = GetZonePeerGroup()
-            zoneID = mq.TLO.Zone.ID()
         end
         local classPropertyFound = false
         for propName, propSettings in pairs(SETTINGS['Properties']) do
