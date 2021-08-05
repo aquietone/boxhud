@@ -365,11 +365,11 @@ local function DrawPropertySettings()
                 newPropertyName = selectedItem
                 if propSettings['Type'] == 'Observed' then
                     typeRadioValue = 1
-                    newPropertyDependsOnName = ''
-                    newPropertyDependsOnValue = ''
+                    newPropertyDependsOnName = propSettings['DependsOnName']
+                    newPropertyDependsOnValue = propSettings['DependsOnValue']
                 elseif propSettings['Type'] == 'Spawn' then
                     typeRadioValue = 3
-                    newPropertyFromIDProperty = ''
+                    newPropertyFromIDProperty = propSettings['FromIDProperty']
                 else
                     typeRadioValue = 2
                 end

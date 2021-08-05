@@ -90,7 +90,7 @@ local function ShouldObserveProperty(botName, propSettings)
         return true
     elseif propSettings['DependsOnValue'] then
         local dependentValue = mq.TLO.DanNet(botName).Observe(string.format('"%s"', propSettings['DependsOnName']))()
-        if dependentValue and propSettings['DependsOnValue']:find(dependentValue) ~= nil then
+        if dependentValue and string.lower(propSettings['DependsOnValue']):find(string.lower(dependentValue)) ~= nil then
             -- The value of the dependent property matches
             return true
         end
