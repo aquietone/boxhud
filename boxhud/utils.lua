@@ -7,7 +7,7 @@ dofile('boxhud/persistence.lua')
 --local lyaml = require('lyaml.init')
 local utils = {}
 
-VERSION = '2.0.2'
+VERSION = '2.0.3'
 
 SETTINGS_FILE = nil
 
@@ -463,6 +463,7 @@ local function ValidateSettings()
         local property = Property(propSettings)
         property['Name'] = propName
         valid,_ = property:validate() and valid
+        SETTINGS['Properties'][propName] = property
     end
     if not SETTINGS['Columns'] then
         SETTINGS['Columns'] = {}
@@ -471,6 +472,7 @@ local function ValidateSettings()
         local column = Column(columnSettings)
         column['Name'] = columnName
         valid,_ = column:validate() and valid
+        SETTINGS['Columns'][columnName] = column
     end
     if not SETTINGS['Columns']['Name'] then
         SETTINGS['Columns']['Name'] = {

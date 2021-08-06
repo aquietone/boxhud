@@ -1,3 +1,5 @@
+2.0.3
+- Fix crash in property and column settings view
 2.0.2
 - Add color picking to general settings
 - Fix to allow saving more than once
