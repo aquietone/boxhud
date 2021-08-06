@@ -24,6 +24,50 @@ STALE_DATA_TIMEOUT = 60
 local isUsingDanNet = false
 local isUsingNetBots = false
 
+function class(base, init)
+    local c = {}    -- a new class instance
+    if not init and type(base) == 'function' then
+        init = base
+        base = nil
+    elseif type(base) == 'table' then
+        -- our new class is a shallow copy of the base class!
+        for i,v in pairs(base) do
+            c[i] = v
+        end
+        c._base = base
+    end
+    -- the class will be the metatable for all its objects,
+    -- and they will look up their methods in it.
+    c.__index = c
+ 
+    -- expose a constructor which can be called by <classname>(<args>)
+    local mt = {}
+    mt.__call = function(class_tbl, ...)
+    local obj = {}
+    setmetatable(obj,c)
+    if init then
+        init(obj,...)
+    else 
+        -- make sure that any stuff from the base class is initialized!
+        if base and base.init then
+        base.init(obj, ...)
+        end
+    end
+    return obj
+    end
+    c.init = init
+    c.is_a = function(self, klass)
+        local m = getmetatable(self)
+        while m do 
+            if m == klass then return true end
+            m = m._base
+        end
+        return false
+    end
+    setmetatable(c, mt)
+    return c
+end
+
 function print_msg(msg) print('\at[\ayBOXHUD\at] \at' .. msg) end
 function print_err(msg) print('\at[\ayBOXHUD\at] \ar' .. msg) end
 
@@ -137,20 +181,13 @@ function ZoneCheck()
     end
 end
 
--- new property fields
-Property = {
-    Name=nil,
-    Type=1,
-    DependsOnName=nil,
-    DependsOnValue=nil,
-    FromIDProperty=nil
-}
-function Property:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
+Property = class(function(p,propSettings)
+    p.Name = propSettings['Name']
+    p.Type = propSettings['Type']
+    p.DependsOnName = propSettings['DependsOnName']
+    p.DependsOnValue = propSettings['DependsOnValue']
+    p.FromIDProperty = propSettings['FromIDProperty']
+end)
 
 function Property:validate()
     local message = nil
@@ -192,24 +229,17 @@ function Property:validate()
     return true, nil
 end
 
--- new column fields
-Column = {
-    Name=nil,
-    Type=1,
-    Properties=nil,
-    Mappings=nil,
-    Thresholds=nil,
-    Percentage=false,
-    Ascending=true,
-    InZone=false,
-    Action=nil
-}
-function Column:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
+Column = class(function(c,columnSettings)
+    c.Name = columnSettings['Name']
+    c.Type = columnSettings['Type']
+    c.Properties = columnSettings['Properties']
+    c.Mappings = columnSettings['Mappings']
+    c.Thresholds = columnSettings['Thresholds']
+    c.Percentage = columnSettings['Percentage']
+    c.Ascending = columnSettings['Ascending']
+    c.InZone = columnSettings['InZone']
+    c.Action = columnSettings['Action']
+end)
 
 function Column:validateProperties()
     local message = nil
@@ -336,17 +366,10 @@ function Column:validate()
     return valid, message
 end
 
--- new tab fields
-Tab = {
-    Name=nil,
-    Columns=nil
-}
-function Tab:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
+Tab = class(function(t,tabSettings)
+    t.Name = tabSettings['Name']
+    t.Columns = tabSettings['Columns']
+end)
 
 function Tab:validate()
     local message = nil
@@ -426,19 +449,17 @@ local function ValidateSettings()
         SETTINGS['Properties'] = {}
     end
     for propName,propSettings in pairs(SETTINGS['Properties']) do
-        local property = Property:new(propSettings)
+        local property = Property(propSettings)
         property['Name'] = propName
         valid,_ = property:validate() and valid
-        SETTINGS['Properties'][propName] = property
     end
     if not SETTINGS['Columns'] then
         SETTINGS['Columns'] = {}
     end
     for columnName,columnSettings in pairs(SETTINGS['Columns']) do
-        local column = Column:new(columnSettings)
+        local column = Column(columnSettings)
         column['Name'] = columnName
         valid,_ = column:validate() and valid
-        SETTINGS['Columns'][columnName] = column
     end
     if not SETTINGS['Columns']['Name'] then
         SETTINGS['Columns']['Name'] = {
@@ -452,9 +473,8 @@ local function ValidateSettings()
         SETTINGS['Tabs'] = {}
     end
     for idx,tabSettings in pairs(SETTINGS['Tabs']) do
-        local tab = Tab:new(tabSettings)
+        local tab = Tab(tabSettings)
         valid,_ = tab:validate() and valid
-        SETTINGS['Tabs'][idx] = tab
     end
     if not valid then
         print_err('Exiting due to invalid configuration. Review the output above.')
