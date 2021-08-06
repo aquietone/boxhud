@@ -77,11 +77,11 @@ function ColumnInput:toColumn()
         column['InZone']=self.InZone
         column['Percentage']=self.Percentage
         column['Properties']={}
-        if self.MappingCount > 0 then
-            column['Mappings']={}
-        end
         for i,j in ipairs(self.Properties) do
             column['Properties'][j[1]] = j[2]
+        end
+        if self.MappingCount > 0 then
+            column['Mappings']={}
         end
         for i,j in ipairs(self.Mappings) do
             column['Mappings'][j[1]] = j[2]
@@ -496,7 +496,7 @@ function ColumnInput:draw(width)
     ImGui.SameLine()
     HelpMarker('The name of the column which will appear in the table column header.')
     self.Name, selected = ImGui.InputText('##newcolumnname', self.Name, 32)
-        
+
     if self.Type == 1 then
         ImGui.Text('Properties(*): ')
         ImGui.SameLine()
@@ -874,6 +874,42 @@ local function DrawGeneralSettings()
     ImGui.Text('Stale Data Timeout: ')
     ImGui.SameLine()
     ImGui.TextColored(0, 1, 0, 1, SETTINGS['StaleDataTimeout'])
+    ImGui.Separator()
+    ImGui.Text('Column Text Colors:')
+    local col, used = ImGui.ColorEdit3("Default Color", SETTINGS['Colors']['Default'], ImGuiColorEditFlags.NoInputs)
+    if col then
+        if col[1] ~= SETTINGS['Colors']['Default'][1] and col[2] ~= SETTINGS['Colors']['Default'][2] and col[3] ~= SETTINGS['Colors']['Default'][3] then
+            SETTINGS['Colors']['Default'] = col
+        end
+    end
+    col, used = ImGui.ColorEdit3("Low threshold color", SETTINGS['Colors']['Low'], ImGuiColorEditFlags.NoInputs)
+    if col then
+        SETTINGS['Colors']['Low'] = col
+    end
+    col, used = ImGui.ColorEdit3("Medium threshold color", SETTINGS['Colors']['Medium'], ImGuiColorEditFlags.NoInputs)
+    if col then
+        SETTINGS['Colors']['Medium'] = col
+    end
+    col, used = ImGui.ColorEdit3("High threshold color", SETTINGS['Colors']['High'], ImGuiColorEditFlags.NoInputs)
+    if col then
+        SETTINGS['Colors']['High'] = col
+    end
+    col, used = ImGui.ColorEdit3("Name in zone color", SETTINGS['Colors']['InZone'], ImGuiColorEditFlags.NoInputs)
+    if col then
+        SETTINGS['Colors']['InZone'] = col
+    end
+    col, used = ImGui.ColorEdit3("Name invis color", SETTINGS['Colors']['Invis'], ImGuiColorEditFlags.NoInputs)
+    if col then
+        SETTINGS['Colors']['Invis'] = col
+    end
+    col, used = ImGui.ColorEdit3("Name not in zone color", SETTINGS['Colors']['NotInZone'], ImGuiColorEditFlags.NoInputs)
+    if col then
+        SETTINGS['Colors']['NotInZone'] = col
+    end
+    ImGui.Separator()
+    if ImGui.Button('Save##general') then
+        configDirty = true
+    end
 end
 
 local function DrawAbout()
@@ -894,6 +930,7 @@ local function DrawSaveChanges()
         end
         if saved then
             configDirty = false
+            saved = false
         end
     else
         ImGui.Text('No pending changes.')

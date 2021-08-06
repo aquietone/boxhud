@@ -180,47 +180,45 @@ local function ManageObservers(botName, drop)
 end
 
 local function SetText(value, thresholds, ascending, percentage)
+    local col = SETTINGS['Colors']['Default']
     if thresholds ~= nil then
         local valueNum = tonumber(value)
         if valueNum == nil then
             return
         end
-        if #thresholds == 1 then -- red or green
+        if #thresholds == 1 then
             if valueNum >= thresholds[1] then
-                if ascending then -- green if above
-                    ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
+                if ascending then
+                    col = SETTINGS['Colors']['High']
                 else -- red if above
-                    ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
+                    col = SETTINGS['Colors']['Low']
                 end
             else
-                if ascending then -- red if below
-                    ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
+                if ascending then
+                    col = SETTINGS['Colors']['Low']
                 else -- green if below
-                    ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
+                    col = SETTINGS['Colors']['High']
                 end
             end
-        elseif #thresholds == 2 then -- red or yellow or green
+        elseif #thresholds == 2 then
             if valueNum >= thresholds[2] then
                 if ascending then
-                    ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
+                    col = SETTINGS['Colors']['High']
                 else
-                    ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
+                    col = SETTINGS['Colors']['Low']
                 end
             elseif valueNum >= thresholds[1] and valueNum < thresholds[2] then
-                ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1) -- yellow
+                col = SETTINGS['Colors']['Medium']
             else
                 if ascending then
-                    ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
+                    col = SETTINGS['Colors']['Low']
                 else
-                    ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
+                    col = SETTINGS['Colors']['High']
                 end
             end
-        else -- white, unsupported # of threshold values
-            ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
         end
-    else -- white, no thresholds defined
-        ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
     end
+    ImGui.PushStyleColor(ImGuiCol.Text, col[1], col[2], col[3], 1)
     if tonumber(value) then
         -- right align number values
         if percentage then value = value..'%' end
@@ -291,16 +289,18 @@ local function DrawNameButton(name, botName, botInZone, botInvis)
     -- Treat Name column special
     -- Fill name column
     local buttonText = TitleCase(botName)
+    local col = nil
     if botInZone then
         if not botInvis then
-            ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
+            col = SETTINGS['Colors']['InZone'] or {0,1,0}
         else
-            ImGui.PushStyleColor(ImGuiCol.Text, 0.26, 0.98, 0.98, 1)
+            col = SETTINGS['Colors']['Invis'] or {0.26, 0.98, 0.98}
             buttonText = '('..TitleCase(botName)..')'
         end
     else
-        ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
+        col = SETTINGS['Colors']['NotInZone'] or {1,0,0}
     end
+    ImGui.PushStyleColor(ImGuiCol.Text, col[1], col[2], col[3], 1)
 
     if ImGui.SmallButton(buttonText..'##'..name) then
         storedCommand = string.format('/squelch /dex %s /foreground', name)
@@ -638,7 +638,7 @@ local function UpdateBotValues(botName, currTime)
     end
 
     if PEER_GROUP == 'all' then
-        botValues['BotInZone'] = (botValues['Me.ID'] ~= nil)
+        botValues['BotInZone'] = botValues['Me.ID'] ~= 0
     else
         botValues['BotInZone'] = true
     end

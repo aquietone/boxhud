@@ -1,3 +1,7 @@
+2.0.2
+- Add color picking to general settings
+- Fix to allow saving more than once
+- Refactor some code
 2.0.1
 - Add info text on config panel when nothing selected
 - Add peer group to admin tab
