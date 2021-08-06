@@ -752,24 +752,24 @@ function Column:draw()
 end
 
 local shouldDrawCombo = false
-local function DrawAddTabOptions(x)
+function TabInput:draw(width)
     ImGui.TextColored(1, 0, 1, 1, "Add New Tab")
     ImGui.Separator()
     ImGui.Text('Name(*): ')
     ImGui.SameLine()
     HelpMarker('The name of the tab which will be displayed in the Tab bar.')
-    newTab.Name, selected = ImGui.InputText('##newtabname', newTab.Name, 32)
+    self.Name, selected = ImGui.InputText('##newtabname', self.Name, 32)
     ImGui.Text('Columns: ')
     ImGui.SameLine()
     HelpMarker('The list of columns which will be displayed in the tab.')
-    for columnIdx, columnName in ipairs(newTab.Columns) do
-        if newTab.Columns[columnIdx] ~= nil then
-            shouldDrawCombo = ImGui.BeginCombo("##columncombo"..columnIdx, newTab.Columns[columnIdx])
+    for columnIdx, columnName in ipairs(self.Columns) do
+        if self.Columns[columnIdx] ~= nil then
+            shouldDrawCombo = ImGui.BeginCombo("##columncombo"..columnIdx, self.Columns[columnIdx])
             if shouldDrawCombo then
                 for column,_ in pairs(SETTINGS['Columns']) do
-                    selected = ImGui.Selectable(column, newTab.Columns[columnIdx] == column)
+                    selected = ImGui.Selectable(column, self.Columns[columnIdx] == column)
                     if selected then
-                        newTab.Columns[columnIdx] = column
+                        self.Columns[columnIdx] = column
                     end
                 end
                 ImGui.EndCombo()
@@ -777,30 +777,30 @@ local function DrawAddTabOptions(x)
             ImGui.SameLine()
             if ImGui.Button('X##deleteRow'..columnIdx) then
                 local columnIter = columnIdx
-                for columns = columnIdx+1, #newTab.Columns do
-                    newTab.Columns[columnIter] = newTab.Columns[columns]
+                for columns = columnIdx+1, #self.Columns do
+                    self.Columns[columnIter] = self.Columns[columns]
                     columnIter = columnIter+1
                 end
-                newTab.Columns[columnIter] = nil
-                newTab.ColumnCount = newTab.ColumnCount - 1
+                self.Columns[columnIter] = nil
+                self.ColumnCount = self.ColumnCount - 1
             end
         end
     end
     if ImGui.Button('+') then
-        newTab.ColumnCount = newTab.ColumnCount + 1
-        newTab.Columns[newTab.ColumnCount] = ''
+        self.ColumnCount = self.ColumnCount + 1
+        self.Columns[self.ColumnCount] = ''
     end
     ImGui.Separator()
     if ImGui.Button('Save##newtab') then
         local ok = false
-        local tab = newTab:toTab()
-        ok, message = tab:validate()
+        local tab = self:toTab()
+        ok, self.message = tab:validate()
         if ok then
             local foundExisting = false
             for tabIdx,existingTab in ipairs(SETTINGS['Tabs']) do
-                if existingTab['Name'] == newTab.Name then
+                if existingTab['Name'] == self.Name then
                     -- replace existing tab
-                    existingTab['Columns'] = newTab.Columns
+                    existingTab['Columns'] = self.Columns
                     foundExisting = true
                 end
             end
@@ -810,13 +810,13 @@ local function DrawAddTabOptions(x)
             selectedItemType = nil
             configDirty = true
         else
-            newTab.valid = false
+            self.valid = false
         end
     end
-    if not newTab.valid then
+    if not self.valid then
         ImGui.SameLine()
         ImGui.PushTextWrapPos(x-10)
-        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', newTab.message))
+        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', self.message))
         ImGui.PopTextWrapPos()
     end
 end
@@ -902,6 +902,10 @@ end
 
 local function DrawInfo(x)
     ImGui.PushTextWrapPos(x-10)
+    if configDirty then
+        ImGui.TextColored(1, 0, 0, 1, 'Configuration changes will not be persisted until you click \'Save Configuration\' on the left menu.')
+        ImGui.Separator()
+    end
     ImGui.Text('To get started with configuring boxhud, select an item from the menu on the left.')
     ImGui.Text('Properties define the data members which will be either observed with MQ2DanNet, read from MQ2NetBots or read from Spawn data.')
     ImGui.Text('Columns define how specific properties should be displayed.')
@@ -920,7 +924,7 @@ local function RightPaneWindow()
         elseif selectedItemType == 'addnewcolumn' then
             newColumn:draw(x)
         elseif selectedItemType == 'addnewtab' then
-            DrawAddTabOptions(x)
+            newTab:draw(x)
         elseif selectedItemType == 'property' then
             DrawPropertySettings()
         elseif selectedItemType == 'column' then
