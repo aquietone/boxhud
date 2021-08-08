@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.0.1 -- aquietone
+boxhud.lua 2.0.4 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -595,7 +595,7 @@ local function SetupBindings()
         openGUI = not openGUI
     end)
 
-    mq.bind('/boxhudend', function() 
+    mq.bind('/boxhudend', function()
         mq.imgui.destroy('BOXHUDUI')
         shouldDrawGUI = false
         terminate = true
@@ -637,7 +637,7 @@ local function UpdateBotValues(botName, currTime)
         end
     end
 
-    if PEER_GROUP == 'all' then
+    if SETTINGS['DanNetPeerGroup'] ~= 'zone' then
         botValues['BotInZone'] = botValues['Me.ID'] ~= 0
     else
         botValues['BotInZone'] = true

@@ -1,4 +1,4 @@
--- boxhud.lua 1.8.1 -- aquietone
+-- boxhud/utils.lua 2.0.4 -- aquietone
 --- @type mq
 local mq = require('mq')
 local converter = require('boxhud.settings-converter')
@@ -176,7 +176,7 @@ local function GetZonePeerGroup()
 end
 
 function ZoneCheck()
-    if PEER_SOURCE == 'dannet' and PEER_GROUP ~= 'all' then
+    if PEER_SOURCE == 'dannet' and SETTINGS['DanNetPeerGroup'] == 'zone' then
         PEER_GROUP = GetZonePeerGroup()
     end
 end
@@ -245,8 +245,14 @@ function Column:validateProperties()
     local message = nil
     local valid = true
     for _,propName in pairs(self.Properties) do
-        if not SETTINGS['Properties'][propName] then
-            message = string.format('Column \'Properties\' must reference a valid \'Observed\', \'NetBots\' or \'Spawn\' property. Name=%s', propName)
+        if string.len(propName) > 0 then
+            if not SETTINGS['Properties'][propName] then
+                message = string.format('Column \'Properties\' must reference a valid \'Observed\', \'NetBots\' or \'Spawn\' property. Name=%s', propName)
+                print_err(string.format('[Column %s] %s', self.Name, message))
+                valid = false
+            end
+        else
+            message = 'Column \'Properties\' must be non-empty \'string\''
             print_err(string.format('[Column %s] %s', self.Name, message))
             valid = false
         end
@@ -381,15 +387,23 @@ function Tab:validate()
     end
     if self.Columns then
         if type(self.Columns) == 'table' then
-            for columnIdx,column in pairs(self.Columns) do
-                if not SETTINGS['Columns'][column] then
-                    message = 'tab includes bad column name'
-                    print_err('tab includes bad column name')
+            for columnIdx,column in ipairs(self.Columns) do
+                if string.len(column) > 0 then
+                    if not SETTINGS['Columns'][column] then
+                        message = string.format('Tab references a column which does not exist. Column=%s', column)
+                        print_err(string.format('[Tab %s] %s', self.Name, message))
+                        valid = false
+                    end
+                else
+                    message = 'Tab \'Column\' values must be non-empty \'string\''
+                    print_err(string.format('[Tab %s] %s', self.Name, message))
                     valid = false
                 end
             end
         else
-            return false, 'Tab \'Columns\' is an unexpected format. \'Columns\' must be a table.'
+            message = 'Tab \'Columns\' is an unexpected format. \'Columns\' must be a table.'
+            print_err(string.format('[Tab %s] %s', self.Name, message))
+            valid = false
         end
     end
     return valid, message
@@ -405,8 +419,12 @@ local function ValidateOptionalSettings()
     end
     if PEER_SOURCE == 'dannet' then
         isUsingDanNet = true
-        if SETTINGS['DanNetPeerGroup'] and SETTINGS['DanNetPeerGroup'] == 'zone' then
-            PEER_GROUP = GetZonePeerGroup()
+        if SETTINGS['DanNetPeerGroup'] then
+            if SETTINGS['DanNetPeerGroup'] == 'zone' then
+                PEER_GROUP = GetZonePeerGroup()
+            else
+                PEER_GROUP = SETTINGS['DanNetPeerGroup']
+            end
         end
         local classPropertyFound = false
         for propName, propSettings in pairs(SETTINGS['Properties']) do
