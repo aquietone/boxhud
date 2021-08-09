@@ -1,18 +1,49 @@
--- boxhud/configpanel.lua 2.0.4 -- aquietone
+-- boxhud/configpanel.lua 2.0.5 -- aquietone
 --- @type ImGui
 require 'ImGui'
 require('boxhud.utils')
 
-local configpanel = {}
+local newProperty = nil
+local newColumn = nil
+local newTab = nil
 
-PropertyInput = class(function(p)
-    p.Name=''
+local classes = {'all', 'melee', 'caster', 'hybrids', 'ranged', 'ber', 'brd', 
+        'bst', 'clr', 'dru', 'enc', 'mag', 'mnk', 'nec', 'pal', 'shd', 'rng', 
+        'rog', 'shm', 'war', 'wiz'}
+
+ConfigurationState = class(function(c)
+    c.dirty = false
+    c.selected = false
+    c.selectedItem = nil
+    c.selectedItemType = nil
+end)
+
+function ConfigurationState:setDirtyAndClearSelection()
+    self.dirty = true
+    self.selected = false
+    self.selectedItem = nil
+    self.selectedItemType = nil
+end
+
+function ConfigurationState:selectItem(item, itemType)
+    self.selectedItem = item
+    self.selectedItemType = itemType
+end
+
+ConfigUI = ConfigurationState()
+
+Input = class(function(i)
+    i.Name=''
+    i.valid=true
+    i.message=nil
+    i.shouldDrawCombo = false
+end)
+
+PropertyInput = class(Input(), function(p)
     p.Type=1
     p.DependsOnName=''
     p.DependsOnValue=''
     p.FromIDProperty=''
-    p.valid=true
-    p.message=nil
 end)
 
 function PropertyInput:toProperty()
@@ -52,10 +83,7 @@ function PropertyInput:fromProperty(property)
     return o
 end
 
-local newProperty = nil
-
-ColumnInput = class(function(c)
-    c.Name=''
+ColumnInput = class(Input(), function(c)
     c.Type=1
     c.Properties={[1]={[1]='',[2]=''}}
     c.PropertyCount=1
@@ -67,8 +95,6 @@ ColumnInput = class(function(c)
     c.Ascending=true
     c.InZone=true
     c.Action=''
-    c.valid=true
-    c.message=nil
 end)
 
 function ColumnInput:toColumn()
@@ -139,14 +165,9 @@ function ColumnInput:fromColumn(column)
     return o
 end
 
-local newColumn = nil
-
-TabInput = class(function(t)
-    t.Name = ''
+TabInput = class(Input(), function(t)
     t.Columns = {[1]='Name'}
     t.ColumnCount = 1
-    t.valid = true
-    t.message = nil
 end)
 
 function TabInput:toTab()
@@ -171,16 +192,6 @@ function TabInput:fromTab(tab)
     return o
 end
 
-local newTab = nil
-
-local selected = false
-local selectedItem = nil
-local selectedItemType = nil
-
-local configDirty = false
-local invalidInput = false
-local message = nil
-
 local function HelpMarker(desc)
     ImGui.TextDisabled('(?)')
     if ImGui.IsItemHovered() then
@@ -194,11 +205,10 @@ end
 
 local function DrawGeneralSettingsSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 1, 1)
-    selected = ImGui.Selectable('General Settings', selectedItemType == 'settings')
+    ConfigUI.selected = ImGui.Selectable('General Settings', ConfigUI.selectedItemType == 'settings')
     ImGui.PopStyleColor(1)
-    if selected then
-        selectedItem = nil
-        selectedItemType = 'settings'
+    if ConfigUI.selected then
+        ConfigUI:selectItem(nil, 'settings')
     end
 end
 
@@ -207,20 +217,18 @@ local function DrawPropertiesTreeSelector()
     if ImGui.TreeNodeEx('Properties', ImGuiTreeNodeFlags.SpanFullWidth) then
         ImGui.PopStyleColor(1)
         ImGui.Indent(8)
-        selected = ImGui.Selectable('Add new property...', selectedItemType == 'addnewproperty')
-        if selected then
-            selectedItem = nil
-            if selectedItemType ~= 'addnewproperty' then
+        ConfigUI.selected = ImGui.Selectable('Add new property...', ConfigUI.selectedItemType == 'addnewproperty')
+        if ConfigUI.selected then
+            if ConfigUI.selectedItemType ~= 'addnewproperty' then
                 newProperty = PropertyInput()
             end
-            selectedItemType = 'addnewproperty'
+            ConfigUI:selectItem(nil, 'addnewproperty')
         end
         for propName, propSettings in pairs(SETTINGS['Properties']) do
             ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
-            selected = ImGui.Selectable(propName, selectedItem == propName and selectedItemType == 'property')
-            if selected then
-                selectedItem = propName
-                selectedItemType = 'property'
+            ConfigUI.selected = ImGui.Selectable(propName, ConfigUI.selectedItem == propName and ConfigUI.selectedItemType == 'property')
+            if ConfigUI.selected then
+                ConfigUI:selectItem(propName, 'property')
             end
             ImGui.PopStyleColor(1)
         end
@@ -228,9 +236,8 @@ local function DrawPropertiesTreeSelector()
         ImGui.TreePop()
     else
         ImGui.PopStyleColor(1)
-        if selectedItemType == 'property' or selectedItemType == 'addnewproperty' then
-            selectedItem = nil
-            selectedItemType = nil
+        if ConfigUI.selectedItemType == 'property' or ConfigUI.selectedItemType == 'addnewproperty' then
+            ConfigUI:selectItem(nil, nil)
         end
     end
 end
@@ -240,20 +247,18 @@ local function DrawColumnTreeSelector()
     if ImGui.TreeNodeEx('Columns', ImGuiTreeNodeFlags.SpanFullWidth) then
         ImGui.PopStyleColor(1)
         ImGui.Indent(8)
-        selected = ImGui.Selectable('Add new column...', selectedItemType == 'addnewcolumn')
-        if selected then
-            selectedItem = nil
-            if selectedItemType ~= 'addnewcolumn' then
+        ConfigUI.selected = ImGui.Selectable('Add new column...', ConfigUI.selectedItemType == 'addnewcolumn')
+        if ConfigUI.selected then
+            if ConfigUI.selectedItemType ~= 'addnewcolumn' then
                 newColumn = ColumnInput()
             end
-            selectedItemType = 'addnewcolumn'
+            ConfigUI:selectItem(nil, 'addnewcolumn')
         end
         for columnName, columnSettings in pairs(SETTINGS['Columns']) do
             ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
-            selected = ImGui.Selectable(columnName, selectedItem == columnName and selectedItemType == 'column')
-            if selected then
-                selectedItem = columnName
-                selectedItemType = 'column'
+            ConfigUI.selected = ImGui.Selectable(columnName, ConfigUI.selectedItem == columnName and ConfigUI.selectedItemType == 'column')
+            if ConfigUI.selected then
+                ConfigUI:selectItem(columnName, 'column')
             end
             ImGui.PopStyleColor(1)
         end
@@ -261,9 +266,8 @@ local function DrawColumnTreeSelector()
         ImGui.TreePop()
     else
         ImGui.PopStyleColor(1)
-        if selectedItemType == 'column' or selectedItemType == 'addnewcolumn' then
-            selectedItem = nil
-            selectedItemType = nil
+        if ConfigUI.selectedItemType == 'column' or ConfigUI.selectedItemType == 'addnewcolumn' then
+            ConfigUI:selectItem(nil, nil)
         end
     end
 end
@@ -273,20 +277,18 @@ local function DrawTabTreeSelector()
     if ImGui.TreeNodeEx('Tabs', ImGuiTreeNodeFlags.SpanFullWidth) then
         ImGui.PopStyleColor(1)
         ImGui.Indent(8)
-        selected = ImGui.Selectable('Add new tab...', selectedItemType == 'addnewtab')
-        if selected then
-            selectedItem = nil
-            if selectedItemType ~= 'addnewtab' then
+        ConfigUI.selected = ImGui.Selectable('Add new tab...', ConfigUI.selectedItemType == 'addnewtab')
+        if ConfigUI.selected then
+            if ConfigUI.selectedItemType ~= 'addnewtab' then
                 newTab = TabInput()
             end
-            selectedItemType = 'addnewtab'
+            ConfigUI:selectItem(nil, 'addnewtab')
         end
         for tabIdx, tab in pairs(SETTINGS['Tabs']) do
             ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
-            selected = ImGui.Selectable(tab['Name'], selectedItem == tabIdx and selectedItemType == 'tab')
-            if selected then
-                selectedItem = tabIdx
-                selectedItemType = 'tab'
+            ConfigUI.selected = ImGui.Selectable(tab['Name'], ConfigUI.selectedItem == tabIdx and ConfigUI.selectedItemType == 'tab')
+            if ConfigUI.selected then
+                ConfigUI:selectItem(tabIdx, 'tab')
             end
             ImGui.PopStyleColor(1)
         end
@@ -294,30 +296,27 @@ local function DrawTabTreeSelector()
         ImGui.TreePop()
     else
         ImGui.PopStyleColor(1)
-        if selectedItemType == 'tab' or selectedItemType == 'addnewtab' then
-            selectedItem = nil
-            selectedItemType = nil
+        if ConfigUI.selectedItemType == 'tab' or ConfigUI.selectedItemType == 'addnewtab' then
+            ConfigUI:selectItem(nil, nil)
         end
     end
 end
 
 local function DrawAboutSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 1, 1)
-    selected = ImGui.Selectable('About', selectedItemType == 'about')
+    ConfigUI.selected = ImGui.Selectable('About', ConfigUI.selectedItemType == 'about')
     ImGui.PopStyleColor(1)
-    if selected then
-        selectedItem = nil
-        selectedItemType = 'about'
+    if ConfigUI.selected then
+        ConfigUI:selectItem(nil, 'about')
     end
 end
 
 local function DrawSaveChangesSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 1, 1)
-    selected = ImGui.Selectable('Save Configuration', selectedItemType == 'savechanges')
+    ConfigUI.selected = ImGui.Selectable('Save Configuration', ConfigUI.selectedItemType == 'savechanges')
     ImGui.PopStyleColor(1)
-    if selected then
-        selectedItem = nil
-        selectedItemType = 'savechanges'
+    if ConfigUI.selected then
+        ConfigUI:selectItem(nil, 'savechanges')
     end
 end
 
@@ -351,22 +350,22 @@ function PropertyInput:draw(width)
     ImGui.Text('Name(*): ')
     ImGui.SameLine()
     HelpMarker('The data member this property should display. Examples:\nObserved: \'Me.PctHPs\'\nNetBots: \'PctHPs\'\nSpawn: \'Distance3D\'\n')
-    self.Name, selected = ImGui.InputText('##newpropname', self.Name, 32)
+    self.Name, ConfigUI.selected = ImGui.InputText('##newpropname', self.Name, 32)
 
     if self.Type == 1 then
         ImGui.Text('DependsOnName: ')
         ImGui.SameLine()
         HelpMarker('Optional. The name of another property which this property depends on. This property will be ignored for a character if the property it depends on doesn\'t have the desired value.')
-        self.DependsOnName, selected = ImGui.InputText('##newpropdepname', self.DependsOnName, 32)
+        self.DependsOnName, ConfigUI.selected = ImGui.InputText('##newpropdepname', self.DependsOnName, 32)
         ImGui.Text('DependsOnValue: ')
         ImGui.SameLine()
         HelpMarker('Optional. The value of another property which this property depends on. This property will be ignored for a character if the property it depends on doesn\'t have the desired value.')
-        self.DependsOnValue, selected = ImGui.InputText('##newpropdepvalue', self.DependsOnValue, 32)
+        self.DependsOnValue, ConfigUI.selected = ImGui.InputText('##newpropdepvalue', self.DependsOnValue, 32)
     elseif self.Type == 3 then
         ImGui.Text('FromIDProperty: ')
         ImGui.SameLine()
         HelpMarker('Optional. The name of another property to use as the ID in the Spawn search. The property MUST return a Spawn ID.')
-        self.FromIDProperty, selected = ImGui.InputText('##newpropfromid', self.FromIDProperty, 32)
+        self.FromIDProperty, ConfigUI.selected = ImGui.InputText('##newpropfromid', self.FromIDProperty, 32)
     end
     ImGui.Separator()
     if ImGui.Button('Apply##newprop') then
@@ -375,8 +374,7 @@ function PropertyInput:draw(width)
         ok, self.message = property:validate()
         if ok then
             SETTINGS['Properties'][self.Name] = property
-            selectedItemType = nil
-            configDirty = true
+            ConfigUI:setDirtyAndClearSelection()
         else
             self.valid = false
         end
@@ -443,15 +441,13 @@ function Property:draw()
     if self.Name ~= 'Me.Class.ShortName' then
         if ImGui.SmallButton('Edit##'..self.Name) then
             newProperty = PropertyInput:fromProperty(self)
-            selectedItemType = 'addnewproperty'
+            ConfigUI:selectItem(nil, 'addnewproperty')
         end
         ImGui.SameLine()
         if ImGui.SmallButton('Delete##'..self.Name) then
             if not self:references(false) then
                 SETTINGS['Properties'][self.Name] = nil
-                selectedItemType = nil
-                selectedItem = nil
-                configDirty = true
+                ConfigUI:setDirtyAndClearSelection()
             end
         end
     end
@@ -480,17 +476,6 @@ function Property:draw()
     ImGui.Indent(-10)
 end
 
-local function DrawPropertySettings()
-    local property = Property(SETTINGS['Properties'][selectedItem])
-    if property then
-        property:draw()
-    end
-end
-
-local classes = {'all', 'melee', 'caster', 'hybrids', 'ranged', 'ber', 'brd', 
-        'bst', 'clr', 'dru', 'enc', 'mag', 'mnk', 'nec', 'pal', 'shd', 'rng', 
-        'rog', 'shm', 'war', 'wiz'}
-
 function ColumnInput:draw(width)
     ImGui.TextColored(1, 0, 1, 1, "Add New Column")
     ImGui.Separator()
@@ -504,7 +489,7 @@ function ColumnInput:draw(width)
     ImGui.Text('Name(*): ')
     ImGui.SameLine()
     HelpMarker('The name of the column which will appear in the table column header.')
-    self.Name, selected = ImGui.InputText('##newcolumnname', self.Name, 32)
+    self.Name, ConfigUI.selected = ImGui.InputText('##newcolumnname', self.Name, 32)
 
     if self.Type == 1 then
         ImGui.Text('Properties(*): ')
@@ -513,11 +498,11 @@ function ColumnInput:draw(width)
         for propIdx, propName in ipairs(self.Properties) do
             if self.Properties[propIdx] ~= nil then
                 ImGui.PushItemWidth(80)
-                shouldDrawCombo = ImGui.BeginCombo("##colpropcombo1"..propIdx, self.Properties[propIdx][1])
-                if shouldDrawCombo then
+                self.shouldDrawCombo = ImGui.BeginCombo("##colpropcombo1"..propIdx, self.Properties[propIdx][1])
+                if self.shouldDrawCombo then
                     for _,class in pairs(classes) do
-                        selected = ImGui.Selectable(class, self.Properties[propIdx][1] == class)
-                        if selected then
+                        ConfigUI.selected = ImGui.Selectable(class, self.Properties[propIdx][1] == class)
+                        if ConfigUI.selected then
                             self.Properties[propIdx][1] = class
                         end
                     end
@@ -526,11 +511,11 @@ function ColumnInput:draw(width)
                 ImGui.PopItemWidth()
                 ImGui.SameLine()
                 ImGui.PushItemWidth(160)
-                shouldDrawCombo = ImGui.BeginCombo("##colpropcombo2"..propIdx, self.Properties[propIdx][2])
-                if shouldDrawCombo then
+                self.shouldDrawCombo = ImGui.BeginCombo("##colpropcombo2"..propIdx, self.Properties[propIdx][2])
+                if self.shouldDrawCombo then
                     for cpropname,_ in pairs(SETTINGS['Properties']) do
-                        selected = ImGui.Selectable(cpropname, self.Properties[propIdx][2] == cpropname)
-                        if selected then
+                        ConfigUI.selected = ImGui.Selectable(cpropname, self.Properties[propIdx][2] == cpropname)
+                        if ConfigUI.selected then
                             self.Properties[propIdx][2] = cpropname
                         end
                     end
@@ -560,9 +545,9 @@ function ColumnInput:draw(width)
         for mappingIdx, mappingName in ipairs(self.Mappings) do
             if self.Mappings[mappingIdx] ~= nil then
                 ImGui.PushItemWidth(100)
-                self.Mappings[mappingIdx][1], selected = ImGui.InputText('##newcolmappings1-'..tostring(mappingIdx), self.Mappings[mappingIdx][1], 32)
+                self.Mappings[mappingIdx][1], ConfigUI.selected = ImGui.InputText('##newcolmappings1-'..tostring(mappingIdx), self.Mappings[mappingIdx][1], 32)
                 ImGui.SameLine()
-                self.Mappings[mappingIdx][2], selected = ImGui.InputText('##newcolmappings2-'..tostring(mappingIdx), self.Mappings[mappingIdx][2], 32)
+                self.Mappings[mappingIdx][2], ConfigUI.selected = ImGui.InputText('##newcolmappings2-'..tostring(mappingIdx), self.Mappings[mappingIdx][2], 32)
                 ImGui.SameLine()
                 if ImGui.Button('X##deleteMappingRow'..mappingIdx) then
                     local mappingIter = mappingIdx
@@ -587,7 +572,7 @@ function ColumnInput:draw(width)
         for thresholdIdx, thresholdValue in ipairs(self.Thresholds) do
             if self.Thresholds[thresholdIdx] ~= nil then
                 ImGui.PushItemWidth(80)
-                self.Thresholds[thresholdIdx], selected = ImGui.InputText('##newcolthresholds'..tostring(thresholdIdx), self.Thresholds[thresholdIdx], 32)
+                self.Thresholds[thresholdIdx], ConfigUI.selected = ImGui.InputText('##newcolthresholds'..tostring(thresholdIdx), self.Thresholds[thresholdIdx], 32)
                 ImGui.PopItemWidth()
                 ImGui.SameLine()
                 if ImGui.Button('X##deleteThresholdRow'..thresholdIdx) then
@@ -624,7 +609,7 @@ function ColumnInput:draw(width)
         ImGui.Text('Action(*): ')
         ImGui.SameLine()
         HelpMarker('The action to take on left click. The string \'#botName#\' will be replaced with the character name from the row of the button.\nExample: \'/dex #botName# /mqp\'')
-        self.Action, selected = ImGui.InputText('##newcolumnaction', self.Action, 32)
+        self.Action, ConfigUI.selected = ImGui.InputText('##newcolumnaction', self.Action, 32)
     end
     ImGui.Separator()
     if ImGui.Button('Apply##newcolumn') then
@@ -632,8 +617,7 @@ function ColumnInput:draw(width)
         ok, self.message = column:validate()
         if ok then
             SETTINGS['Columns'][self.Name] = column
-            selectedItemType = nil
-            configDirty = true
+            ConfigUI:setDirtyAndClearSelection()
         else
             self.valid = false
         end
@@ -665,28 +649,19 @@ function Column:references(draw)
     return refFound
 end
 
-local function DrawColumnSettings()
-    local column = Column(SETTINGS['Columns'][selectedItem])
-    if column ~= nil then
-        column:draw()
-    end
-end
-
 function Column:draw()
     ImGui.TextColored(1, 0, 1, 1, self.Name)
     ImGui.Separator()
     if self.Name ~= 'Name' then
         if ImGui.SmallButton('Edit##'..self.Name) then
             newColumn = ColumnInput:fromColumn(self)
-            selectedItemType = 'addnewcolumn'
+            ConfigUI:selectItem(nil, 'addnewcolumn')
         end
         ImGui.SameLine()
         if ImGui.SmallButton('Delete##'..self.Name) then
             if not self:references(false) then
                 SETTINGS['Columns'][self.Name] = nil
-                selectedItemType = nil
-                selectedItem = nil
-                configDirty = true
+                ConfigUI:setDirtyAndClearSelection()
             end
         end
     end
@@ -760,24 +735,23 @@ function Column:draw()
     ImGui.Indent(-10)
 end
 
-local shouldDrawCombo = false
 function TabInput:draw(width)
     ImGui.TextColored(1, 0, 1, 1, "Add New Tab")
     ImGui.Separator()
     ImGui.Text('Name(*): ')
     ImGui.SameLine()
     HelpMarker('The name of the tab which will be displayed in the Tab bar.')
-    self.Name, selected = ImGui.InputText('##newtabname', self.Name, 32)
+    self.Name, ConfigUI.selected = ImGui.InputText('##newtabname', self.Name, 32)
     ImGui.Text('Columns: ')
     ImGui.SameLine()
     HelpMarker('The list of columns which will be displayed in the tab.')
     for columnIdx, columnName in ipairs(self.Columns) do
         if self.Columns[columnIdx] ~= nil then
-            shouldDrawCombo = ImGui.BeginCombo("##columncombo"..columnIdx, self.Columns[columnIdx])
-            if shouldDrawCombo then
+            self.shouldDrawCombo = ImGui.BeginCombo("##columncombo"..columnIdx, self.Columns[columnIdx])
+            if self.shouldDrawCombo then
                 for column,_ in pairs(SETTINGS['Columns']) do
-                    selected = ImGui.Selectable(column, self.Columns[columnIdx] == column)
-                    if selected then
+                    ConfigUI.selected = ImGui.Selectable(column, self.Columns[columnIdx] == column)
+                    if ConfigUI.selected then
                         self.Columns[columnIdx] = column
                     end
                 end
@@ -816,8 +790,7 @@ function TabInput:draw(width)
             if not foundExisting then
                 table.insert(SETTINGS['Tabs'], tab)
             end
-            selectedItemType = nil
-            configDirty = true
+            ConfigUI:setDirtyAndClearSelection()
         else
             self.valid = false
         end
@@ -830,32 +803,22 @@ function TabInput:draw(width)
     end
 end
 
-local function DrawTabSettings()
-    local tab = Tab(SETTINGS['Tabs'][selectedItem])
-    if tab then
-        tab:draw()
-    end
-end
-
 function Tab:draw()
     ImGui.TextColored(1, 0, 1, 1, self.Name)
     ImGui.Separator()
     if ImGui.SmallButton('Edit##'..self.Name) then
         newTab = TabInput:fromTab(self)
-        selectedItemType = 'addnewtab'
+        ConfigUI:selectItem(nil, 'addnewtab')
     end
     ImGui.SameLine()
     if ImGui.SmallButton('Delete##'..self.Name) then
-        local i = 1
-        local tabIter = selectedItem
+        local tabIter = ConfigUI.selectedItem
         for tabIdx = tabIter+1, #SETTINGS['Tabs'] do
             SETTINGS['Tabs'][tabIter] = SETTINGS['Tabs'][tabIdx]
             tabIter = tabIter+1
         end
         SETTINGS['Tabs'][tabIter] = nil
-        selectedItemType = nil
-        selectedItem = nil
-        configDirty = true
+        ConfigUI:setDirtyAndClearSelection()
     end
     ImGui.Text('Columns:')
     if self.Columns then
@@ -916,8 +879,8 @@ local function DrawGeneralSettings()
         SETTINGS['Colors']['NotInZone'] = col
     end
     ImGui.Separator()
-    if ImGui.Button('Save##general') then
-        configDirty = true
+    if ImGui.Button('Apply##general') then
+        ConfigUI:setDirtyAndClearSelection()
     end
 end
 
@@ -929,17 +892,14 @@ local function DrawAbout()
     ImGui.TextColored(0, 1, 0, 1, VERSION)
 end
 
-local saved = false
 local function DrawSaveChanges()
-    if configDirty then
+    if ConfigUI.dirty then
         ImGui.TextColored(1, 0, 0, 1, 'Are you sure you wish to save your changes?')
         if ImGui.Button('Yes') then
             print_msg('Saving configuration')
-            saved = SaveSettings()
-        end
-        if saved then
-            configDirty = false
-            saved = false
+            if SaveSettings() then
+                ConfigUI.dirty = false
+            end
         end
     else
         ImGui.Text('No pending changes.')
@@ -948,7 +908,7 @@ end
 
 local function DrawInfo(x)
     ImGui.PushTextWrapPos(x-10)
-    if configDirty then
+    if ConfigUI.dirty then
         ImGui.TextColored(1, 0, 0, 1, 'Configuration changes will not be persisted until you click \'Save Configuration\' on the left menu.')
         ImGui.Separator()
     end
@@ -963,23 +923,32 @@ end
 local function RightPaneWindow()
     local x,y = ImGui.GetContentRegionAvail()
     if ImGui.BeginChild("right", x, y-1, true) then
-        if selectedItemType == 'settings' then
+        if ConfigUI.selectedItemType == 'settings' then
             DrawGeneralSettings()
-        elseif selectedItemType == 'addnewproperty' then
+        elseif ConfigUI.selectedItemType == 'addnewproperty' then
             newProperty:draw(x)
-        elseif selectedItemType == 'addnewcolumn' then
+        elseif ConfigUI.selectedItemType == 'addnewcolumn' then
             newColumn:draw(x)
-        elseif selectedItemType == 'addnewtab' then
+        elseif ConfigUI.selectedItemType == 'addnewtab' then
             newTab:draw(x)
-        elseif selectedItemType == 'property' then
-            DrawPropertySettings()
-        elseif selectedItemType == 'column' then
-            DrawColumnSettings()
-        elseif selectedItemType == 'tab' then
-            DrawTabSettings()
-        elseif selectedItemType == 'about' then
+        elseif ConfigUI.selectedItemType == 'property' then
+            local property = SETTINGS['Properties'][ConfigUI.selectedItem]
+            if property then
+                property:draw()
+            end
+        elseif ConfigUI.selectedItemType == 'column' then
+            local column = SETTINGS['Columns'][ConfigUI.selectedItem]
+            if column ~= nil then
+                column:draw()
+            end
+        elseif ConfigUI.selectedItemType == 'tab' then
+            local tab = SETTINGS['Tabs'][ConfigUI.selectedItem]
+            if tab then
+                tab:draw()
+            end
+        elseif ConfigUI.selectedItemType == 'about' then
             DrawAbout()
-        elseif selectedItemType == 'savechanges' then
+        elseif ConfigUI.selectedItemType == 'savechanges' then
             DrawSaveChanges()
         else
             DrawInfo(x)
@@ -995,5 +964,3 @@ function ConfigurationTab()
     RightPaneWindow()
     ImGui.PopStyleVar()
 end
-
-return configpanel

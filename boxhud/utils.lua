@@ -1,13 +1,10 @@
--- boxhud/utils.lua 2.0.4 -- aquietone
+-- boxhud/utils.lua 2.0.5 -- aquietone
 --- @type mq
 local mq = require('mq')
 local converter = require('boxhud.settings-converter')
 dofile('boxhud/persistence.lua')
 
---local lyaml = require('lyaml.init')
-local utils = {}
-
-VERSION = '2.0.3'
+VERSION = '2.0.5'
 
 SETTINGS_FILE = nil
 
@@ -506,6 +503,7 @@ local function ValidateSettings()
     for idx,tabSettings in pairs(SETTINGS['Tabs']) do
         local tab = Tab(tabSettings)
         valid,_ = tab:validate() and valid
+        SETTINGS['Tabs'][idx] = tab
     end
     if not valid then
         print_err('Exiting due to invalid configuration. Review the output above.')
@@ -572,5 +570,3 @@ function SaveSettings()
     persistence.store(settings_path, SETTINGS)
     return true
 end
-
-return utils
