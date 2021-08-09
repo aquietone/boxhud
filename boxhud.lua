@@ -361,7 +361,7 @@ function Character:updateCharacterProperties(currTime)
         properties['BotInZone'] = true
     end
     properties['lastUpdated'] = currTime
-    self.className = properties[CLASS_VAR]
+    self.className = properties[CLASS_VAR]:lower()
     self.properties = properties
 end
 

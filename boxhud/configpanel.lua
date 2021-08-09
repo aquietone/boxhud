@@ -605,7 +605,7 @@ function ColumnInput:draw(width)
         ImGui.SameLine()
         HelpMarker('Check this box if this column should only display values for characters in the same zone.')
         self.InZone, pressed = ImGui.Checkbox('##newcolumninzone', self.InZone)
-    elseif typeRadioValue == 2 then
+    elseif self.Type == 2 then
         ImGui.Text('Action(*): ')
         ImGui.SameLine()
         HelpMarker('The action to take on left click. The string \'#botName#\' will be replaced with the character name from the row of the button.\nExample: \'/dex #botName# /mqp\'')
