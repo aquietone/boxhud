@@ -32,6 +32,7 @@ require 'ImGui'
 require('boxhud.utils')
 require('boxhud.configpanel')
 
+local scriptname = debug.getinfo(1,'S').source:match("^.+\\(.+).lua$")
 local arg = {...}
 
 -- Control variables
@@ -528,7 +529,7 @@ local HUDGUI = function()
     if mq.TLO.Me.CleanName() == 'load' then
         return
     end
-    openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..mq.TLO.Me.CleanName(), openGUI, ImGuiWindowFlags.NoTitleBar)
+    openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..mq.TLO.Me.CleanName()..scriptname, openGUI, ImGuiWindowFlags.NoTitleBar)
     if shouldDrawGUI then
         if initialRun and ImGui.GetWindowHeight() == 32 and ImGui.GetWindowWidth() == 32 then
             ImGui.SetWindowSize(460, 177)
@@ -572,14 +573,18 @@ end
 
 local Help = function()
     print_msg('Available commands:')
-    print('\ao    /bhhelp\a-w -- Displays this help output')
-    print('\ao    /bhversion\a-w -- Displays the version')
-    print('\ao    /boxhud\a-w -- Toggle the display')
-    print('\ao    /boxhudend\a-w -- End the script')
-    print('\ao    /bhadmin\a-w -- Enable admin mode')
-    print('\ao    /bhadmin anon\a-w -- Enable anon mode')
-    print('\ao    /bhadmin reset all\a-w -- Reset DanNet Observed Properties for all toons')
-    print('\ao    /bhadmin reset <name>\a-w -- Reset DanNet Observed Properties for <name>')
+    local prefix = 'bh'
+    if scriptname ~= 'boxhud' then
+        prefix = scriptname
+    end
+    print(string.format('\ao    /%shelp\a-w -- Displays this help output', prefix))
+    print(string.format('\ao    /%sversion\a-w -- Displays the version', prefix))
+    print(string.format('\ao    /%s\a-w -- Toggle the display', scriptname))
+    print(string.format('\ao    /%send\a-w -- End the script', scriptname))
+    print(string.format('\ao    /%sadmin\a-w -- Enable admin mode', prefix))
+    print(string.format('\ao    /%sadmin anon\a-w -- Enable anon mode', prefix))
+    print(string.format('\ao    /%sadmin reset all\a-w -- Reset DanNet Observed Properties for all toons', prefix))
+    print(string.format('\ao    /%sadmin reset <name>\a-w -- Reset DanNet Observed Properties for <name>', prefix))
 end
 
 local ShowVersion = function()
@@ -587,21 +592,25 @@ local ShowVersion = function()
 end
 
 local function SetupBindings()
-    mq.bind('/bhversion', ShowVersion)
+    local prefix = 'bh'
+    if scriptname ~= 'boxhud' then
+        prefix = scriptname
+    end
+    mq.bind(string.format('/%sversion', prefix), ShowVersion)
 
-    mq.bind('/bhhelp', Help)
+    mq.bind(string.format('/%shelp', prefix), Help)
 
-    mq.bind('/boxhud', function()
+    mq.bind(string.format('/%s', scriptname), function()
         openGUI = not openGUI
     end)
 
-    mq.bind('/boxhudend', function()
+    mq.bind(string.format('/%send', scriptname), function() 
         mq.imgui.destroy('BOXHUDUI')
         shouldDrawGUI = false
         terminate = true
     end)
 
-    mq.bind('/bhadmin', Admin)
+    mq.bind(string.format('/%sadmin', prefix), Admin)
 end
 
 local function UpdateBotValues(botName, currTime)
