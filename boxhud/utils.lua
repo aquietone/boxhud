@@ -9,6 +9,7 @@ VERSION = '2.0.6'
 SETTINGS_FILE = nil
 
 SETTINGS = {}
+TRANSPARENCY = false
 PEER_SOURCE = 'dannet'
 -- Default DanNet peer group to use
 PEER_GROUP = 'all'

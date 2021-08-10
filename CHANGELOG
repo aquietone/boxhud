@@ -1,4 +1,6 @@
 2.0.6
+- Added color options for true/false values
+- Added toggle for window transparency
 - More refactoring
 2.0.5
 - Just refactoring things for no reason
