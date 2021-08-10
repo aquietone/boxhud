@@ -1,14 +1,15 @@
--- boxhud/utils.lua 2.0.5 -- aquietone
+-- boxhud/utils.lua 2.0.6 -- aquietone
 --- @type mq
 local mq = require('mq')
 local converter = require('boxhud.settings-converter')
 dofile('boxhud/persistence.lua')
 
-VERSION = '2.0.5'
+VERSION = '2.0.6'
 
 SETTINGS_FILE = nil
 
 SETTINGS = {}
+TRANSPARENCY = false
 PEER_SOURCE = 'dannet'
 -- Default DanNet peer group to use
 PEER_GROUP = 'all'
@@ -455,16 +456,17 @@ local function ValidateOptionalSettings()
         STALE_DATA_TIMEOUT = SETTINGS['StaleDataTimeout']
     end
     if not SETTINGS['Colors'] then
-        SETTINGS['Colors'] = {
-            ['Default'] = {1,1,1},
-            ['Low'] = {1,0,0},
-            ['Medium'] = {1,1,0},
-            ['High'] = {0,1,0},
-            ['InZone'] = {0,1,0},
-            ['Invis'] = {0.26, 0.98, 0.98},
-            ['NotInZone'] = {1,0,0}
-        }
+        SETTINGS['Colors'] = {}
     end
+    SETTINGS['Colors']['Default'] = SETTINGS['Colors']['Default'] or {1,1,1}
+    SETTINGS['Colors']['Low'] = SETTINGS['Colors']['Low'] or {1,0,0}
+    SETTINGS['Colors']['Medium'] = SETTINGS['Colors']['Medium'] or {1,1,0}
+    SETTINGS['Colors']['High'] = SETTINGS['Colors']['High'] or  {0,1,0}
+    SETTINGS['Colors']['True'] = SETTINGS['Colors']['True'] or {0,1,0}
+    SETTINGS['Colors']['False'] = SETTINGS['Colors']['False'] or {1,0,0}
+    SETTINGS['Colors']['InZone'] = SETTINGS['Colors']['InZone'] or {0,1,0}
+    SETTINGS['Colors']['Invis'] = SETTINGS['Colors']['Invis'] or {0.26, 0.98, 0.98}
+    SETTINGS['Colors']['NotInZone'] = SETTINGS['Colors']['NotInZone'] or {1,0,0}
     return true
 end
 
@@ -529,11 +531,6 @@ function LoadSettings(arg)
         CopyFile(old_settings_path, settings_path)
         print_msg('Loading settings from file: ' .. SETTINGS_FILE)
         SETTINGS = require(string.format('boxhud.%s', SETTINGS_FILE:gsub('.lua', '')))
-        --os.remove(old_settings_path)
-
-        --local new_settings_path = string.format('%s/%s', boxhud_dir, 'newsettings.lua')
-        --local new_settings = ConvertSettings(SETTINGS)
-        --persistence.store(new_settings_path, new_settings)
     else
         print_msg('Loading default settings from file: boxhud-settings')
         -- Default settings
@@ -544,23 +541,8 @@ function LoadSettings(arg)
 
     if not SETTINGS['SchemaVersion'] or SETTINGS['SchemaVersion'] < 2 then
         SETTINGS = ConvertSettings(SETTINGS)
-        --local backup_settings_path = string.format('%s/%s.bak', boxhud_dir, SETTINGS_FILE)
-        --CopyFile(settings_path, backup_settings_path)
-        --local new_settings_path = string.format('%s/%s', boxhud_dir, SETTINGS_FILE)
-        --persistence.store(new_settings_path, SETTINGS)
     end
     ValidateSettings()
-
-    --[[
-    f = io.open(yaml_settings_path, 'w')
-    f:write(lyaml.dump({SETTINGS}))
-    io.close(f)
-    f = io.open(yaml_settings_path, 'r')
-    local contents = f:read('*a')
-    io.close(f)
-    SETTINGS = lyaml.load(contents)
-    ValidateSettings()
-    --]]
 end
 
 function SaveSettings()

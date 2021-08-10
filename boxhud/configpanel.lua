@@ -1,4 +1,4 @@
--- boxhud/configpanel.lua 2.0.5 -- aquietone
+-- boxhud/configpanel.lua 2.0.6 -- aquietone
 --- @type ImGui
 require 'ImGui'
 require('boxhud.utils')
@@ -203,6 +203,66 @@ local function HelpMarker(desc)
     end
 end
 
+local function DrawLabelAndTextInput(textLabel, inputLabel, resultVar, helpText)
+    ImGui.Text(textLabel)
+    ImGui.SameLine()
+    HelpMarker(helpText)
+    resultVar,_ = ImGui.InputText(inputLabel, resultVar, ImGuiInputTextFlags.EnterReturnsTrue)
+    return resultVar
+end
+
+local function DrawLabelAndTextValue(label, value)
+    ImGui.Text(label)
+    ImGui.SameLine()
+    ImGui.TextColored(0, 1, 0, 1, value)
+end
+
+local function DrawComboBox(label, resultvar, options, bykey)
+    if ImGui.BeginCombo(label, resultvar) then
+        for i,j in pairs(options) do
+            if bykey then
+                if ImGui.Selectable(i, i == resultvar) then
+                    resultvar = i
+                end
+            else
+                if ImGui.Selectable(j, j == resultvar) then
+                    resultvar = j
+                end
+            end
+        end
+        ImGui.EndCombo()
+    end
+    return resultvar
+end
+
+local function DrawCheckBox(labelText, idText, resultVar, helpText)
+    ImGui.Text(labelText)
+    ImGui.SameLine()
+    HelpMarker(helpText)
+    resultVar,_ = ImGui.Checkbox(idText, resultVar)
+    return resultVar
+end
+
+local function DrawColorEditor(label, resultVar)
+    local col, used = ImGui.ColorEdit3(label, resultVar, ImGuiColorEditFlags.NoInputs)
+    if col then
+        resultVar = col
+    end
+    return resultVar
+end
+
+function DrawReferenceText(label1, value1, label2, value2)
+    ImGui.TextColored(0, 1, 1, 1, label1)
+    ImGui.SameLine()
+    ImGui.TextColored(0, 1, 0, 1, value1)
+    if label2 then
+        ImGui.SameLine()
+        ImGui.TextColored(0, 1, 1, 1, label2)
+        ImGui.SameLine()
+        ImGui.TextColored(0, 1, 0, 1, value2)
+    end
+end
+
 local function DrawGeneralSettingsSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 1, 1)
     ConfigUI.selected = ImGui.Selectable('General Settings', ConfigUI.selectedItemType == 'settings')
@@ -347,25 +407,13 @@ function PropertyInput:draw(width)
     ImGui.SameLine()
     self.Type,_ = ImGui.RadioButton("Spawn", self.Type, 3)
     
-    ImGui.Text('Name(*): ')
-    ImGui.SameLine()
-    HelpMarker('The data member this property should display. Examples:\nObserved: \'Me.PctHPs\'\nNetBots: \'PctHPs\'\nSpawn: \'Distance3D\'\n')
-    self.Name, ConfigUI.selected = ImGui.InputText('##newpropname', self.Name, ImGuiInputTextFlags.EnterReturnsTrue)
+    self.Name = DrawLabelAndTextInput('Name(*): ', '##newpropname', self.Name, 'The data member this property should display. Examples:\nObserved: \'Me.PctHPs\'\nNetBots: \'PctHPs\'\nSpawn: \'Distance3D\'\n')
 
     if self.Type == 1 then
-        ImGui.Text('DependsOnName: ')
-        ImGui.SameLine()
-        HelpMarker('Optional. The name of another property which this property depends on. This property will be ignored for a character if the property it depends on doesn\'t have the desired value.')
-        self.DependsOnName, ConfigUI.selected = ImGui.InputText('##newpropdepname', self.DependsOnName, ImGuiInputTextFlags.EnterReturnsTrue)
-        ImGui.Text('DependsOnValue: ')
-        ImGui.SameLine()
-        HelpMarker('Optional. The value of another property which this property depends on. This property will be ignored for a character if the property it depends on doesn\'t have the desired value.')
-        self.DependsOnValue, ConfigUI.selected = ImGui.InputText('##newpropdepvalue', self.DependsOnValue, ImGuiInputTextFlags.EnterReturnsTrue)
+        self.DependsOnName = DrawLabelAndTextInput('DependsOnName: ', '##newpropdepname', self.DependsOnName, 'Optional. The name of another property which this property depends on. This property will be ignored for a character if the property it depends on doesn\'t have the desired value.')
+        self.DependsOnValue = DrawLabelAndTextInput('DependsOnValue: ', '##newpropdepvalue', self.DependsOnValue, 'Optional. The value of another property which this property depends on. This property will be ignored for a character if the property it depends on doesn\'t have the desired value.')
     elseif self.Type == 3 then
-        ImGui.Text('FromIDProperty: ')
-        ImGui.SameLine()
-        HelpMarker('Optional. The name of another property to use as the ID in the Spawn search. The property MUST return a Spawn ID.')
-        self.FromIDProperty, ConfigUI.selected = ImGui.InputText('##newpropfromid', self.FromIDProperty, ImGuiInputTextFlags.EnterReturnsTrue)
+        self.FromIDProperty = DrawLabelAndTextInput('FromIDProperty: ', '##newpropfromid', self.FromIDProperty, 'Optional. The name of another property to use as the ID in the Spawn search. The property MUST return a Spawn ID.')
     end
     ImGui.Separator()
     if ImGui.Button('Apply##newprop') then
@@ -395,13 +443,7 @@ function Property:references(draw)
                 if propValue == self.Name then
                     refFound = true
                     if draw then
-                        ImGui.TextColored(0, 1, 1, 1, 'Column: ')
-                        ImGui.SameLine()
-                        ImGui.TextColored(0, 1, 0, 1, columnName)
-                        ImGui.SameLine()
-                        ImGui.TextColored(0, 1, 1, 1, ' Property Key: ')
-                        ImGui.SameLine()
-                        ImGui.TextColored(0, 1, 0, 1, propKey)
+                        DrawReferenceText('Column: ', columnName, ' Property Key: ', propKey)
                     end
                 end
             end
@@ -411,24 +453,12 @@ function Property:references(draw)
         if property['DependsOnName'] == self.Name then
             refFound = true
             if draw then
-                ImGui.TextColored(0, 1, 1, 1, 'Property: ')
-                ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, propNameIter)
-                ImGui.SameLine()
-                ImGui.TextColored(0, 1, 1, 1, ' DependsOnName: ')
-                ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, self.Name)
+                DrawReferenceText('Property: ', propNameIter, ' DependsOnName: ', self.Name)
             end
         elseif property['FromIDProperty'] == self.Name then
             refFound = true
             if draw then
-                ImGui.TextColored(0, 1, 1, 1, 'Property: ')
-                ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, propNameIter)
-                ImGui.SameLine()
-                ImGui.TextColored(0, 1, 1, 1, ' FromIDProperty: ')
-                ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, self.Name)
+                DrawReferenceText('Property: ', propNameIter, ' FromIDProperty: ', self.Name)
             end
         end
     end
@@ -451,23 +481,15 @@ function Property:draw()
             end
         end
     end
-    ImGui.Text('Type: ')
-    ImGui.SameLine()
-    ImGui.TextColored(0, 1, 0, 1, self.Type)
+    DrawLabelAndTextValue('Type: ', self.Type)
     if self.DependsOnName then
-        ImGui.Text('DependsOnName: ')
-        ImGui.SameLine()
-        ImGui.TextColored(0, 1, 0, 1, self.DependsOnName)
+        DrawLabelAndTextValue('DependsOnName: ', self.DependsOnName)
     end
     if self.DependsOnValue then
-        ImGui.Text('DependsOnValue: ')
-        ImGui.SameLine()
-        ImGui.TextColored(0, 1, 0, 1, self.DependsOnValue)
+        DrawLabelAndTextValue('DependsOnValue: ', self.DependsOnValue)
     end
     if self.FromIDProperty then
-        ImGui.Text('FromIDProperty: ')
-        ImGui.SameLine()
-        ImGui.TextColored(0, 1, 0, 1, self.FromIDProperty)
+        DrawLabelAndTextValue('FromIDProperty: ', self.FromIDProperty)
     end
     ImGui.Separator()
     ImGui.Text('References:')
@@ -486,10 +508,7 @@ function ColumnInput:draw(width)
     ImGui.SameLine()
     self.Type,_ = ImGui.RadioButton("Button", self.Type, 2)
 
-    ImGui.Text('Name(*): ')
-    ImGui.SameLine()
-    HelpMarker('The name of the column which will appear in the table column header.')
-    self.Name, ConfigUI.selected = ImGui.InputText('##newcolumnname', self.Name, ImGuiInputTextFlags.EnterReturnsTrue)
+    self.Name = DrawLabelAndTextInput('Name(*): ', '##newcolumnname', self.Name, 'The name of the column which will appear in the table column header.')
 
     if self.Type == 1 then
         ImGui.Text('Properties(*): ')
@@ -498,29 +517,11 @@ function ColumnInput:draw(width)
         for propIdx, propName in ipairs(self.Properties) do
             if self.Properties[propIdx] ~= nil then
                 ImGui.PushItemWidth(80)
-                self.shouldDrawCombo = ImGui.BeginCombo("##colpropcombo1"..propIdx, self.Properties[propIdx][1])
-                if self.shouldDrawCombo then
-                    for _,class in pairs(classes) do
-                        ConfigUI.selected = ImGui.Selectable(class, self.Properties[propIdx][1] == class)
-                        if ConfigUI.selected then
-                            self.Properties[propIdx][1] = class
-                        end
-                    end
-                    ImGui.EndCombo()
-                end
+                self.Properties[propIdx][1] = DrawComboBox("##colpropcombo1"..propIdx, self.Properties[propIdx][1], classes, false)
                 ImGui.PopItemWidth()
                 ImGui.SameLine()
                 ImGui.PushItemWidth(160)
-                self.shouldDrawCombo = ImGui.BeginCombo("##colpropcombo2"..propIdx, self.Properties[propIdx][2])
-                if self.shouldDrawCombo then
-                    for cpropname,_ in pairs(SETTINGS['Properties']) do
-                        ConfigUI.selected = ImGui.Selectable(cpropname, self.Properties[propIdx][2] == cpropname)
-                        if ConfigUI.selected then
-                            self.Properties[propIdx][2] = cpropname
-                        end
-                    end
-                    ImGui.EndCombo()
-                end
+                self.Properties[propIdx][2] = DrawComboBox("##colpropcombo2"..propIdx, self.Properties[propIdx][2], SETTINGS['Properties'], true)
                 ImGui.PopItemWidth()
                 ImGui.SameLine()
                 if ImGui.Button('X##deleteRow'..propIdx) then
@@ -593,23 +594,11 @@ function ColumnInput:draw(width)
             end
         end
 
-        ImGui.Text('Percentage: ')
-        ImGui.SameLine()
-        HelpMarker('Check this box if the values displayed in this column are percents.')
-        self.Percentage, pressed = ImGui.Checkbox('##newcolumnpercent', self.Percentage)
-        ImGui.Text('Ascending: ')
-        ImGui.SameLine()
-        HelpMarker('Check this box if higher values are \'better\', i.e. 100%% HP is better than 10%%.')
-        self.Ascending, pressed = ImGui.Checkbox('##newcolumnascending', self.Ascending)
-        ImGui.Text('InZone: ')
-        ImGui.SameLine()
-        HelpMarker('Check this box if this column should only display values for characters in the same zone.')
-        self.InZone, pressed = ImGui.Checkbox('##newcolumninzone', self.InZone)
+        self.Percentage = DrawCheckBox('Percentage: ', '##newcolumnpercent', self.Percentage, 'Check this box if the values displayed in this column are percents.')
+        self.Ascending = DrawCheckBox('Ascending: ', '##newcolumnascending', self.Ascending, 'Check this box if higher values are \'better\', i.e. 100%% HP is better than 10%%.')
+        self.InZone = DrawCheckBox('InZone: ', '##newcolumninzone', self.InZone, 'Check this box if this column should only display values for characters in the same zone.')
     elseif self.Type == 2 then
-        ImGui.Text('Action(*): ')
-        ImGui.SameLine()
-        HelpMarker('The action to take on left click. The string \'#botName#\' will be replaced with the character name from the row of the button.\nExample: \'/dex #botName# /mqp\'')
-        self.Action, ConfigUI.selected = ImGui.InputText('##newcolumnaction', self.Action, ImGuiInputTextFlags.EnterReturnsTrue)
+        self.Action = DrawLabelAndTextInput('Action(*): ', '##newcolumnaction', self.Action, 'The action to take on left click. The string \'#botName#\' will be replaced with the character name from the row of the button.\nExample: \'/dex #botName# /mqp\'')
     end
     ImGui.Separator()
     if ImGui.Button('Apply##newcolumn') then
@@ -638,9 +627,7 @@ function Column:references(draw)
                 if self.Name == columnNameIter then
                     refFound = true
                     if draw then
-                        ImGui.TextColored(0, 1, 1, 1, 'Tab: ')
-                        ImGui.SameLine()
-                        ImGui.TextColored(0, 1, 0, 1, tab['Name'])
+                        DrawReferenceText('Tab: ', tab['Name'], nil, nil)
                     end
                 end
             end
@@ -665,9 +652,7 @@ function Column:draw()
             end
         end
     end
-    ImGui.Text('Type: ')
-    ImGui.SameLine()
-    ImGui.TextColored(0, 1, 0, 1, self.Type)
+    DrawLabelAndTextValue('Type: ', self.Type)
     
     if self.Type == 'property' then
         ImGui.Text('Properties: ')
@@ -707,25 +692,17 @@ function Column:draw()
             ImGui.TextColored(0, 1, 0, 1, 'None')
         end
         if self.Percentage then
-            ImGui.Text('Percentage: ')
-            ImGui.SameLine()
-            ImGui.TextColored(0, 1, 0, 1, tostring(self.Percentage))
+            DrawLabelAndTextValue('Percentage: ', tostring(self.Percentage))
         end
         if self.Ascending then
-            ImGui.Text('Ascending: ')
-            ImGui.SameLine()
-            ImGui.TextColored(0, 1, 0, 1, tostring(self.Ascending))
+            DrawLabelAndTextValue('Ascending: ', tostring(self.Ascending))
         end
         if self.InZone then
-            ImGui.Text('InZone: ')
-            ImGui.SameLine()
-            ImGui.TextColored(0, 1, 0, 1, tostring(self.InZone))
+            DrawLabelAndTextValue('InZone: ', tostring(self.InZone))
         end
     elseif self.Type == 'button' then
         if self.Action then
-            ImGui.Text('Action: ')
-            ImGui.SameLine()
-            ImGui.TextColored(0, 1, 0, 1, self.Action)
+            DrawLabelAndTextValue('Action: ', self.Action)
         end
     end
     ImGui.Separator()
@@ -738,25 +715,13 @@ end
 function TabInput:draw(width)
     ImGui.TextColored(1, 0, 1, 1, "Add New Tab")
     ImGui.Separator()
-    ImGui.Text('Name(*): ')
-    ImGui.SameLine()
-    HelpMarker('The name of the tab which will be displayed in the Tab bar.')
-    self.Name, ConfigUI.selected = ImGui.InputText('##newtabname', self.Name, ImGuiInputTextFlags.EnterReturnsTrue)
+    self.Name = DrawLabelAndTextInput('Name(*): ', '##newtabname', self.Name, 'The name of the tab which will be displayed in the Tab bar.')
     ImGui.Text('Columns: ')
     ImGui.SameLine()
     HelpMarker('The list of columns which will be displayed in the tab.')
     for columnIdx, columnName in ipairs(self.Columns) do
         if self.Columns[columnIdx] ~= nil then
-            self.shouldDrawCombo = ImGui.BeginCombo("##columncombo"..columnIdx, self.Columns[columnIdx])
-            if self.shouldDrawCombo then
-                for column,_ in pairs(SETTINGS['Columns']) do
-                    ConfigUI.selected = ImGui.Selectable(column, self.Columns[columnIdx] == column)
-                    if ConfigUI.selected then
-                        self.Columns[columnIdx] = column
-                    end
-                end
-                ImGui.EndCombo()
-            end
+            self.Columns[columnIdx] = DrawComboBox("##columncombo"..columnIdx, self.Columns[columnIdx], SETTINGS['Columns'], true)
             ImGui.SameLine()
             if ImGui.Button('X##deleteRow'..columnIdx) then
                 local columnIter = columnIdx
@@ -833,51 +798,23 @@ end
 local function DrawGeneralSettings()
     ImGui.TextColored(1, 0, 1, 1, 'General Settings')
     ImGui.Separator()
-    ImGui.Text('Peer Source: ')
-    ImGui.SameLine()
-    ImGui.TextColored(0, 1, 0, 1, SETTINGS['PeerSource'])
-    ImGui.Text('DanNet Peer Group: ')
-    ImGui.SameLine()
-    ImGui.TextColored(0, 1, 0, 1, SETTINGS['DanNetPeerGroup'])
+    DrawLabelAndTextValue('Peer Source: ', SETTINGS['PeerSource'])
+    DrawLabelAndTextValue('DanNet Peer Group: ', SETTINGS['DanNetPeerGroup'])
+    DrawLabelAndTextValue('Refresh Interval: ', SETTINGS['RefreshInterval'])
+    DrawLabelAndTextValue('Stale Data Timeout: ', SETTINGS['StaleDataTimeout'])
     ImGui.Separator()
-    ImGui.Text('Refresh Interval: ')
-    ImGui.SameLine()
-    ImGui.TextColored(0, 1, 0, 1, SETTINGS['RefreshInterval'])
-    ImGui.Text('Stale Data Timeout: ')
-    ImGui.SameLine()
-    ImGui.TextColored(0, 1, 0, 1, SETTINGS['StaleDataTimeout'])
+    TRANSPARENCY = DrawCheckBox('Transparent Window: ', '##transparency', TRANSPARENCY, 'Check this box to toggle transparency of the window.')
     ImGui.Separator()
     ImGui.Text('Column Text Colors:')
-    local col, used = ImGui.ColorEdit3("Default Color", SETTINGS['Colors']['Default'], ImGuiColorEditFlags.NoInputs)
-    if col then
-        if col[1] ~= SETTINGS['Colors']['Default'][1] and col[2] ~= SETTINGS['Colors']['Default'][2] and col[3] ~= SETTINGS['Colors']['Default'][3] then
-            SETTINGS['Colors']['Default'] = col
-        end
-    end
-    col, used = ImGui.ColorEdit3("Low threshold color", SETTINGS['Colors']['Low'], ImGuiColorEditFlags.NoInputs)
-    if col then
-        SETTINGS['Colors']['Low'] = col
-    end
-    col, used = ImGui.ColorEdit3("Medium threshold color", SETTINGS['Colors']['Medium'], ImGuiColorEditFlags.NoInputs)
-    if col then
-        SETTINGS['Colors']['Medium'] = col
-    end
-    col, used = ImGui.ColorEdit3("High threshold color", SETTINGS['Colors']['High'], ImGuiColorEditFlags.NoInputs)
-    if col then
-        SETTINGS['Colors']['High'] = col
-    end
-    col, used = ImGui.ColorEdit3("Name in zone color", SETTINGS['Colors']['InZone'], ImGuiColorEditFlags.NoInputs)
-    if col then
-        SETTINGS['Colors']['InZone'] = col
-    end
-    col, used = ImGui.ColorEdit3("Name invis color", SETTINGS['Colors']['Invis'], ImGuiColorEditFlags.NoInputs)
-    if col then
-        SETTINGS['Colors']['Invis'] = col
-    end
-    col, used = ImGui.ColorEdit3("Name not in zone color", SETTINGS['Colors']['NotInZone'], ImGuiColorEditFlags.NoInputs)
-    if col then
-        SETTINGS['Colors']['NotInZone'] = col
-    end
+    SETTINGS['Colors']['Default'] = DrawColorEditor("Default Color", SETTINGS['Colors']['Default'])
+    SETTINGS['Colors']['Low'] = DrawColorEditor("Below Threshold", SETTINGS['Colors']['Low'])
+    SETTINGS['Colors']['Medium'] = DrawColorEditor("Medium Threshold", SETTINGS['Colors']['Medium'])
+    SETTINGS['Colors']['High'] = DrawColorEditor("Above Threshold", SETTINGS['Colors']['High'])
+    SETTINGS['Colors']['True'] = DrawColorEditor("True values", SETTINGS['Colors']['True'])
+    SETTINGS['Colors']['False'] = DrawColorEditor("False values", SETTINGS['Colors']['False'])
+    SETTINGS['Colors']['InZone'] = DrawColorEditor("Character names in zone", SETTINGS['Colors']['InZone'])
+    SETTINGS['Colors']['Invis'] = DrawColorEditor("Invis characters in zone", SETTINGS['Colors']['Invis'])
+    SETTINGS['Colors']['NotInZone'] = DrawColorEditor("Characters not in zone", SETTINGS['Colors']['NotInZone'])
     ImGui.Separator()
     if ImGui.Button('Apply##general') then
         ConfigUI:setDirtyAndClearSelection()
@@ -887,9 +824,7 @@ end
 local function DrawAbout()
     ImGui.TextColored(1, 0, 1, 1, 'About')
     ImGui.Separator()
-    ImGui.Text('Version: ')
-    ImGui.SameLine()
-    ImGui.TextColored(0, 1, 0, 1, VERSION)
+    DrawLabelAndTextValue('Version: ', VERSION)
 end
 
 local function DrawSaveChanges()
@@ -906,8 +841,8 @@ local function DrawSaveChanges()
     end
 end
 
-local function DrawInfo(x)
-    ImGui.PushTextWrapPos(x-10)
+local function DrawInfo(width)
+    ImGui.PushTextWrapPos(width-10)
     if ConfigUI.dirty then
         ImGui.TextColored(1, 0, 0, 1, 'Configuration changes will not be persisted until you click \'Save Configuration\' on the left menu.')
         ImGui.Separator()
