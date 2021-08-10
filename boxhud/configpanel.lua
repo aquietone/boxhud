@@ -350,22 +350,22 @@ function PropertyInput:draw(width)
     ImGui.Text('Name(*): ')
     ImGui.SameLine()
     HelpMarker('The data member this property should display. Examples:\nObserved: \'Me.PctHPs\'\nNetBots: \'PctHPs\'\nSpawn: \'Distance3D\'\n')
-    self.Name, ConfigUI.selected = ImGui.InputText('##newpropname', self.Name, 32)
+    self.Name, ConfigUI.selected = ImGui.InputText('##newpropname', self.Name, ImGuiInputTextFlags.EnterReturnsTrue)
 
     if self.Type == 1 then
         ImGui.Text('DependsOnName: ')
         ImGui.SameLine()
         HelpMarker('Optional. The name of another property which this property depends on. This property will be ignored for a character if the property it depends on doesn\'t have the desired value.')
-        self.DependsOnName, ConfigUI.selected = ImGui.InputText('##newpropdepname', self.DependsOnName, 32)
+        self.DependsOnName, ConfigUI.selected = ImGui.InputText('##newpropdepname', self.DependsOnName, ImGuiInputTextFlags.EnterReturnsTrue)
         ImGui.Text('DependsOnValue: ')
         ImGui.SameLine()
         HelpMarker('Optional. The value of another property which this property depends on. This property will be ignored for a character if the property it depends on doesn\'t have the desired value.')
-        self.DependsOnValue, ConfigUI.selected = ImGui.InputText('##newpropdepvalue', self.DependsOnValue, 32)
+        self.DependsOnValue, ConfigUI.selected = ImGui.InputText('##newpropdepvalue', self.DependsOnValue, ImGuiInputTextFlags.EnterReturnsTrue)
     elseif self.Type == 3 then
         ImGui.Text('FromIDProperty: ')
         ImGui.SameLine()
         HelpMarker('Optional. The name of another property to use as the ID in the Spawn search. The property MUST return a Spawn ID.')
-        self.FromIDProperty, ConfigUI.selected = ImGui.InputText('##newpropfromid', self.FromIDProperty, 32)
+        self.FromIDProperty, ConfigUI.selected = ImGui.InputText('##newpropfromid', self.FromIDProperty, ImGuiInputTextFlags.EnterReturnsTrue)
     end
     ImGui.Separator()
     if ImGui.Button('Apply##newprop') then
@@ -489,7 +489,7 @@ function ColumnInput:draw(width)
     ImGui.Text('Name(*): ')
     ImGui.SameLine()
     HelpMarker('The name of the column which will appear in the table column header.')
-    self.Name, ConfigUI.selected = ImGui.InputText('##newcolumnname', self.Name, 32)
+    self.Name, ConfigUI.selected = ImGui.InputText('##newcolumnname', self.Name, ImGuiInputTextFlags.EnterReturnsTrue)
 
     if self.Type == 1 then
         ImGui.Text('Properties(*): ')
@@ -545,9 +545,9 @@ function ColumnInput:draw(width)
         for mappingIdx, mappingName in ipairs(self.Mappings) do
             if self.Mappings[mappingIdx] ~= nil then
                 ImGui.PushItemWidth(100)
-                self.Mappings[mappingIdx][1], ConfigUI.selected = ImGui.InputText('##newcolmappings1-'..tostring(mappingIdx), self.Mappings[mappingIdx][1], 32)
+                self.Mappings[mappingIdx][1], ConfigUI.selected = ImGui.InputText('##newcolmappings1-'..tostring(mappingIdx), self.Mappings[mappingIdx][1], ImGuiInputTextFlags.EnterReturnsTrue)
                 ImGui.SameLine()
-                self.Mappings[mappingIdx][2], ConfigUI.selected = ImGui.InputText('##newcolmappings2-'..tostring(mappingIdx), self.Mappings[mappingIdx][2], 32)
+                self.Mappings[mappingIdx][2], ConfigUI.selected = ImGui.InputText('##newcolmappings2-'..tostring(mappingIdx), self.Mappings[mappingIdx][2], ImGuiInputTextFlags.EnterReturnsTrue)
                 ImGui.SameLine()
                 if ImGui.Button('X##deleteMappingRow'..mappingIdx) then
                     local mappingIter = mappingIdx
@@ -572,7 +572,7 @@ function ColumnInput:draw(width)
         for thresholdIdx, thresholdValue in ipairs(self.Thresholds) do
             if self.Thresholds[thresholdIdx] ~= nil then
                 ImGui.PushItemWidth(80)
-                self.Thresholds[thresholdIdx], ConfigUI.selected = ImGui.InputText('##newcolthresholds'..tostring(thresholdIdx), self.Thresholds[thresholdIdx], 32)
+                self.Thresholds[thresholdIdx], ConfigUI.selected = ImGui.InputText('##newcolthresholds'..tostring(thresholdIdx), self.Thresholds[thresholdIdx], ImGuiInputTextFlags.EnterReturnsTrue)
                 ImGui.PopItemWidth()
                 ImGui.SameLine()
                 if ImGui.Button('X##deleteThresholdRow'..thresholdIdx) then
@@ -609,7 +609,7 @@ function ColumnInput:draw(width)
         ImGui.Text('Action(*): ')
         ImGui.SameLine()
         HelpMarker('The action to take on left click. The string \'#botName#\' will be replaced with the character name from the row of the button.\nExample: \'/dex #botName# /mqp\'')
-        self.Action, ConfigUI.selected = ImGui.InputText('##newcolumnaction', self.Action, 32)
+        self.Action, ConfigUI.selected = ImGui.InputText('##newcolumnaction', self.Action, ImGuiInputTextFlags.EnterReturnsTrue)
     end
     ImGui.Separator()
     if ImGui.Button('Apply##newcolumn') then
@@ -741,7 +741,7 @@ function TabInput:draw(width)
     ImGui.Text('Name(*): ')
     ImGui.SameLine()
     HelpMarker('The name of the tab which will be displayed in the Tab bar.')
-    self.Name, ConfigUI.selected = ImGui.InputText('##newtabname', self.Name, 32)
+    self.Name, ConfigUI.selected = ImGui.InputText('##newtabname', self.Name, ImGuiInputTextFlags.EnterReturnsTrue)
     ImGui.Text('Columns: ')
     ImGui.SameLine()
     HelpMarker('The list of columns which will be displayed in the tab.')

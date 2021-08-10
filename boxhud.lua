@@ -256,7 +256,7 @@ function Character:drawContextMenu()
         end
         ImGui.Text('Send Command to '..self:getDisplayName()..': ')
         local textInput = ""
-        textInput, selected = ImGui.InputText("##input"..self.name, textInput, 32)
+        textInput, selected = ImGui.InputText("##input"..self.name, textInput, ImGuiInputTextFlags.EnterReturnsTrue)
         if selected then
             print_msg('Sending command: \ag/dex '..self:getDisplayName()..' '..textInput)
             ImGui.CloseCurrentPopup()
