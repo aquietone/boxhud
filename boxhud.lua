@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.0.5 -- aquietone
+boxhud.lua 2.0.6 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -43,7 +43,6 @@ local peerTable = nil
 local peersDirty = false
 -- Stores all live observed toon information that will be displayed
 local characters = {}
--- Set to 1 to use classname instead of player names
 local anonymize = false
 local adminMode = false
 local adminPeerSelected = 0
@@ -207,6 +206,13 @@ local function SetText(value, thresholds, ascending, percentage)
                     col = SETTINGS['Colors']['High']
                 end
             end
+        end
+    end
+    if type(value) == 'string' then
+        if value:lower() == 'true' then
+            col = SETTINGS['Colors']['True']
+        elseif value:lower() == 'false' then
+            col = SETTINGS['Colors']['False']
         end
     end
     ImGui.PushStyleColor(ImGuiCol.Text, col[1], col[2], col[3], 1)
@@ -408,7 +414,6 @@ local function CompareWithSortSpecs(a, b)
                 delta = 0
             end
         end
-
         if delta ~= 0 then
             if sort_spec.SortDirection == ImGuiSortDirection.Ascending then
                 return delta < 0
@@ -546,7 +551,6 @@ local HUDGUI = function()
             ImGui.SetWindowSize(460, 177)
             initialRun = false
         end
-
         DrawHUDTabs()
     end
     ImGui.End()
@@ -596,19 +600,15 @@ end
 
 local function SetupBindings()
     mq.bind('/bhversion', ShowVersion)
-
     mq.bind('/bhhelp', Help)
-
     mq.bind('/boxhud', function()
         openGUI = not openGUI
     end)
-
     mq.bind('/boxhudend', function()
         mq.imgui.destroy('BOXHUDUI')
         shouldDrawGUI = false
         terminate = true
     end)
-
     mq.bind('/bhadmin', Admin)
 end
 
@@ -661,10 +661,8 @@ local function main()
     LoadSettings(arg)
     PluginCheck()
     SetupBindings()
-
     -- Initialize peer list before the UI, since UI iterates over peer list
     RefreshPeers()
-
     mq.imgui.init('BOXHUDUI', HUDGUI)
 
     -- Initial setup of observers
