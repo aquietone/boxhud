@@ -548,9 +548,8 @@ local HUDGUI = function()
         end
 
         DrawHUDTabs()
-
-        ImGui.End()
     end
+    ImGui.End()
 end
 
 local Admin = function(action, name)
