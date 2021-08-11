@@ -37,7 +37,7 @@ function ConvertSettings(settings)
     end
     for _, property in pairs(settings['NetBotsProperties']) do
         targetSettings['Properties'][property['Name']] = {
-            PropertyType = 'NetBots'
+            Type = 'NetBots'
         }
     end
     for _, property in pairs(settings['SpawnProperties']) do

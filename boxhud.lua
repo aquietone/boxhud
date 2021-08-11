@@ -39,15 +39,13 @@ local openGUI = true
 local shouldDrawGUI = true
 local terminate = false
 
-local peerTable = nil
-local sortedPeers = nil
-local peersDirty = false
+local peerTable = {}
+local sortedPeers = {}
 -- Stores all live observed toon information that will be displayed
 local characters = {}
 local anonymize = false
 local adminMode = false
 local adminPeerSelected = 0
-local initialRun = true
 math.randomseed(os.time())
 local tableRandom = math.random(1,100)
 
@@ -348,7 +346,7 @@ function Character:drawColumnButton(columnName, columnAction)
     end
 end
 
-function Character:updateCharacterProperties(currTime)
+function Character:updateCharacterProperties(currTime, peerGroup)
     local properties = {}
     local charSpawnData = mq.TLO.Spawn('='..self.name)
     properties['Me.ID'] = charSpawnData.ID()
@@ -371,7 +369,10 @@ function Character:updateCharacterProperties(currTime)
             end
         elseif propSettings['Type'] == 'Spawn' then
             if propSettings['FromIDProperty'] then
-                properties[propName] = mq.TLO.Spawn('id '..properties[propSettings['FromIDProperty']])[propName]()
+                if SETTINGS['Properties'][propSettings.FromIDProperty]['Type'] == 'NetBots' then
+                    properties[propSettings.FromIDProperty] = mq.TLO.NetBots(TitleCase(self.name))[propSettings.FromIDProperty]()
+                end
+                properties[propName] = mq.TLO.Spawn(string.format('id %s', properties[propSettings['FromIDProperty']]))[propName]()
             else
                 properties[propName] = charSpawnData[propName]()
                 if type(properties[propName]) == 'number' then
@@ -381,7 +382,7 @@ function Character:updateCharacterProperties(currTime)
         end
     end
 
-    if SETTINGS['DanNetPeerGroup'] ~= 'zone' then
+    if peerGroup ~= 'zone' then
         properties['BotInZone'] = properties['Me.ID'] ~= 0
     else
         properties['BotInZone'] = true
@@ -401,8 +402,8 @@ function Character:updateCharacterProperties(currTime)
     self.properties = properties
 end
 
-local current_sort_specs = nil
-local current_columns = nil
+local current_sort_specs = {}
+local current_columns = {}
 local function CompareWithSortSpecs(a, b)
     for n = 1, current_sort_specs.SpecsCount, 1 do
         -- Here we identify columns using the ColumnUserID value that we ourselves passed to TableSetupColumn()
@@ -457,7 +458,7 @@ local function CompareWithSortSpecs(a, b)
     return a < b
 end
 
-local function DrawTableTab(columns, tabName)
+local function DrawTableTab(columns, tabName, window)
     local flags = bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Reorderable, ImGuiTableFlags.Hideable, ImGuiTableFlags.Sortable, ImGuiTableFlags.MultiSortable,
             ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY, ImGuiTableFlags.NoSavedSettings)
     if ImGui.BeginTable('##bhtable'..tabName..tostring(tableRandom), #columns, flags, 0, 0, 0.0) then
@@ -474,30 +475,30 @@ local function DrawTableTab(columns, tabName)
         ImGui.TableSetupScrollFreeze(0, 1) -- Make row always visible
         local sort_specs = ImGui.TableGetSortSpecs()
         if sort_specs then
-            if sort_specs.SpecsDirty or peersDirty then
-                if #peerTable > 0 then
-                    current_sort_specs = sort_specs
-                    current_columns = columns
-                    sortedPeers = TableClone(peerTable)
+            if sort_specs.SpecsDirty or peerTable[window['Name']]['PeersDirty'] then
+                if #peerTable[window['Name']]['Peers'] > 0 then
+                    current_sort_specs[window['Name']] = sort_specs
+                    current_columns[window['Name']] = columns
+                    sortedPeers[window['Name']] = TableClone(peerTable[window['Name']]['Peers'])
                     table.sort(sortedPeers, CompareWithSortSpecs)
-                    current_sort_specs = nil
-                    current_columns = nil
+                    current_sort_specs[window['Name']] = nil
+                    current_columns[window['Name']] = nil
                 end
                 sort_specs.SpecsDirty = false
-                peersDirty = false
+                peerTable[window['Name']]['PeersDirty'] = false
             end
         end
 
         -- Display data
         ImGui.TableHeadersRow()
         local clipper = ImGuiListClipper.new()
-        if sortedPeers == nil then
-            sortedPeers = TableClone(peerTable)
+        if sortedPeers[window['Name']] == nil then
+            sortedPeers[window['Name']] = TableClone(peerTable[window['Name']]['Peers'])
         end
-        clipper:Begin(#sortedPeers)
+        clipper:Begin(#sortedPeers[window['Name']])
         while clipper:Step() do
             for row_n = clipper.DisplayStart, clipper.DisplayEnd - 1, 1 do
-                local clipName = sortedPeers[row_n+1]
+                local clipName = sortedPeers[window['Name']][row_n+1]
                 local char = characters[clipName]
                 if char and char.properties then
                     ImGui.PushID(clipName)
@@ -528,13 +529,24 @@ local function DrawTableTab(columns, tabName)
     end
 end
 
-local function DrawHUDTabs()
+local function GetTabByName(tabName)
+    for _,tab in ipairs(SETTINGS['Tabs']) do
+        if tab['Name'] == tabName then
+            return tab
+        end
+    end
+    return nil
+end
+
+local function DrawHUDTabs(window)
     if ImGui.BeginTabBar('BOXHUDTABS') then
-        for _, tab in ipairs(SETTINGS['Tabs']) do
+        --for _, tab in ipairs(SETTINGS['Tabs']) do
+        for _,tabName in ipairs(window['Tabs']) do
+            local tab = GetTabByName(tabName)
             ImGui.PushID(tab['Name'])
             if ImGui.BeginTabItem(tab['Name']) then
                 if tab['Columns'] and #tab['Columns'] > 0 then
-                    DrawTableTab(tab['Columns'], tab['Name'])
+                    DrawTableTab(tab['Columns'], tab['Name'], window)
                     ImGui.EndTabItem()
                 else
                     ImGui.Text('No columns defined for tab')
@@ -549,13 +561,13 @@ local function DrawHUDTabs()
             if ImGui.BeginTabItem('Admin') then
                 ImGui.Text('DanNet Peer Group: ')
                 ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, PEER_GROUP)
+                ImGui.TextColored(0, 1, 0, 1, PEER_GROUPS[window['Name']])
                 ImGui.Text('Reset Observers for:')
-                adminPeerSelected, clicked = ImGui.Combo("##combo", adminPeerSelected, peerTable, #peerTable, 5)
+                adminPeerSelected, clicked = ImGui.Combo("##combo", adminPeerSelected, peerTable[window['Name']]['Peers'], #peerTable[window['Name']]['Peers'], 5)
                 ImGui.SameLine()
                 if ImGui.Button('Reset') then
-                    print_msg('Resetting observed properties for: \ay'..peerTable[adminPeerSelected+1])
-                    resetObserversName = peerTable[adminPeerSelected+1]
+                    print_msg('Resetting observed properties for: \ay'..peerTable[window['Name']]['Peers'][adminPeerSelected+1])
+                    resetObserversName = peerTable[window['Name']]['Peers'][adminPeerSelected+1]
                 end
                 ImGui.EndTabItem()
             end
@@ -578,13 +590,16 @@ local HUDGUI = function()
     local flags = 0
     if not SETTINGS['TitleBar'] then flags = bit32.bor(flags, ImGuiWindowFlags.NoTitleBar) end
     if SETTINGS['Transparency'] then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
-    openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..myname, openGUI, flags)
-    if shouldDrawGUI then
-        if initialRun and ImGui.GetWindowHeight() == 32 and ImGui.GetWindowWidth() == 32 then
-            ImGui.SetWindowSize(460, 177)
-            initialRun = false
+    for windowName,window in pairs(SETTINGS['Windows']) do
+        if peerTable[windowName] then
+            openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..myname..windowName, openGUI, flags)
+            if shouldDrawGUI then
+                if ImGui.GetWindowHeight() == 32 and ImGui.GetWindowWidth() == 32 then
+                    ImGui.SetWindowSize(460, 177)
+                end
+                DrawHUDTabs(window)
+            end
         end
-        DrawHUDTabs()
     end
     ImGui.End()
 end
@@ -660,22 +675,23 @@ local function SendCommand()
 end
 
 local function RefreshPeers()
-    local t = {}
-    if PEER_SOURCE == 'dannet' then
-        t = Split(mq.TLO.DanNet.Peers(PEER_GROUP)())
-    else
-        t={}
-        for i=1,mq.TLO.NetBots.Counts() do
-            table.insert(t, mq.TLO.NetBots.Client.Arg(i)())
+    for windowName,window in pairs(SETTINGS['Windows']) do
+        local t = {}
+        if PEER_SOURCE == 'dannet' then
+            t = Split(mq.TLO.DanNet.Peers(PEER_GROUPS[windowName])())
+        else
+            for i=1,mq.TLO.NetBots.Counts() do
+                table.insert(t, mq.TLO.NetBots.Client.Arg(i)())
+            end
         end
-    end
-    if not peerTable or not DoTablesMatch(peerTable, t) then
-        peersDirty = true
-        peerTable = t
-    end
-    for i,peerName in ipairs(peerTable) do
-        if not characters[peerName] then
-            characters[peerName] = Character(peerName,nil)
+
+        if not peerTable[windowName] or not DoTablesMatch(peerTable[windowName]['Peers'], t) then
+            peerTable[windowName] = {['Peers'] = t, ['PeersDirty'] = true}
+        end
+        for i,peerName in ipairs(peerTable[windowName]['Peers']) do
+            if not characters[peerName] then
+                characters[peerName] = Character(peerName,nil)
+            end
         end
     end
 end
@@ -715,19 +731,21 @@ local function main()
         ZoneCheck()
         local currTime = os.time(os.date("!*t"))
         RefreshPeers()
-        for _, charName in pairs(peerTable) do
-            local char = characters[charName]
-            -- Ensure observers are set for the toon
-            if IsUsingDanNet() then
-                if resetObserversName == char.name then
-                    resetObserversName = nil
-                    char:manageObservers(true)
-                    char:manageObservers(false)
-                elseif not char:verifyObservers() then
-                    char:manageObservers(false)
+        for windowName,window in pairs(SETTINGS['Windows']) do
+            for _, charName in pairs(peerTable[windowName]['Peers']) do
+                local char = characters[charName]
+                -- Ensure observers are set for the toon
+                if IsUsingDanNet() then
+                    if resetObserversName == char.name then
+                        resetObserversName = nil
+                        char:manageObservers(true)
+                        char:manageObservers(false)
+                    elseif not char:verifyObservers() then
+                        char:manageObservers(false)
+                    end
                 end
+                char:updateCharacterProperties(currTime, window['PeerGroup'])
             end
-            char:updateCharacterProperties(currTime)
         end
         CleanupStaleData(currTime)
         mq.delay(REFRESH_INTERVAL)
