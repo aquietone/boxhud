@@ -1,4 +1,4 @@
--- boxhud/configpanel.lua 2.0.10 -- aquietone
+-- boxhud/configpanel.lua 2.1.0 -- aquietone
 --- @type ImGui
 require 'ImGui'
 require('boxhud.utils')
@@ -6,6 +6,7 @@ require('boxhud.utils')
 local newProperty = nil
 local newColumn = nil
 local newTab = nil
+local newWindow = nil
 
 local classes = {'all', 'melee', 'caster', 'hybrids', 'ranged', 'ber', 'brd', 
         'bst', 'clr', 'dru', 'enc', 'mag', 'mnk', 'nec', 'pal', 'shd', 'rng', 
@@ -177,7 +178,6 @@ function TabInput:toTab()
     for idx,column in ipairs(self.Columns) do
         tab.Columns[idx] = column
     end
-    tab.Columns = self.Columns
     return tab
 end
 
@@ -189,6 +189,34 @@ function TabInput:fromTab(tab)
         o.Columns[idx] = column
     end
     o.ColumnCount = #tab['Columns']
+    return o
+end
+
+WindowInput = class(Input(), function(w)
+    w.PeerGroup = ''
+    w.Tabs = {}
+    w.TabCount = 0
+end)
+
+function WindowInput:toWindow()
+    local window  = Window({})
+    window.Name = self.Name
+    window.PeerGroup = self.PeerGroup
+    window.Tabs = {}
+    for idx,tab in ipairs(self.Tabs) do
+        window.Tabs[idx] = tab
+    end
+    return window
+end
+
+function WindowInput:fromWindow(window)
+    local o = WindowInput()
+    o.Name = window.Name
+    o.PeerGroup = window.PeerGroup
+    for idx,tab in ipairs(window.Tabs) do
+        o.Tabs[idx] = tab
+    end
+    o.TabCount = #window['Tabs']
     return o
 end
 
@@ -264,7 +292,7 @@ function DrawReferenceText(label1, value1, label2, value2)
 end
 
 local function DrawGeneralSettingsSelector()
-    ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 1, 1)
+    ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
     ConfigUI.selected = ImGui.Selectable('General Settings', ConfigUI.selectedItemType == 'settings')
     ImGui.PopStyleColor(1)
     if ConfigUI.selected then
@@ -273,10 +301,11 @@ local function DrawGeneralSettingsSelector()
 end
 
 local function DrawPropertiesTreeSelector()
-    ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 1, 1)
+    ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
     if ImGui.TreeNodeEx('Properties', ImGuiTreeNodeFlags.SpanFullWidth) then
         ImGui.PopStyleColor(1)
-        ImGui.Indent(8)
+        ImGui.TableNextRow()
+        ImGui.TableNextColumn()
         ConfigUI.selected = ImGui.Selectable('Add new property...', ConfigUI.selectedItemType == 'addnewproperty')
         if ConfigUI.selected then
             if ConfigUI.selectedItemType ~= 'addnewproperty' then
@@ -285,6 +314,8 @@ local function DrawPropertiesTreeSelector()
             ConfigUI:selectItem(nil, 'addnewproperty')
         end
         for propName, propSettings in pairs(SETTINGS['Properties']) do
+            ImGui.TableNextRow()
+            ImGui.TableNextColumn()
             ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
             ConfigUI.selected = ImGui.Selectable(propName, ConfigUI.selectedItem == propName and ConfigUI.selectedItemType == 'property')
             if ConfigUI.selected then
@@ -292,7 +323,6 @@ local function DrawPropertiesTreeSelector()
             end
             ImGui.PopStyleColor(1)
         end
-        ImGui.Indent(-8)
         ImGui.TreePop()
     else
         ImGui.PopStyleColor(1)
@@ -303,10 +333,11 @@ local function DrawPropertiesTreeSelector()
 end
 
 local function DrawColumnTreeSelector()
-    ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 1, 1)
+    ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
     if ImGui.TreeNodeEx('Columns', ImGuiTreeNodeFlags.SpanFullWidth) then
         ImGui.PopStyleColor(1)
-        ImGui.Indent(8)
+        ImGui.TableNextRow()
+        ImGui.TableNextColumn()
         ConfigUI.selected = ImGui.Selectable('Add new column...', ConfigUI.selectedItemType == 'addnewcolumn')
         if ConfigUI.selected then
             if ConfigUI.selectedItemType ~= 'addnewcolumn' then
@@ -315,6 +346,8 @@ local function DrawColumnTreeSelector()
             ConfigUI:selectItem(nil, 'addnewcolumn')
         end
         for columnName, columnSettings in pairs(SETTINGS['Columns']) do
+            ImGui.TableNextRow()
+            ImGui.TableNextColumn()
             ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
             ConfigUI.selected = ImGui.Selectable(columnName, ConfigUI.selectedItem == columnName and ConfigUI.selectedItemType == 'column')
             if ConfigUI.selected then
@@ -322,7 +355,6 @@ local function DrawColumnTreeSelector()
             end
             ImGui.PopStyleColor(1)
         end
-        ImGui.Indent(-8)
         ImGui.TreePop()
     else
         ImGui.PopStyleColor(1)
@@ -333,10 +365,11 @@ local function DrawColumnTreeSelector()
 end
 
 local function DrawTabTreeSelector()
-    ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 1, 1)
+    ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
     if ImGui.TreeNodeEx('Tabs', ImGuiTreeNodeFlags.SpanFullWidth) then
         ImGui.PopStyleColor(1)
-        ImGui.Indent(8)
+        ImGui.TableNextRow()
+        ImGui.TableNextColumn()
         ConfigUI.selected = ImGui.Selectable('Add new tab...', ConfigUI.selectedItemType == 'addnewtab')
         if ConfigUI.selected then
             if ConfigUI.selectedItemType ~= 'addnewtab' then
@@ -345,6 +378,8 @@ local function DrawTabTreeSelector()
             ConfigUI:selectItem(nil, 'addnewtab')
         end
         for tabIdx, tab in pairs(SETTINGS['Tabs']) do
+            ImGui.TableNextRow()
+            ImGui.TableNextColumn()
             ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
             ConfigUI.selected = ImGui.Selectable(tab['Name'], ConfigUI.selectedItem == tabIdx and ConfigUI.selectedItemType == 'tab')
             if ConfigUI.selected then
@@ -352,7 +387,6 @@ local function DrawTabTreeSelector()
             end
             ImGui.PopStyleColor(1)
         end
-        ImGui.Indent(-8)
         ImGui.TreePop()
     else
         ImGui.PopStyleColor(1)
@@ -362,8 +396,40 @@ local function DrawTabTreeSelector()
     end
 end
 
+local function DrawWindowTreeSelector()
+    ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
+    if ImGui.TreeNodeEx('Windows', ImGuiTreeNodeFlags.SpanFullWidth) then
+        ImGui.PopStyleColor(1)
+        ImGui.TableNextRow()
+        ImGui.TableNextColumn()
+        ConfigUI.selected = ImGui.Selectable('Add new window...', ConfigUI.selectedItemType == 'addnewwindow')
+        if ConfigUI.selected then
+            if ConfigUI.selectedItemType ~= 'addnewwindow' then
+                newWindow = WindowInput()
+            end
+            ConfigUI:selectItem(nil, 'addnewwindow')
+        end
+        for windowName, window in pairs(SETTINGS['Windows']) do
+            ImGui.TableNextRow()
+            ImGui.TableNextColumn()
+            ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
+            ConfigUI.selected = ImGui.Selectable(windowName, ConfigUI.selectedItem == windowName and ConfigUI.selectedItemType == 'window')
+            if ConfigUI.selected then
+                ConfigUI:selectItem(windowName, 'window')
+            end
+            ImGui.PopStyleColor(1)
+        end
+        ImGui.TreePop()
+    else
+        ImGui.PopStyleColor(1)
+        if ConfigUI.selectedItemType == 'window' or ConfigUI.selectedItemType == 'addnewwindow' then
+            ConfigUI:selectItem(nil, nil)
+        end
+    end
+end
+
 local function DrawAboutSelector()
-    ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 1, 1)
+    ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
     ConfigUI.selected = ImGui.Selectable('About', ConfigUI.selectedItemType == 'about')
     ImGui.PopStyleColor(1)
     if ConfigUI.selected then
@@ -373,24 +439,41 @@ end
 
 local function DrawSaveChangesSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 1, 1)
-    ConfigUI.selected = ImGui.Selectable('Save Configuration', ConfigUI.selectedItemType == 'savechanges')
-    ImGui.PopStyleColor(1)
-    if ConfigUI.selected then
+    if ImGui.Button('Save Configuration') then
         ConfigUI:selectItem(nil, 'savechanges')
     end
+    ImGui.PopStyleColor(1)
 end
 
 local function LeftPaneWindow()
     local x,y = ImGui.GetContentRegionAvail()
     if ImGui.BeginChild("left", 200, y-1, true) then
         DrawSaveChangesSelector()
-        DrawGeneralSettingsSelector()
-        ImGui.Indent(-24)
-        DrawPropertiesTreeSelector()
-        DrawColumnTreeSelector()
-        DrawTabTreeSelector()
-        ImGui.Indent(24)
-        DrawAboutSelector()
+        local flags = bit32.bor(ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY)
+        if ImGui.BeginTable('##configmenu', 1, flags, 0, 0, 0.0) then
+            ImGui.TableNextRow()
+            ImGui.TableNextColumn()
+            DrawGeneralSettingsSelector()
+            ImGui.TableNextRow()
+            ImGui.TableNextColumn()
+            DrawPropertiesTreeSelector()
+            ImGui.TableNextRow()
+            ImGui.TableNextColumn()
+            DrawColumnTreeSelector()
+            ImGui.TableNextRow()
+            ImGui.TableNextColumn()
+            DrawTabTreeSelector()
+            if PEER_SOURCE == 'dannet' then
+                ImGui.TableNextRow()
+                ImGui.TableNextColumn()
+                DrawWindowTreeSelector()
+            end
+            ImGui.TableNextRow()
+            ImGui.TableNextColumn()
+            DrawAboutSelector()
+            
+            ImGui.EndTable()
+        end
         ImGui.EndChild()
     end
 end
@@ -768,6 +851,23 @@ function TabInput:draw(width)
     end
 end
 
+function Tab:references(draw)
+    local refFound = false
+    for _,window in pairs(SETTINGS['Windows']) do
+        if window['Tabs'] then
+            for _,tabNameIter in pairs(window['Tabs']) do
+                if self.Name == tabNameIter then
+                    refFound = true
+                    if draw then
+                        DrawReferenceText('Window: ', window['Name'], nil, nil)
+                    end
+                end
+            end
+        end
+    end
+    return refFound
+end
+
 function Tab:draw()
     ImGui.TextColored(1, 0, 1, 1, self.Name)
     ImGui.Separator()
@@ -791,6 +891,101 @@ function Tab:draw()
             ImGui.Text(string.format('%d: ', columnIdx))
             ImGui.SameLine()
             ImGui.TextColored(0, 1, 0, 1, column)
+        end
+    end
+    ImGui.Separator()
+    ImGui.Text('References:')
+    ImGui.Indent(10)
+    self:references(true)
+    ImGui.Indent(-10)
+end
+
+function WindowInput:draw(width)
+    ImGui.TextColored(1, 0, 1, 1, "Add New Window")
+    ImGui.Separator()
+    self.Name = DrawLabelAndTextInput('Name(*): ', '##newwindowname', self.Name, 'The name of the window to be added.')
+    self.PeerGroup = DrawLabelAndTextInput('PeerGroup(*): ', '##newwindowpg', self.PeerGroup, 'The DanNet Peer Group the new window should use.')
+
+    ImGui.Text('Tabs: ')
+    ImGui.SameLine()
+    HelpMarker('The list of tabs which will be displayed in the window.')
+    for tabIdx, tabName in ipairs(self.Tabs) do
+        if self.Tabs[tabIdx] ~= nil then
+            local tabNameList = {}
+            for _,tab in ipairs(SETTINGS['Tabs']) do
+                table.insert(tabNameList, tab['Name'])
+            end
+            self.Tabs[tabIdx] = DrawComboBox("##tabcombo"..tabIdx, self.Tabs[tabIdx], tabNameList, false)
+            ImGui.SameLine()
+            if ImGui.Button('X##deleteRow'..tabIdx) then
+                local tabIter = tabIdx
+                for tabs = tabIdx+1, #self.Tabs do
+                    self.Tabs[tabIter] = self.Tabs[tabs]
+                    tabIter = tabIter+1
+                end
+                self.Tabs[tabIter] = nil
+                self.TabCount = self.TabCount - 1
+            end
+        end
+    end
+    if ImGui.Button('+') then
+        self.TabCount = self.TabCount + 1
+        self.Tabs[self.TabCount] = ''
+    end
+
+    ImGui.Separator()
+    if ImGui.Button('Apply##newwindow') then
+        local ok = false
+        local window = self:toWindow()
+        ok, self.message = window:validate()
+        if ok then
+            SETTINGS['Windows'][self.Name] = window
+            if self.PeerGroup == 'zone' then
+                ZoneCheck()
+            else
+                PEER_GROUPS[self.Name] = self.PeerGroup
+            end
+            ConfigUI:setDirtyAndClearSelection()
+        else
+            self.valid = false
+        end
+    end
+    if not self.valid then
+        ImGui.SameLine()
+        ImGui.PushTextWrapPos(width-10)
+        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', self.message))
+        ImGui.PopTextWrapPos()
+    end
+end
+
+function tablelength(T)
+    local count = 0
+    for _ in pairs(T) do count = count + 1 end
+    return count
+ end
+
+function Window:draw()
+    ImGui.TextColored(1, 0, 1, 1, self.Name)
+    ImGui.Separator()
+    if ImGui.SmallButton('Edit##'..self.Name) then
+        newWindow = WindowInput:fromWindow(self)
+        ConfigUI:selectItem(nil, 'addnewwindow')
+    end
+    if tablelength(SETTINGS['Windows']) > 1 then
+        ImGui.SameLine()
+        if ImGui.SmallButton('Delete##'..self.Name) then
+            SETTINGS['Windows'][self.Name] = nil
+            PEER_GROUPS[self.Name] = nil
+            ConfigUI:setDirtyAndClearSelection()
+        end
+    end
+    DrawLabelAndTextValue('Peer Group: ', self.PeerGroup)
+    ImGui.Text('Tabs:')
+    if self.Tabs then
+        for tabIdx,tab in ipairs(self.Tabs) do
+            ImGui.Text(string.format('%d: ', tabIdx))
+            ImGui.SameLine()
+            ImGui.TextColored(0, 1, 0, 1, tab)
         end
     end
 end
@@ -827,7 +1022,8 @@ local function DrawAbout()
     DrawLabelAndTextValue('Version: ', VERSION)
 end
 
-local function DrawSaveChanges()
+local function DrawSaveChanges(width)
+    ImGui.PushTextWrapPos(width-10)
     if ConfigUI.dirty then
         ImGui.TextColored(1, 0, 0, 1, 'Are you sure you wish to save your changes?')
         if ImGui.Button('Yes') then
@@ -839,10 +1035,11 @@ local function DrawSaveChanges()
     else
         ImGui.Text('No pending changes.')
     end
+    ImGui.PopTextWrapPos()
 end
 
 local function DrawInfo(width)
-    ImGui.PushTextWrapPos(width-10)
+    ImGui.PushTextWrapPos(width-17)
     if ConfigUI.dirty then
         ImGui.TextColored(1, 0, 0, 1, 'Configuration changes will not be persisted until you click \'Save Configuration\' on the left menu.')
         ImGui.Separator()
@@ -851,6 +1048,7 @@ local function DrawInfo(width)
     ImGui.Text('Properties define the data members which will be either observed with MQ2DanNet, read from MQ2NetBots or read from Spawn data.')
     ImGui.Text('Columns define how specific properties should be displayed.')
     ImGui.Text('Tabs define groupings of columns and will appear in the top tab bar.')
+    ImGui.Text('Windows define separate instances of the boxhud window to be displayed for different peer groups. (MQ2DanNet only)')
     ImGui.Text('Configuration changes take effect immediately. However, changes won\'t be persisted unless you click \'Save Configuration\'.')
     ImGui.PopTextWrapPos()
 end
@@ -866,6 +1064,8 @@ local function RightPaneWindow()
             newColumn:draw(x)
         elseif ConfigUI.selectedItemType == 'addnewtab' then
             newTab:draw(x)
+        elseif ConfigUI.selectedItemType == 'addnewwindow' then
+            newWindow:draw(x)
         elseif ConfigUI.selectedItemType == 'property' then
             local property = SETTINGS['Properties'][ConfigUI.selectedItem]
             if property then
@@ -881,10 +1081,15 @@ local function RightPaneWindow()
             if tab then
                 tab:draw()
             end
+        elseif ConfigUI.selectedItemType == 'window' then
+            local window = SETTINGS['Windows'][ConfigUI.selectedItem]
+            if window then
+                window:draw()
+            end
         elseif ConfigUI.selectedItemType == 'about' then
             DrawAbout()
         elseif ConfigUI.selectedItemType == 'savechanges' then
-            DrawSaveChanges()
+            DrawSaveChanges(x)
         else
             DrawInfo(x)
         end

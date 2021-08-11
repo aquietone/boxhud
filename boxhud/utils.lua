@@ -1,10 +1,10 @@
--- boxhud/utils.lua 2.0.10 -- aquietone
+-- boxhud/utils.lua 2.1.0 -- aquietone
 --- @type mq
 local mq = require('mq')
 local converter = require('boxhud.settings-converter')
 dofile('boxhud/persistence.lua')
 
-VERSION = '2.0.10'
+VERSION = '2.1.0'
 
 SETTINGS_FILE = nil
 
@@ -13,6 +13,7 @@ TRANSPARENCY = false
 PEER_SOURCE = 'dannet'
 -- Default DanNet peer group to use
 PEER_GROUP = 'all'
+PEER_GROUPS = {}
 CLASS_VAR = 'Me.Class.ShortName'
 -- Default observer polling interval (0.25 seconds)
 REFRESH_INTERVAL = 250
@@ -174,9 +175,25 @@ local function GetZonePeerGroup()
 end
 
 function ZoneCheck()
-    if PEER_SOURCE == 'dannet' and SETTINGS['DanNetPeerGroup'] == 'zone' then
-        PEER_GROUP = GetZonePeerGroup()
+    if PEER_SOURCE == 'dannet' then
+        for name,window in pairs(SETTINGS['Windows']) do
+            if window['PeerGroup'] == 'zone' then
+                PEER_GROUPS[window] = GetZonePeerGroup()
+            end
+        end
     end
+end
+
+Window = class(function(w,windowSettings)
+    w.Name = windowSettings['Name']
+    w.PeerGroup = windowSettings['PeerGroup']
+    w.Tabs = windowSettings['Tabs']
+end)
+
+function Window:validate()
+    local message = nil
+    local valid = true
+    return valid, message
 end
 
 Property = class(function(p,propSettings)
@@ -408,6 +425,20 @@ function Tab:validate()
 end
 
 local function ValidateOptionalSettings()
+    if not SETTINGS['Windows'] then
+        print_msg('No windows defined, adding default')
+        SETTINGS['Windows'] = {
+            ['default'] = Window({Name='default',Tabs={}})
+        }
+        for _,tab in ipairs(SETTINGS['Tabs']) do
+            table.insert(SETTINGS['Windows']['default']['Tabs'], tab['Name'])
+        end
+        if SETTINGS['PeerSource'] and SETTINGS['PeerSource'] == 'dannet' then
+            print_msg('Setting default window peer group to '..SETTINGS['DanNetPeerGroup'])
+            SETTINGS['Windows']['default']['PeerGroup'] = SETTINGS['DanNetPeerGroup']
+        end
+    end
+
     if SETTINGS['PeerSource'] then
         if SETTINGS['PeerSource'] ~= 'dannet' and  SETTINGS['PeerSource'] ~= 'netbots' then
             print_err('PeerSource must be either \'dannet\' or \'netbots\'')
@@ -417,13 +448,18 @@ local function ValidateOptionalSettings()
     end
     if PEER_SOURCE == 'dannet' then
         isUsingDanNet = true
-        if SETTINGS['DanNetPeerGroup'] then
-            if SETTINGS['DanNetPeerGroup'] == 'zone' then
-                PEER_GROUP = GetZonePeerGroup()
+        for name,window in pairs(SETTINGS['Windows']) do
+            if not window['PeerGroup'] then
+                window['PeerGroup'] = 'zone'
+            end
+            SETTINGS['Windows'][name] = Window(window)
+            if window['PeerGroup'] == 'zone' then
+                PEER_GROUPS[name] = GetZonePeerGroup()
             else
-                PEER_GROUP = SETTINGS['DanNetPeerGroup']
+                PEER_GROUPS[name] = window['PeerGroup']
             end
         end
+
         local classPropertyFound = false
         for propName, propSettings in pairs(SETTINGS['Properties']) do
             if (propName == 'Me.Class' or propName == 'Me.Class.ShortName') and propSettings['Type'] == 'Observed' then
@@ -437,6 +473,10 @@ local function ValidateOptionalSettings()
         end
     elseif PEER_SOURCE == 'netbots' then
         isUsingNetBots = true
+        if table.getn(SETTINGS['Windows']) > 1 then
+            print_err('NetBots only supports 1 window')
+            return false
+        end
         local classPropertyFound = false
         for propName, propSettings in pairs(SETTINGS['Properties']) do
             if propName == 'Class' and propSettings['Type'] == 'NetBots' then
