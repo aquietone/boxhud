@@ -123,11 +123,12 @@ A settings filename can also be provided when starting the script like `lua run 
 
 Note that since the settings are another lua file, its expecting the settings file to also be in the lua folder, rather than the config folder.
 
-Boxhud configuration is broken up into 3 main sections: Properties, Columns and Tabs.
+Boxhud configuration is broken up into 4 main sections: Properties, Columns, Tabs and Windows.
 
 - Properties define what data you want to watch in the HUD. These can include DanNet observed properties, NetBots properties and Spawn properties.
 - Columns define the display settings for a given property, such as whether it should only show for toons in the same zone as you, or whether it is a percentage value. They can also be used to define value mappings to display different text based on the value returned for a property.
 - Tabs define a group of columns to be displayed together.
+- Windows define individual ImGui windows to display, which allows for having separate groups of characters displayed in separate windows.
 
 ## Properties
 There are 3 types of properties: Observed, NetBots and Spawn.
@@ -249,6 +250,18 @@ Each tab includes a name and list of columns to be included in that tab, for exa
             }
         }
     },
+```
+
+## Windows
+Windows include a name and a list of tabs to be shown on the window.
+
+```
+    ['default'] = {
+        Name='default',
+        Tabs={
+            'General'
+        }
+    }
 ```
 
 Some other configuration options include:

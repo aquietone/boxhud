@@ -1,7 +1,7 @@
 -- boxhud/settings-converter.lua 2.1.4 -- aquietone
 local converter = {}
 
-function deepcopy(orig)
+local function deepcopy(orig)
     local orig_type = type(orig)
     local copy
     if orig_type == 'table' then
@@ -16,7 +16,7 @@ function deepcopy(orig)
     return copy
 end
 
-function ConvertSettings(settings)
+converter.ConvertSettings = function(settings)
     local targetSettings = {
         SchemaVersion = 2,
         Columns = {},
