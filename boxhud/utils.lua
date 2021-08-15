@@ -419,6 +419,7 @@ local Window = utils.class(function(w,windowSettings)
     w.Name = windowSettings['Name']
     w.PeerGroup = windowSettings['PeerGroup']
     w.Tabs = windowSettings['Tabs']
+    w.Transparency = windowSettings['Transparency']
 end)
 
 function Window:validate()
@@ -457,7 +458,7 @@ local function ValidateOptionalSettings()
     if not utils.settings['Windows'] then
         utils.print_msg('No windows defined, adding default')
         utils.settings['Windows'] = {
-            ['default'] = Window({Name='default',Tabs={},Transparency=false})
+            ['default'] = Window({Name='default',Tabs={},Transparency=true})
         }
         for _,tab in ipairs(utils.settings['Tabs']) do
             table.insert(utils.settings['Windows']['default']['Tabs'], tab['Name'])
