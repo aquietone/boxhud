@@ -553,19 +553,10 @@ function bh.Window:drawTableTab(columns, tabName)
     end
 end
 
-local function GetTabByName(tabName)
-    for _,tab in ipairs(bh.settings['Tabs']) do
-        if tab['Name'] == tabName then
-            return tab
-        end
-    end
-    return nil
-end
-
 function bh.Window:drawTabs()
     if ImGui.BeginTabBar('BOXHUDTABS##'..self.Name) then
         for _,tabName in ipairs(self.Tabs) do
-            local tab = GetTabByName(tabName)
+            local tab = bh.GetTabByName(tabName)
             if ImGui.BeginTabItem(tab['Name']) then
                 if tab['Columns'] and #tab['Columns'] > 0 then
                     self:drawTableTab(tab['Columns'], tab['Name'])
