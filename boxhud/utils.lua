@@ -178,6 +178,15 @@ utils.GetZonePeerGroup = function()
     end
 end
 
+utils.GetTabByName = function(tabName)
+    for _,tab in ipairs(utils.settings['Tabs']) do
+        if tab['Name'] == tabName then
+            return tab
+        end
+    end
+    return nil
+end
+
 local Property = utils.class(function(p,propSettings)
     p.Name = propSettings['Name']
     p.Type = propSettings['Type']
@@ -419,7 +428,27 @@ function Window:validate()
         message = 'Window name is invalid. Name must be a non-empty string'
         utils.print_err(string.format('[Window %s] %s', self.Name, message))
         return false, message
-    else
+    end
+    if self.Tabs then
+        if type(self.Tabs) == 'table' then
+            for tabIdx,tab in ipairs(self.Tabs) do
+                if string.len(tab) > 0 then
+                    if not utils.GetTabByName(tab) then
+                        message = string.format('Window references a tab which does not exist. Tab=%s', tab)
+                        utils.print_err(string.format('[Window %s] %s', self.Name, message))
+                        valid = false
+                    end
+                else
+                    message = 'Window \'Tab\' values must be non-empty \'string\''
+                    utils.print_err(string.format('[Window %s] %s', self.Name, message))
+                    valid = false
+                end
+            end
+        else
+            message = 'Window \'Tab\' is an unexpected format. \'Tabs\' must be a table.'
+            utils.print_err(string.format('[Window %s] %s', self.Name, message))
+            valid = false
+        end
     end
     return valid, message
 end
