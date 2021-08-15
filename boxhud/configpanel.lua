@@ -16,6 +16,8 @@ local ConfigurationPanel = bh.class(function(c, name)
     c.newColumn = nil
     c.newTab = nil
     c.newWindow = nil
+    c.lpanesize = 200
+    c.baselpanesize = 200
 end)
 
 function ConfigurationPanel:clearSelection()
@@ -435,7 +437,7 @@ end
 
 function ConfigurationPanel:drawLeftPaneWindow()
     local x,y = ImGui.GetContentRegionAvail()
-    if ImGui.BeginChild("left", 200, y-1, true) then
+    if ImGui.BeginChild("left", self.lpanesize, y-1, true) then
         local flags = bit32.bor(ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY)
         if ImGui.BeginTable('##configmenu'..self.name, 1, flags, 0, 0, 0.0) then
             ImGui.TableNextRow()
@@ -934,7 +936,12 @@ function WindowInput:draw(width, configPanel)
         local window = self:toWindow()
         ok, self.message = window:validate()
         if ok then
-            bh.settings['Windows'][self.Name] = window
+            if bh.settings.Windows[self.Name] then
+                bh.settings.Windows[self.Name].Tabs = window.Tabs
+                bh.settings.Windows[self.Name].PeerGroup = window.PeerGroup
+            else
+                bh.settings.Windows[self.Name] = window
+            end
             bh.SaveSettings()
             configPanel:clearSelection()
         else
@@ -1063,10 +1070,45 @@ function ConfigurationPanel:drawRightPaneWindow()
     ImGui.EndChild()
 end
 
+function ConfigurationPanel:drawSplitter(thickness, size0, min_size0)
+    local x,y = ImGui.GetCursorPos()
+    local delta = 0
+    ImGui.SetCursorPosX(x + size0)
+    
+    ImGui.PushStyleColor(ImGuiCol.Button, 0, 0, 0, 0)
+    ImGui.PushStyleColor(ImGuiCol.ButtonActive, 0, 0, 0, 0)
+    ImGui.PushStyleColor(ImGuiCol.ButtonHovered, 0.6, 0.6, 0.6, 0.1)
+    ImGui.Button('##splitter', thickness, -1)
+    ImGui.PopStyleColor(3)
+
+    ImGui.SetItemAllowOverlap()
+
+    if ImGui.IsItemActive() then
+        delta,_ = ImGui.GetMouseDragDelta()
+        
+        if delta < min_size0 - size0 then
+            delta = min_size0 - size0
+        end
+        if delta > 275 - size0 then
+            delta = 275 - size0
+        end
+
+        size0 = size0 + delta
+        self.lpanesize = size0
+    else
+        self.baselpanesize = self.lpanesize
+    end
+    ImGui.SetCursorPosX(x)
+    ImGui.SetCursorPosY(y)
+end
+
 function ConfigurationPanel:draw()
+    self:drawSplitter(8, self.baselpanesize, 135)
     ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, 6, 6)
     self:drawLeftPaneWindow()
+    ImGui.PopStyleVar()
     ImGui.SameLine()
+    ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, 6, 6)
     self:drawRightPaneWindow()
     ImGui.PopStyleVar()
 end
