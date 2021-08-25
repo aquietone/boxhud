@@ -1,10 +1,10 @@
--- boxhud/utils.lua 2.0.8 -- aquietone
+-- boxhud/utils.lua 2.0.9 -- aquietone
 --- @type mq
 local mq = require('mq')
 local converter = require('boxhud.settings-converter')
 dofile('boxhud/persistence.lua')
 
-VERSION = '2.0.8'
+VERSION = '2.0.9'
 
 SETTINGS_FILE = nil
 
