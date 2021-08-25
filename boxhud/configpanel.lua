@@ -1,4 +1,4 @@
--- boxhud/configpanel.lua 2.0.7 -- aquietone
+-- boxhud/configpanel.lua 2.0.8 -- aquietone
 --- @type ImGui
 require 'ImGui'
 require('boxhud.utils')
@@ -214,7 +214,7 @@ end
 local function DrawLabelAndTextValue(label, value)
     ImGui.Text(label)
     ImGui.SameLine()
-    ImGui.TextColored(0, 1, 0, 1, value)
+    ImGui.TextColored(0, 1, 0, 1, tostring(value))
 end
 
 local function DrawComboBox(label, resultvar, options, bykey)
