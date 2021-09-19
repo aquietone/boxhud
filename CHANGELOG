@@ -1,5 +1,7 @@
 2.1.0
 - Multiple window support
+2.0.11
+- Move a couple EndChild outside of if
 2.0.10
 - Add an extra nil check setting text in tables
 2.0.9

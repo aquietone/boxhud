@@ -463,8 +463,8 @@ function ConfigurationPanel:drawLeftPaneWindow()
             
             ImGui.EndTable()
         end
-        ImGui.EndChild()
     end
+    ImGui.EndChild()
 end
 
 function PropertyInput:draw(width, configPanel)
@@ -1063,8 +1063,8 @@ function ConfigurationPanel:drawRightPaneWindow()
         else
             self:drawInfo(x)
         end
-        ImGui.EndChild()
     end
+    ImGui.EndChild()
 end
 
 function ConfigurationPanel:drawSplitter(thickness, size0, min_size0)
