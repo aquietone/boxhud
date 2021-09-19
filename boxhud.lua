@@ -329,7 +329,11 @@ end
 
 function Character:drawColumnButton(columnName, columnAction)
     if ImGui.SmallButton(columnName..'##'..self.name) then
-        storedCommand = columnAction:gsub('#botName#', self.name)
+        if self.name == mq.TLO.Me.Name():lower() and columnAction:find('/dex #botName# ') ~= -1 then
+            storedCommand = columnAction:gsub('/dex #botName# ', '')
+        else
+            storedCommand = columnAction:gsub('#botName#', self.name)
+        end
         print_msg('Run command: \ag'..storedCommand)
     end
 end
