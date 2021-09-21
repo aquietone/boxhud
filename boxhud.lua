@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.0.11 -- aquietone
+boxhud.lua 2.1.0 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -282,11 +282,17 @@ function Character:drawNameButton()
     local buttonText = self:getDisplayName()
     local col = nil
     if self.properties['BotInZone'] then
-        if not self.properties['Me.Invis'] then
-            col = SETTINGS['Colors']['InZone'] or {0,1,0}
-        else
-            col = SETTINGS['Colors']['Invis'] or {0.26, 0.98, 0.98}
+        if self.properties['Me.Invis'] == 1 then
+            col = {0.26, 0.98, 0.98}
             buttonText = '('..self:getDisplayName()..')'
+        elseif self.properties['Me.Invis'] == 2 then
+            col = {0.95, 0.98, 0.26}
+            buttonText = '('..self:getDisplayName()..')'
+        elseif self.properties['Me.Invis'] == 3 then
+            col = {0.68, 0.98, 0.98}
+            buttonText = '('..self:getDisplayName()..')'
+        else
+            col = {0,1,0}
         end
     else
         col = SETTINGS['Colors']['NotInZone'] or {1,0,0}
@@ -342,7 +348,13 @@ function Character:updateCharacterProperties(currTime)
     local properties = {}
     local charSpawnData = mq.TLO.Spawn('='..self.name)
     properties['Me.ID'] = charSpawnData.ID()
-    properties['Me.Invis'] = charSpawnData.Invis()
+    properties['Me.Invis'] = 0
+    if charSpawnData.Invis(1)() then
+        properties['Me.Invis'] = properties['Me.Invis'] + 1
+    end
+    if charSpawnData.Invis(2)() then
+        properties['Me.Invis'] = properties['Me.Invis'] + 2
+    end
 
     -- Fill in data from this toons observed properties
     for propName, propSettings in pairs(SETTINGS['Properties']) do
