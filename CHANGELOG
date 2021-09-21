@@ -1,5 +1,6 @@
 2.1.0
-- ...
+- Make column buttons with "/dex #botName# " work for self
+- Add more name coloring options if Me.Invis[1] or Me.Invis[2] are observed
 2.0.11
 - Move a couple EndChild outside of if
 2.0.10

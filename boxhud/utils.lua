@@ -466,6 +466,8 @@ local function ValidateOptionalSettings()
     SETTINGS['Colors']['False'] = SETTINGS['Colors']['False'] or {1,0,0}
     SETTINGS['Colors']['InZone'] = SETTINGS['Colors']['InZone'] or {0,1,0}
     SETTINGS['Colors']['Invis'] = SETTINGS['Colors']['Invis'] or {0.26, 0.98, 0.98}
+    SETTINGS['Colors']['IVU'] = SETTINGS['Colors']['IVU'] or {0.95, 0.98, 0.26}
+    SETTINGS['Colors']['DoubleInvis'] = SETTINGS['Colors']['DoubleInvis'] or {0.68, 0.98, 0.98}
     SETTINGS['Colors']['NotInZone'] = SETTINGS['Colors']['NotInZone'] or {1,0,0}
     return true
 end
