@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.0.11 -- aquietone
+boxhud.lua 2.1.0 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -282,11 +282,20 @@ function Character:drawNameButton()
     local buttonText = self:getDisplayName()
     local col = nil
     if self.properties['BotInZone'] then
-        if not self.properties['Me.Invis'] then
-            col = SETTINGS['Colors']['InZone'] or {0,1,0}
-        else
+        if self.properties['Me.Invis'] == true then -- Me.Invis* isn't observed, just getting ANY invis from spawn data
             col = SETTINGS['Colors']['Invis'] or {0.26, 0.98, 0.98}
             buttonText = '('..self:getDisplayName()..')'
+        elseif self.properties['Me.Invis'] == 1 then -- Me.Invis[1] is observed and toon has regular invis
+            col = SETTINGS['Colors']['Invis'] or {0.26, 0.98, 0.98}
+            buttonText = '('..self:getDisplayName()..')'
+        elseif self.properties['Me.Invis'] == 2 then -- Me.Invis[2] is observed and toon  has ivu
+            col = SETTINGS['Colors']['IVU'] or {0.95, 0.98, 0.26}
+            buttonText = '('..self:getDisplayName()..')'
+        elseif self.properties['Me.Invis'] == 3 then -- Me.Invis[1,2] is observed and toon has double invis
+            col = SETTINGS['Colors']['DoubleInvis'] or {0.68, 0.98, 0.98}
+            buttonText = '('..self:getDisplayName()..')'
+        else -- toon has no invis
+            col = SETTINGS['Colors']['InZone'] or {0,1,0}
         end
     else
         col = SETTINGS['Colors']['NotInZone'] or {1,0,0}
@@ -329,7 +338,11 @@ end
 
 function Character:drawColumnButton(columnName, columnAction)
     if ImGui.SmallButton(columnName..'##'..self.name) then
-        storedCommand = columnAction:gsub('#botName#', self.name)
+        if self.name == mq.TLO.Me.Name():lower() and columnAction:find('/dex #botName# ') ~= -1 then
+            storedCommand = columnAction:gsub('/dex #botName# ', '')
+        else
+            storedCommand = columnAction:gsub('#botName#', self.name)
+        end
         print_msg('Run command: \ag'..storedCommand)
     end
 end
@@ -371,6 +384,14 @@ function Character:updateCharacterProperties(currTime)
         properties['BotInZone'] = properties['Me.ID'] ~= 0
     else
         properties['BotInZone'] = true
+    end
+    if properties['Me.Invis[1]'] == 'TRUE' then
+        if type(properties['Me.Invis']) ~= 'number' then properties['Me.Invis'] = 0 end
+        properties['Me.Invis'] = properties['Me.Invis'] + 1
+    end
+    if properties['Me.Invis[2]'] == 'TRUE' then
+        if type(properties['Me.Invis']) ~= 'number' then properties['Me.Invis'] = 0 end
+        properties['Me.Invis'] = properties['Me.Invis'] + 2
     end
     properties['lastUpdated'] = currTime
     if properties[CLASS_VAR] and not self.className then

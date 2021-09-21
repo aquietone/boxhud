@@ -1,10 +1,10 @@
--- boxhud/utils.lua 2.0.11 -- aquietone
+-- boxhud/utils.lua 2.1.0 -- aquietone
 --- @type mq
 local mq = require('mq')
 local converter = require('boxhud.settings-converter')
 dofile('boxhud/persistence.lua')
 
-VERSION = '2.0.11'
+VERSION = '2.1.0'
 
 SETTINGS_FILE = nil
 
@@ -466,6 +466,8 @@ local function ValidateOptionalSettings()
     SETTINGS['Colors']['False'] = SETTINGS['Colors']['False'] or {1,0,0}
     SETTINGS['Colors']['InZone'] = SETTINGS['Colors']['InZone'] or {0,1,0}
     SETTINGS['Colors']['Invis'] = SETTINGS['Colors']['Invis'] or {0.26, 0.98, 0.98}
+    SETTINGS['Colors']['IVU'] = SETTINGS['Colors']['IVU'] or {0.95, 0.98, 0.26}
+    SETTINGS['Colors']['DoubleInvis'] = SETTINGS['Colors']['DoubleInvis'] or {0.68, 0.98, 0.98}
     SETTINGS['Colors']['NotInZone'] = SETTINGS['Colors']['NotInZone'] or {1,0,0}
     return true
 end

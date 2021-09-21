@@ -1,4 +1,4 @@
--- boxhud/configpanel.lua 2.0.11 -- aquietone
+-- boxhud/configpanel.lua 2.1.0 -- aquietone
 --- @type ImGui
 require 'ImGui'
 require('boxhud.utils')
@@ -814,6 +814,8 @@ local function DrawGeneralSettings()
     SETTINGS['Colors']['False'] = DrawColorEditor("False values", SETTINGS['Colors']['False'])
     SETTINGS['Colors']['InZone'] = DrawColorEditor("Character names in zone", SETTINGS['Colors']['InZone'])
     SETTINGS['Colors']['Invis'] = DrawColorEditor("Invis characters in zone", SETTINGS['Colors']['Invis'])
+    SETTINGS['Colors']['IVU'] = DrawColorEditor("IVU characters in zone", SETTINGS['Colors']['IVU'])
+    SETTINGS['Colors']['DoubleInvis'] = DrawColorEditor("Double Invis characters in zone", SETTINGS['Colors']['DoubleInvis'])
     SETTINGS['Colors']['NotInZone'] = DrawColorEditor("Characters not in zone", SETTINGS['Colors']['NotInZone'])
     ImGui.Separator()
     if ImGui.Button('Apply##general') then
