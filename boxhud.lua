@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.1.0 -- aquietone
+boxhud.lua 2.1.1 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -571,11 +571,12 @@ end
 
 -- ImGui main function for rendering the UI window
 local HUDGUI = function()
-    if mq.TLO.Me.CleanName() == 'load' then return end
+    local myname = mq.TLO.Me.CleanName()
+    if not myname or myname == 'load' then return end
     if not openGUI then return end
     local flags = ImGuiWindowFlags.NoTitleBar
     if TRANSPARENCY then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
-    openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..mq.TLO.Me.CleanName(), openGUI, flags)
+    openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..myname, openGUI, flags)
     if shouldDrawGUI then
         if initialRun and ImGui.GetWindowHeight() == 32 and ImGui.GetWindowWidth() == 32 then
             ImGui.SetWindowSize(460, 177)

@@ -1,3 +1,5 @@
+2.1.1
+- Fix bug while zoning
 2.1.0
 - Make column buttons with "/dex #botName# " work for self
 - Add more name coloring options if Me.Invis[1] or Me.Invis[2] are observed
