@@ -1,3 +1,5 @@
+2.1.2
+- Add ImGuiTableFlags.Sortable for ImGui upgrade
 2.1.1
 - Fix bug while zoning
 2.1.0

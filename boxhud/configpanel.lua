@@ -1,4 +1,4 @@
--- boxhud/configpanel.lua 2.1.1 -- aquietone
+-- boxhud/configpanel.lua 2.1.2 -- aquietone
 --- @type ImGui
 require 'ImGui'
 require('boxhud.utils')

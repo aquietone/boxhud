@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.1.1 -- aquietone
+boxhud.lua 2.1.2 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -40,6 +40,7 @@ local shouldDrawGUI = true
 local terminate = false
 
 local peerTable = nil
+local sortedPeers = nil
 local peersDirty = false
 -- Stores all live observed toon information that will be displayed
 local characters = {}
@@ -457,7 +458,7 @@ local function CompareWithSortSpecs(a, b)
 end
 
 local function DrawTableTab(columns, tabName)
-    local flags = bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Reorderable, ImGuiTableFlags.Hideable, ImGuiTableFlags.MultiSortable,
+    local flags = bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Reorderable, ImGuiTableFlags.Hideable, ImGuiTableFlags.Sortable, ImGuiTableFlags.MultiSortable,
             ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY, ImGuiTableFlags.NoSavedSettings)
     if ImGui.BeginTable('##bhtable'..tabName..tostring(tableRandom), #columns, flags, 0, 0, 0.0) then
         for i, columnName in ipairs(columns) do
