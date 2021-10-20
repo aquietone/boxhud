@@ -1,3 +1,7 @@
+2.1.3
+- Update to persist window transparency setting in boxhud-settings.lua
+- Update to add title bar toggle setting under general settings
+- Attempt to add some protection in sorting method for some edge cases
 2.1.2
 - Add ImGuiTableFlags.Sortable for ImGui upgrade
 2.1.1
