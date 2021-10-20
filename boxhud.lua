@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.1.2 -- aquietone
+boxhud.lua 2.1.3 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -418,14 +418,14 @@ local function CompareWithSortSpecs(a, b)
         local aVal = nil
         local bVal = nil
         if column['Name'] == 'Name' or not column['Properties'] or not column['Properties']['all'] then
-            aVal = a
-            bVal = b
+            aVal = tostring(a)
+            bVal = tostring(b)
         elseif characters[a].properties and characters[b].properties then
-            aVal = characters[a].properties[column['Properties']['all']] or -1
-            bVal = characters[b].properties[column['Properties']['all']] or -1
+            aVal = tostring(characters[a].properties[column['Properties']['all']] or -1)
+            bVal = tostring(characters[b].properties[column['Properties']['all']] or -1)
         else
-            aVal = a
-            bVal = b
+            aVal = tostring(a)
+            bVal = tostring(b)
         end
         if tonumber(aVal) ~= nil and tonumber(bVal) ~= nil then
             if tonumber(aVal) < tonumber(bVal) then
@@ -575,8 +575,9 @@ local HUDGUI = function()
     local myname = mq.TLO.Me.CleanName()
     if not myname or myname == 'load' then return end
     if not openGUI then return end
-    local flags = ImGuiWindowFlags.NoTitleBar
-    if TRANSPARENCY then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
+    local flags = 0
+    if not SETTINGS['TitleBar'] then flags = bit32.bor(flags, ImGuiWindowFlags.NoTitleBar) end
+    if SETTINGS['Transparency'] then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
     openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..myname, openGUI, flags)
     if shouldDrawGUI then
         if initialRun and ImGui.GetWindowHeight() == 32 and ImGui.GetWindowWidth() == 32 then
