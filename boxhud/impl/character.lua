@@ -212,7 +212,8 @@ function Character:drawContextMenu()
         if ImGui.SmallButton("Reset Obs##"..self.name) then
             print_msg('Resetting observed properties for: \ay'..self.name)
             ImGui.CloseCurrentPopup()
-            state.resetObserversName = self.name
+            state.adminPeerAction = 'reset'
+            state.adminPeerName = self.name
         end
         ImGui.Text('Send Command to '..self:getDisplayName()..': ')
         local textInput = ""

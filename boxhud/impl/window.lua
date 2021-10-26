@@ -157,12 +157,27 @@ function Window:drawTabs()
                 ImGui.Text('DanNet Peer Group: ')
                 ImGui.SameLine()
                 ImGui.TextColored(0, 1, 0, 1, state.windowStates[self.Name].peerGroup)
-                ImGui.Text('Reset Observers for:')
-                adminPeerSelected, clicked = ImGui.Combo("##combo", adminPeerSelected, state.windowStates[self.Name].peers, #state.windowStates[self.Name].peers, 5)
+                ImGui.Text('Administer Observers for:')
+                adminPeerSelected, _ = ImGui.Combo("##combo", adminPeerSelected, state.windowStates[self.Name].peers, #state.windowStates[self.Name].peers, 5)
                 ImGui.SameLine()
-                if ImGui.Button('Reset') then
+                if ImGui.Button('Reset All Observers') then
                     print_msg('Resetting observed properties for: \ay'..state.windowStates[self.Name].peers[adminPeerSelected+1])
-                    state.resetObserversName = state.windowStates[self.Name].peers[adminPeerSelected+1]
+                    state.adminPeerAction = 'reset'
+                    state.adminPeerName = state.windowStates[self.Name].peers[adminPeerSelected+1]
+                end
+                ImGui.Text('Enter an observed property to check or drop:')
+                state.adminPeerItem = ImGui.InputText('##checkobs', state.adminPeerItem)
+                ImGui.SameLine()
+                if ImGui.Button('Check') then
+                    print_msg('Check observed property \ay'..state.adminPeerItem..'\ax for: \ay'..state.windowStates[self.Name].peers[adminPeerSelected+1])
+                    state.adminPeerAction = 'check'
+                    state.adminPeerName = state.windowStates[self.Name].peers[adminPeerSelected+1]
+                end
+                ImGui.SameLine()
+                if ImGui.Button('Drop') then
+                    print_msg('Drop observed property \ay'..state.adminPeerItem..'\ax for: \ay'..state.windowStates[self.Name].peers[adminPeerSelected+1])
+                    state.adminPeerAction = 'drop'
+                    state.adminPeerName = state.windowStates[self.Name].peers[adminPeerSelected+1]
                 end
                 ImGui.EndTabItem()
             end

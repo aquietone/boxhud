@@ -193,10 +193,19 @@ local function main()
                     local char = state.characters[charName]
                     -- Ensure observers are set for the toon
                     if utils.IsUsingDanNet() then
-                        if state.resetObserversName == char.name then
-                            state.resetObserversName = nil
-                            char:manageObservers(true)
-                            char:manageObservers(false)
+                        if state.adminPeerName == char.name then
+                            if state.adminPeerAction == 'reset' then
+                                char:manageObservers(true)
+                                char:manageObservers(false)
+                            elseif state.adminPeerAction == 'check' then
+                                local obsSet = char:isObserverSet(state.adminPeerItem)
+                                print_msg(string.format('Observer set for \ay%s\ax: \ay%s\ax', state.adminPeerItem, tostring(obsSet)))
+                            elseif state.adminPeerAction == 'drop' then
+                                char:removeObserver(state.adminPeerItem)
+                            end
+                            state.adminPeerName = nil
+                            state.adminPeerAction = nil
+                            state.adminPeerItem = ''
                         elseif not char:verifyObservers() then
                             char:manageObservers(false)
                         end
