@@ -687,10 +687,12 @@ end
 
 function WindowState:refreshPeers()
     local windowSettings = bh.settings.Windows[self.name]
-    if windowSettings.PeerGroup ~= 'zone' and self.peerGroup ~= windowSettings.PeerGroup then
-        self.peerGroup = windowSettings.PeerGroup
-    elseif windowSettings.PeerGroup == 'zone' then
+    if windowSettings.PeerGroup == 'zone' then
         self.peerGroup = bh.GetZonePeerGroup()
+    elseif windowSettings.PeerGroup == 'group' then
+        self.peerGroup = bh.GetGroupPeerGroup()
+    elseif self.peerGroup ~= windowSettings.PeerGroup then
+        self.peerGroup = windowSettings.PeerGroup
     end
     local t = {}
     if bh.peer_source == 'dannet' then

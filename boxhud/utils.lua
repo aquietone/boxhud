@@ -178,6 +178,25 @@ utils.GetZonePeerGroup = function()
     end
 end
 
+utils.GetGroupPeerGroup = function ()
+    return ('group_%s_%s'):format(mq.TLO.EverQuest.Server(), mq.TLO.Me.CleanName():lower())
+end
+
+utils.PeerGroupCheck = function (group)
+    if PEER_SOURCE == 'dannet' then
+        group = group or SETTINGS['DanNetPeerGroup']
+        if group == 'zone' then
+            PEER_GROUP = GetZonePeerGroup()
+        elseif group == 'group' then
+            PEER_GROUP = GetGroupPeerGroup()
+        elseif mq.TLO.DanNet.Peers(group)():len() > 0 then
+            PEER_GROUP = group
+        else
+            PEER_GROUP = 'ERROR'
+        end
+    end
+end
+
 utils.GetTabByName = function(tabName)
     for _,tab in ipairs(utils.settings['Tabs']) do
         if tab['Name'] == tabName then
@@ -192,6 +211,7 @@ local Property = utils.class(function(p,propSettings)
     p.Type = propSettings['Type']
     p.DependsOnName = propSettings['DependsOnName']
     p.DependsOnValue = propSettings['DependsOnValue']
+    p.Inverse = propSettings['Inverse']
     p.FromIDProperty = propSettings['FromIDProperty']
 end)
 
@@ -203,6 +223,11 @@ function Property:validate()
         return false, message
     else
         if self.Type == 'Observed' then
+            if self.Name:find('CWTN.') then
+                if not self.DependsOnName and not self.DependsOnValue then
+                    print_err('Adding CWTN properties without limiting the classes they apply to will almost certainly break macros on non-CWTN boxes!')
+                end
+            end
             if self.DependsOnName and not utils.settings['Properties'][self.DependsOnName] then
                 message = string.format(
                         '[Properties %s] \'DependsOnName\' must refer to another observed property name. DependsOnName=%s', 
@@ -213,6 +238,11 @@ function Property:validate()
             if self.DependsOnValue and not self.DependsOnName then
                 message = string.format('[Properties %s] \'DependsOnValue\' requires \'DependsOnName\' to also be set', self.Name)
                 utils.print_err(message)
+                return false, message
+            end
+            if self.Inverse and type(self.Inverse) ~= 'boolean' then
+                message = string.format('[Properties %s] \'Inverse\' must be a boolean.', self.Name)
+                print_err(message)
                 return false, message
             end
             isUsingDanNet = true
@@ -609,7 +639,7 @@ utils.LoadSettings = function(arg)
     ValidateSettings()
 end
 
-function SaveSettings()
+utils.SaveSettings = function()
     local settings_path = ('%s/boxhud/%s'):format(mq.luaDir, settings_file)
     persistence.store(settings_path, utils.settings)
     return true
