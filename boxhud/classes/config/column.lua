@@ -3,8 +3,6 @@ The Column class represents the static configuration of a column defined in boxh
 --]]
 local BaseClass = require 'boxhud.classes.base'
 local state = require 'boxhud.state'
---- @type ImGui
-require 'ImGui'
 
 local Column = BaseClass(function(c,columnSettings)
     c.Name = columnSettings['Name']

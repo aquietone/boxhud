@@ -7,11 +7,6 @@ local WindowInput = require 'boxhud.classes.inputs.windowinput'
 local ConfigurationPanel = require 'boxhud.classes.config.configurationpanel'
 local state = require 'boxhud.state'
 local settings = require 'boxhud.settings.settings'
-require 'boxhud.impl.property'
-require 'boxhud.impl.column'
-require 'boxhud.impl.tab'
---- @type ImGui
-require 'ImGui'
 
 function ConfigurationPanel:drawDisplaySettingsSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)

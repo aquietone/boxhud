@@ -3,7 +3,6 @@ local ColumnInput = require 'boxhud.classes.inputs.columninput'
 local helpers = require 'boxhud.utils.uihelpers'
 local state = require 'boxhud.state'
 local settings = require 'boxhud.settings.settings'
-require 'ImGui'
 
 local classes = {'all', 'melee', 'caster', 'hybrids', 'ranged', 'ber', 'brd',
         'bst', 'clr', 'dru', 'enc', 'mag', 'mnk', 'nec', 'pal', 'shd', 'rng',
