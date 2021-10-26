@@ -6,6 +6,8 @@ require('boxhud.utils')
 local newProperty = nil
 local newColumn = nil
 local newTab = nil
+local newPeerGroupSelection = nil
+local newPeerGroupText = ''
 
 local classes = {'all', 'melee', 'caster', 'hybrids', 'ranged', 'ber', 'brd', 
         'bst', 'clr', 'dru', 'enc', 'mag', 'mnk', 'nec', 'pal', 'shd', 'rng', 
@@ -43,6 +45,7 @@ PropertyInput = class(Input(), function(p)
     p.Type=1
     p.DependsOnName=''
     p.DependsOnValue=''
+    p.Inverse=false
     p.FromIDProperty=''
 end)
 
@@ -61,6 +64,7 @@ function PropertyInput:toProperty()
     if self.DependsOnValue ~= '' then
         property['DependsOnValue'] = self.DependsOnValue
     end
+    propert['Inverse'] = self.Inverse
     if self.FromIDProperty ~= '' then
         property['FromIDProperty'] = self.FromIDProperty
     end
@@ -74,6 +78,7 @@ function PropertyInput:fromProperty(property)
         o.Type = 1
         o.DependsOnName = property['DependsOnName'] or ''
         o.DependsOnValue = property['DependsOnValue'] or ''
+        o.Inverse = property['Inverse'] or false
     elseif property['Type'] == 'Spawn' then
         o.Type = 3
         o.FromIDProperty = property['FromIDProperty'] or ''
@@ -236,10 +241,11 @@ local function DrawComboBox(label, resultvar, options, bykey)
 end
 
 local function DrawCheckBox(labelText, idText, resultVar, helpText)
+    resultVar,_ = ImGui.Checkbox(idText, resultVar)
+    ImGui.SameLine()
     ImGui.Text(labelText)
     ImGui.SameLine()
     HelpMarker(helpText)
-    resultVar,_ = ImGui.Checkbox(idText, resultVar)
     return resultVar
 end
 
@@ -263,12 +269,21 @@ function DrawReferenceText(label1, value1, label2, value2)
     end
 end
 
-local function DrawGeneralSettingsSelector()
+local function DrawPeerSettingsSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 1, 1)
-    ConfigUI.selected = ImGui.Selectable('General Settings', ConfigUI.selectedItemType == 'settings')
+    ConfigUI.selected = ImGui.Selectable('Peer Settings', ConfigUI.selectedItemType == 'peersettings')
     ImGui.PopStyleColor(1)
     if ConfigUI.selected then
-        ConfigUI:selectItem(nil, 'settings')
+        ConfigUI:selectItem(nil, 'peersettings')
+    end
+end
+
+local function DrawWindowSettingsSelector()
+    ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 1, 1)
+    ConfigUI.selected = ImGui.Selectable('Window Settings', ConfigUI.selectedItemType == 'windowsettings')
+    ImGui.PopStyleColor(1)
+    if ConfigUI.selected then
+        ConfigUI:selectItem(nil, 'windowsettings')
     end
 end
 
@@ -384,7 +399,8 @@ local function LeftPaneWindow()
     local x,y = ImGui.GetContentRegionAvail()
     if ImGui.BeginChild("left", 200, y-1, true) then
         DrawSaveChangesSelector()
-        DrawGeneralSettingsSelector()
+        DrawPeerSettingsSelector()
+        DrawWindowSettingsSelector()
         ImGui.Indent(-24)
         DrawPropertiesTreeSelector()
         DrawColumnTreeSelector()
@@ -412,6 +428,7 @@ function PropertyInput:draw(width)
     if self.Type == 1 then
         self.DependsOnName = DrawLabelAndTextInput('DependsOnName: ', '##newpropdepname', self.DependsOnName, 'Optional. The name of another property which this property depends on. This property will be ignored for a character if the property it depends on doesn\'t have the desired value.')
         self.DependsOnValue = DrawLabelAndTextInput('DependsOnValue: ', '##newpropdepvalue', self.DependsOnValue, 'Optional. The value of another property which this property depends on. This property will be ignored for a character if the property it depends on doesn\'t have the desired value.')
+        self.Inverse = DrawCheckBox('Inverse', '##newpropinverse', self.Inverse, 'Optional. Validate that the dependency condition is false instead of true.')
     elseif self.Type == 3 then
         self.FromIDProperty = DrawLabelAndTextInput('FromIDProperty: ', '##newpropfromid', self.FromIDProperty, 'Optional. The name of another property to use as the ID in the Spawn search. The property MUST return a Spawn ID.')
     end
@@ -482,14 +499,18 @@ function Property:draw()
         end
     end
     DrawLabelAndTextValue('Type: ', self.Type)
-    if self.DependsOnName then
-        DrawLabelAndTextValue('DependsOnName: ', self.DependsOnName)
-    end
-    if self.DependsOnValue then
-        DrawLabelAndTextValue('DependsOnValue: ', self.DependsOnValue)
-    end
-    if self.FromIDProperty then
-        DrawLabelAndTextValue('FromIDProperty: ', self.FromIDProperty)
+    if self.Type == 'Observed' then
+        if self.DependsOnName then
+            DrawLabelAndTextValue('DependsOnName: ', self.DependsOnName)
+        end
+        if self.DependsOnValue then
+            DrawLabelAndTextValue('DependsOnValue: ', self.DependsOnValue)
+        end
+        DrawLabelAndTextValue('Inverse: ', tostring(self.Inverse))
+    elseif self.Type == 'Spawn' then
+        if self.FromIDProperty then
+            DrawLabelAndTextValue('FromIDProperty: ', self.FromIDProperty)
+        end
     end
     ImGui.Separator()
     ImGui.Text('References:')
@@ -594,9 +615,9 @@ function ColumnInput:draw(width)
             end
         end
 
-        self.Percentage = DrawCheckBox('Percentage: ', '##newcolumnpercent', self.Percentage, 'Check this box if the values displayed in this column are percents.')
-        self.Ascending = DrawCheckBox('Ascending: ', '##newcolumnascending', self.Ascending, 'Check this box if higher values are \'better\', i.e. 100%% HP is better than 10%%.')
-        self.InZone = DrawCheckBox('InZone: ', '##newcolumninzone', self.InZone, 'Check this box if this column should only display values for characters in the same zone.')
+        self.Percentage = DrawCheckBox('Percentage', '##newcolumnpercent', self.Percentage, 'Check this box if the values displayed in this column are percents.')
+        self.Ascending = DrawCheckBox('Ascending', '##newcolumnascending', self.Ascending, 'Check this box if higher values are \'better\', i.e. 100%% HP is better than 10%%.')
+        self.InZone = DrawCheckBox('InZone', '##newcolumninzone', self.InZone, 'Check this box if this column should only display values for characters in the same zone.')
     elseif self.Type == 2 then
         self.Action = DrawLabelAndTextInput('Action(*): ', '##newcolumnaction', self.Action, 'The action to take on left click. The string \'#botName#\' will be replaced with the character name from the row of the button.\nExample: \'/dex #botName# /mqp\'')
     end
@@ -795,33 +816,66 @@ function Tab:draw()
     end
 end
 
-local function DrawGeneralSettings()
+local function DrawPeerSettings()
     ImGui.TextColored(1, 0, 1, 1, 'General Settings')
     ImGui.Separator()
     DrawLabelAndTextValue('Peer Source: ', SETTINGS['PeerSource'])
-    DrawLabelAndTextValue('DanNet Peer Group: ', SETTINGS['DanNetPeerGroup'])
-    DrawLabelAndTextValue('Refresh Interval: ', SETTINGS['RefreshInterval'])
-    DrawLabelAndTextValue('Stale Data Timeout: ', SETTINGS['StaleDataTimeout'])
+    if SETTINGS['PeerSource'] == 'dannet' then
+        if not newPeerGroupSelection then
+            if SETTINGS['DanNetPeerGroup'] == 'all' or SETTINGS['DanNetPeerGroup'] == 'zone' or SETTINGS['DanNetPeerGroup'] == 'group' then
+                newPeerGroupSelection = SETTINGS['DanNetPeerGroup']
+            else
+                newPeerGroupSelection = 'other'
+                newPeerGroupText = 'PEER_GROUP'
+            end
+        end
+        newPeerGroupSelection = DrawComboBox('Peer Group', newPeerGroupSelection, { 'all', 'group', 'zone', 'other' }, false)
+        if newPeerGroupSelection == 'other' then
+            newPeerGroupText = DrawLabelAndTextInput('Enter a peer group name:', '##peergroup', newPeerGroupText, 'The DanNet Peer Group to source peers from. For a list of groups, use "/dnet info".')
+        end
+    end
     ImGui.Separator()
-    SETTINGS['Transparency'] = DrawCheckBox('Transparent Window: ', '##transparency', SETTINGS['Transparency'], 'Check this box to toggle transparency of the window.')
-    SETTINGS['TitleBar'] = DrawCheckBox('Show Title Bar: ', '##titlebar', SETTINGS['TitleBar'], 'Check this box to toggle showing the title bar.')
+    if ImGui.Button('Apply##general') then
+        if newPeerGroupSelection ~= SETTINGS['DanNetPeerGroup'] then
+            if newPeerGroupSelection ~= 'other' then newPeerGroupText = newPeerGroupSelection end
+            PeerGroupCheck(newPeerGroupText)
+            if PEER_GROUP ~= 'ERROR' then
+                SETTINGS['DanNetPeerGroup'] = newPeerGroupText
+            end
+        end
+        ConfigUI:setDirtyAndClearSelection()
+    end
+end
+
+local function DrawWindowSettings()
+    ImGui.TextColored(1, 0, 1, 1, 'Window Settings')
+    SETTINGS['Transparency'] = DrawCheckBox('Transparent Window', '##transparency', SETTINGS['Transparency'], 'Check this box to toggle transparency of the window.')
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(200)
+    SETTINGS['TitleBar'] = DrawCheckBox('Show Title Bar', '##titlebar', SETTINGS['TitleBar'], 'Check this box to toggle showing the title bar.')
     ImGui.Separator()
     ImGui.Text('Column Text Colors:')
     SETTINGS['Colors']['Default'] = DrawColorEditor("Default Color", SETTINGS['Colors']['Default'])
-    SETTINGS['Colors']['Low'] = DrawColorEditor("Below Threshold", SETTINGS['Colors']['Low'])
-    SETTINGS['Colors']['Medium'] = DrawColorEditor("Medium Threshold", SETTINGS['Colors']['Medium'])
-    SETTINGS['Colors']['High'] = DrawColorEditor("Above Threshold", SETTINGS['Colors']['High'])
-    SETTINGS['Colors']['True'] = DrawColorEditor("True values", SETTINGS['Colors']['True'])
-    SETTINGS['Colors']['False'] = DrawColorEditor("False values", SETTINGS['Colors']['False'])
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(175)
     SETTINGS['Colors']['InZone'] = DrawColorEditor("Character names in zone", SETTINGS['Colors']['InZone'])
+    SETTINGS['Colors']['Low'] = DrawColorEditor("Below Threshold", SETTINGS['Colors']['Low'])
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(175)
     SETTINGS['Colors']['Invis'] = DrawColorEditor("Invis characters in zone", SETTINGS['Colors']['Invis'])
+    SETTINGS['Colors']['Medium'] = DrawColorEditor("Medium Threshold", SETTINGS['Colors']['Medium'])
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(175)
     SETTINGS['Colors']['IVU'] = DrawColorEditor("IVU characters in zone", SETTINGS['Colors']['IVU'])
+    SETTINGS['Colors']['High'] = DrawColorEditor("Above Threshold", SETTINGS['Colors']['High'])
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(175)
     SETTINGS['Colors']['DoubleInvis'] = DrawColorEditor("Double Invis characters in zone", SETTINGS['Colors']['DoubleInvis'])
+    SETTINGS['Colors']['True'] = DrawColorEditor("True values", SETTINGS['Colors']['True'])
+    ImGui.SameLine()
+    ImGui.SetCursorPosX(175)
     SETTINGS['Colors']['NotInZone'] = DrawColorEditor("Characters not in zone", SETTINGS['Colors']['NotInZone'])
-    ImGui.Separator()
-    if ImGui.Button('Apply##general') then
-        ConfigUI:setDirtyAndClearSelection()
-    end
+    SETTINGS['Colors']['False'] = DrawColorEditor("False values", SETTINGS['Colors']['False'])
 end
 
 local function DrawAbout()
@@ -861,8 +915,10 @@ end
 local function RightPaneWindow()
     local x,y = ImGui.GetContentRegionAvail()
     if ImGui.BeginChild("right", x, y-1, true) then
-        if ConfigUI.selectedItemType == 'settings' then
-            DrawGeneralSettings()
+        if ConfigUI.selectedItemType == 'peersettings' then
+            DrawPeerSettings()
+        elseif ConfigUI.selectedItemType == 'windowsettings' then
+            DrawWindowSettings()
         elseif ConfigUI.selectedItemType == 'addnewproperty' then
             newProperty:draw(x)
         elseif ConfigUI.selectedItemType == 'addnewcolumn' then

@@ -712,7 +712,8 @@ local function main()
             SendCommand()
         end
         -- Update PEER_GROUP if we've zoned and using the zone peer group
-        ZoneCheck()
+        --ZoneCheck()
+        PeerGroupCheck()
         local currTime = os.time(os.date("!*t"))
         RefreshPeers()
         for _, charName in pairs(peerTable) do
