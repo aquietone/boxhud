@@ -119,6 +119,7 @@ function ConfigurationPanel:drawWindowTreeSelector()
         ImGui.PopStyleColor(1)
         ImGui.TableNextRow()
         ImGui.TableNextColumn()
+        --[[
         self.selected = ImGui.Selectable('Add new window...', self.selectedItemType == 'addnewwindow')
         if self.selected then
             if self.selectedItemType ~= 'addnewwindow' then
@@ -126,7 +127,8 @@ function ConfigurationPanel:drawWindowTreeSelector()
             end
             self:selectItem(nil, 'addnewwindow')
         end
-        for windowName, window in pairs(state.settings['Windows']) do
+        --]]
+        for windowName, _ in pairs(state.settings['Windows']) do
             ImGui.TableNextRow()
             ImGui.TableNextColumn()
             ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
@@ -248,8 +250,8 @@ function ConfigurationPanel:drawRightPaneWindow()
             self.newColumn:draw(x, self)
         elseif self.selectedItemType == 'addnewtab' then
             self.newTab:draw(x, self)
-        elseif self.selectedItemType == 'addnewwindow' then
-            self.newWindow:draw(x, self)
+        --elseif self.selectedItemType == 'addnewwindow' then
+        --    self.newWindow:draw(x, self)
         elseif self.selectedItemType == 'property' then
             local property = state.settings['Properties'][self.selectedItem]
             if property then

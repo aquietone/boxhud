@@ -27,72 +27,11 @@ local function deepcopy(orig)
     return copy
 end
 
-local function ConvertSettings(settings)
-    local targetSettings = {
-        SchemaVersion = 2,
-        Columns = {},
-        Properties = {},
-        Tabs = {},
-        PeerSource = settings['PeerSource'] or 'dannet',
-        DanNetPeerGroup = settings['DanNetPeerGroup'] or settings['PeerGroup'] or 'zone',
-        RefreshInterval = settings['RefreshInterval'] or 250,
-        StaleDataTimeout = settings['StaleDataTimeout'] or 30,
-    }
-
-    for _, property in pairs(settings['ObservedProperties']) do
-        targetSettings['Properties'][property['Name']] = {
-            Type = 'Observed',
-            DependsOnName = property['DependsOnName'] or nil,
-            DependsOnValue = property['DependsOnValue'] or nil
-        }
-    end
-    for _, property in pairs(settings['NetBotsProperties']) do
-        targetSettings['Properties'][property['Name']] = {
-            Type = 'NetBots'
-        }
-    end
-    for _, property in pairs(settings['SpawnProperties']) do
-        targetSettings['Properties'][property['Name']] = {
-            Type = 'Spawn',
-            FromIDProperty = property['FromIDProperty'] or nil
-        }
-    end
-
-    for _, column in pairs(settings['Columns']) do
-        local c = deepcopy(column)
-        targetSettings['Columns'][column['Name']] = deepcopy(column)
-        targetSettings['Columns'][column['Name']]['Name'] = nil
-    end
-    for _, tab in pairs(settings['Tabs']) do
-        for _, column in pairs(tab['Columns']) do
-            targetSettings['Columns'][column['Name']] = deepcopy(column)
-            targetSettings['Columns'][column['Name']]['Name'] = nil
-        end
-    end
-
-    for _, tab in pairs(settings['Tabs']) do
-        local newTab = {
-            Name = tab['Name'],
-            Columns = {}
-        }
-        for _, column in pairs(settings['Columns']) do
-            table.insert(newTab['Columns'], column['Name'])
-        end
-        for _, column in pairs(tab['Columns']) do
-            table.insert(newTab['Columns'], column['Name'])
-        end
-
-        table.insert(targetSettings['Tabs'], newTab)
-    end
-
-    return targetSettings
-end
-
 local function ValidateOptionalSettings()
     if not state.settings['Windows'] then
         print_msg('No windows defined, adding default')
         state.settings['Windows'] = {
-            ['default'] = Window({Name='default',Tabs={},Transparency=false})
+            ['default'] = Window({Name='default',Tabs={},Transparency=false,TitleBar=false})
         }
         for _,tab in ipairs(state.settings['Tabs']) do
             table.insert(state.settings['Windows']['default']['Tabs'], tab['Name'])
@@ -217,7 +156,7 @@ s.LoadSettings = function(arg)
     local boxhud_dir = ('%s/boxhud'):format(mq.luaDir)
     settings_file = arg[1] or string.format('boxhud-settings-%s.lua', string.lower(mq.TLO.Me.Name()))
     local settings_path = string.format('%s/settings/%s', boxhud_dir, settings_file)
-    local old_settings_path = string.format('%s/%s', mq.luaDir, settings_file)
+    local old_settings_path = string.format('%s/%s', boxhud_dir, settings_file)
     local default_settings_path = string.format('%s/settings/%s', boxhud_dir, 'boxhud-settings.lua')
 
     if utils.FileExists(settings_path) then
@@ -225,7 +164,7 @@ s.LoadSettings = function(arg)
         state.settings = require(string.format('boxhud.settings.%s', settings_file:gsub('.lua', '')))
     elseif utils.FileExists(old_settings_path) then
         -- copy old settings to new location in boxhud folder
-        print_msg(string.format('Moving lua/%s to lua/boxhud/settings/%s', settings_file, settings_file))
+        print_msg(string.format('Moving lua/boxhud/%s to lua/boxhud/settings/%s', settings_file, settings_file))
         utils.CopyFile(old_settings_path, settings_path)
         print_msg('Loading settings from file: ' .. settings_file)
         state.settings = require(string.format('boxhud.%s', settings_file:gsub('.lua', '')))
@@ -237,9 +176,6 @@ s.LoadSettings = function(arg)
         utils.CopyFile(default_settings_path, settings_path)
     end
 
-    if not state.settings['SchemaVersion'] or state.settings['SchemaVersion'] < 2 then
-        state.settings = ConvertSettings(state.settings)
-    end
     ValidateSettings()
 end
 

@@ -16,9 +16,13 @@ function Character:shouldObserveProperty(propSettings)
         return true
     elseif propSettings['DependsOnValue'] then
         local dependentValue = DanNet(self.name).Observe(string.format('"%s"', propSettings['DependsOnName']))()
-        if dependentValue and string.lower(propSettings['DependsOnValue']):find(string.lower(dependentValue)) ~= nil then
-            -- The value of the dependent property matches
-            return true
+        if dependentValue then
+            if not propSettings['Inverse'] and string.lower(propSettings['DependsOnValue']):find(string.lower(dependentValue)) ~= nil then
+                -- The value of the dependent property matches
+                return true
+            elseif propSettings['Inverse'] and string.lower(propSettings['DependsOnValue']):find(string.lower(dependentValue)) == nil then
+                return true
+            end
         end
     end
     -- Do not observe the property

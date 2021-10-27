@@ -138,6 +138,9 @@ function Property:draw(configPanel)
     if self.DependsOnValue then
         helpers.DrawLabelAndTextValue('DependsOnValue: ', self.DependsOnValue)
     end
+    if self.DependsOnName then
+        helpers.DrawLabelAndTextValue('Inverse: ', tostring(self.Inverse))
+    end
     if self.FromIDProperty then
         helpers.DrawLabelAndTextValue('FromIDProperty: ', self.FromIDProperty)
     end

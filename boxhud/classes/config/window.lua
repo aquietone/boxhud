@@ -9,6 +9,7 @@ local Window = BaseClass(function(w,windowSettings)
     w.PeerGroup = windowSettings['PeerGroup']
     w.Tabs = windowSettings['Tabs']
     w.Transparency = windowSettings['Transparency']
+    w.TitleBar = windowSettings['TitleBar']
 end)
 
 local function GetTabByName(tabName)
