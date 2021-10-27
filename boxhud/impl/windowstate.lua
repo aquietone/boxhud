@@ -18,7 +18,7 @@ function WindowState:refreshPeers()
         self.PeerGroup = windowSettings.PeerGroup
     end
     local t = {}
-    if utils.PeerSource == 'dannet' then
+    if state.PeerSource == 'dannet' then
         t = utils.Split(DanNet.Peers(self.PeerGroup)())
     else
         for i=1,NetBots.Counts() do

@@ -51,23 +51,23 @@ local function ValidateOptionalSettings()
             print_err('PeerSource must be either \'dannet\' or \'netbots\'')
             return false
         end
-        utils.PeerSource = state.Settings['PeerSource']
+        state.PeerSource = state.Settings['PeerSource']
     end
-    if utils.PeerSource == 'dannet' then
-        utils.IsUsingDanNet = true
+    if state.PeerSource == 'dannet' then
+        state.IsUsingDanNet = true
         local classPropertyFound = false
         for propName, propSettings in pairs(state.Settings['Properties']) do
             if (propName == 'Me.Class' or propName == 'Me.Class.ShortName') and propSettings['Type'] == 'Observed' then
                 classPropertyFound = true
-                utils.ClassVar = propName
+                state.ClassVar = propName
             end
         end
         if not classPropertyFound then
-            utils.ClassVar = 'Me.Class.ShortName'
-            state.Settings['Properties'][utils.ClassVar] = { Type='Observed' }
+            state.ClassVar = 'Me.Class.ShortName'
+            state.Settings['Properties'][state.ClassVar] = { Type='Observed' }
         end
-    elseif utils.PeerSource == 'netbots' then
-        utils.IsUsingNetBots = true
+    elseif state.PeerSource == 'netbots' then
+        state.IsUsingNetBots = true
         if table.getn(state.Settings['Windows']) > 1 then
             print_err('NetBots only supports 1 window')
             return false
@@ -76,19 +76,19 @@ local function ValidateOptionalSettings()
         for propName, propSettings in pairs(state.Settings['Properties']) do
             if propName == 'Class' and propSettings['Type'] == 'NetBots' then
                 classPropertyFound = true
-                utils.ClassVar = propName
+                state.ClassVar = propName
             end
         end
         if not classPropertyFound then
-            utils.ClassVar = 'Class'
-            state.Settings['Properties'][utils.ClassVar] = { Type='NetBots' }
+            state.ClassVar = 'Class'
+            state.Settings['Properties'][state.ClassVar] = { Type='NetBots' }
         end
     end
     if state.Settings['RefreshInterval'] and type(state.Settings['RefreshInterval']) == 'number' then
-        utils.RefreshInterval = state.Settings['RefreshInterval']
+        state.RefreshInterval = state.Settings['RefreshInterval']
     end
     if state.Settings['StaleDataTimeout'] and type(state.Settings['StaleDataTimeout']) == 'number' then
-        utils.StaleDataTimeout = state.Settings['StaleDataTimeout']
+        state.StaleDataTimeout = state.Settings['StaleDataTimeout']
     end
     if not state.Settings['Colors'] then
         state.Settings['Colors'] = {}

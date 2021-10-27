@@ -5,17 +5,7 @@ local state = require 'boxhud.state'
 function print_msg(msg) print('\at[\ayBOXHUD\at] \at' .. msg) end
 function print_err(msg) print('\at[\ayBOXHUD\at] \ar' .. msg) end
 
-local utils = {
-    Version = '2.2.0',
-    PeerSource = 'dannet',
-    ClassVar = 'Me.Class.ShortName',
-    -- Default observer polling interval (0.25 seconds)
-    RefreshInterval = 250,
-    -- Default stale observed data timeout (60 seconds)
-    StaleDataTimeout = 60,
-    IsUsingDanNet = false,
-    IsUsingNetBots = false,
-}
+local utils = {}
 
 utils.FileExists = function(path)
     local f = io.open(path, "r")
@@ -80,7 +70,7 @@ end
 
 -- Load required plugins
 utils.PluginCheck = function()
-    if utils.IsUsingDanNet then
+    if state.IsUsingDanNet then
         if not mq.TLO.Plugin('mq2dannet').IsLoaded() then
             print_msg("Plugin \ayMQ2DanNet\ax is required. Loading it now.")
             mq.cmd('/plugin mq2dannet noauto')
@@ -90,7 +80,7 @@ utils.PluginCheck = function()
             mq.cmd('/dnet fullnames off')
         end
     end
-    if utils.IsUsingNetBots then
+    if state.IsUsingNetBots then
         if not mq.TLO.Plugin('mq2eqbc').IsLoaded() then
             print_msg("Plugin \ayMQ2EQBC\ax is required. Loading it now.")
             mq.cmd('/plugin mq2eqbc noauto')

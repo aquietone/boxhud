@@ -114,7 +114,7 @@ local Help = function()
 end
 
 local ShowVersion = function()
-    print_msg('Version '..utils.Version)
+    print_msg('Version '..state.Version)
 end
 
 local function SetupBindings()
@@ -133,7 +133,7 @@ end
 
 local function CleanupStaleData(currTime)
     for name, char in pairs(state.Characters) do
-        if os.difftime(currTime, char.Properties['lastUpdated']) > utils.StaleDataTimeout then
+        if os.difftime(currTime, char.Properties['lastUpdated']) > state.StaleDataTimeout then
             print_msg('Removing stale toon data: \ay'..name)
             state.Characters[name] = nil
         end
@@ -170,7 +170,7 @@ local function main()
     mq.imgui.init('BOXHUDUI', HUDGUI)
 
     -- Initial setup of observers
-    if utils.IsUsingDanNet then
+    if state.IsUsingDanNet then
         for _, char in pairs(state.Characters) do
             char:manageObservers(false)
         end
@@ -192,19 +192,19 @@ local function main()
                 for _, charName in pairs(state.WindowStates[windowName].Peers) do
                     local char = state.Characters[charName]
                     -- Ensure observers are set for the toon
-                    if utils.IsUsingDanNet then
-                        if state.AdminPeerName == char.name then
-                            if state.adminPeerAction == 'reset' then
+                    if state.IsUsingDanNet then
+                        if state.AdminPeerName == char.Name then
+                            if state.AdminPeerAction == 'reset' then
                                 char:manageObservers(true)
                                 char:manageObservers(false)
-                            elseif state.adminPeerAction == 'check' then
+                            elseif state.AdminPeerAction == 'check' then
                                 local obsSet = char:isObserverSet(state.AdminPeerItem)
                                 print_msg(string.format('Observer set for \ay%s\ax: \ay%s\ax', state.AdminPeerItem, tostring(obsSet)))
-                            elseif state.adminPeerAction == 'drop' then
+                            elseif state.AdminPeerAction == 'drop' then
                                 char:removeObserver(state.AdminPeerItem)
                             end
                             state.AdminPeerName = nil
-                            state.adminPeerAction = nil
+                            state.AdminPeerAction = nil
                             state.AdminPeerItem = ''
                         elseif not char:verifyObservers() then
                             char:manageObservers(false)
@@ -215,7 +215,7 @@ local function main()
             end
         end
         CleanupStaleData(currTime)
-        mq.delay(utils.RefreshInterval)
+        mq.delay(state.RefreshInterval)
     end
 end
 
