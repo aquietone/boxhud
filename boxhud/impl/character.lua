@@ -109,6 +109,21 @@ function Character:manageObservers(drop)
     end
 end
 
+function Character:dannetAdminAction()
+    if state.AdminPeerAction == 'reset' then
+        self:manageObservers(true)
+        self:manageObservers(false)
+    elseif state.AdminPeerAction == 'check' then
+        local obsSet = self:isObserverSet(state.AdminPeerItem)
+        print_msg(string.format('Observer set for \ay%s\ax: \ay%s\ax', state.AdminPeerItem, tostring(obsSet)))
+    elseif state.AdminPeerAction == 'drop' then
+        self:removeObserver(state.AdminPeerItem)
+    end
+    state.AdminPeerName = nil
+    state.AdminPeerAction = nil
+    state.AdminPeerItem = ''
+end
+
 -- lists of classes to check against for things like displaying mana % versus endurance %
 local casters = utils.Set { 'cleric', 'clr', 'druid', 'dru', 'shaman', 'shm', 'enchanter',
                       'enc', 'magician', 'mag', 'necromancer', 'nec', 'wizard', 'wiz' }
