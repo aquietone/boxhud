@@ -10,9 +10,9 @@ local settings = require 'boxhud.settings.settings'
 
 function ConfigurationPanel:drawDisplaySettingsSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
-    self.selected = ImGui.Selectable('Display Settings', self.selectedItemType == 'displaysettings')
+    self.Selected = ImGui.Selectable('Display Settings', self.SelectedItemType == 'displaysettings')
     ImGui.PopStyleColor(1)
-    if self.selected then
+    if self.Selected then
         self:selectItem(nil, 'displaysettings')
     end
 end
@@ -23,19 +23,19 @@ function ConfigurationPanel:drawPropertiesTreeSelector()
         ImGui.PopStyleColor(1)
         ImGui.TableNextRow()
         ImGui.TableNextColumn()
-        self.selected = ImGui.Selectable('Add new property...', self.selectedItemType == 'addnewproperty')
-        if self.selected then
-            if self.selectedItemType ~= 'addnewproperty' then
-                self.newProperty = PropertyInput()
+        self.Selected = ImGui.Selectable('Add new property...', self.SelectedItemType == 'addnewproperty')
+        if self.Selected then
+            if self.SelectedItemType ~= 'addnewproperty' then
+                self.NewProperty = PropertyInput()
             end
             self:selectItem(nil, 'addnewproperty')
         end
-        for propName, propSettings in pairs(state.settings['Properties']) do
+        for propName, propSettings in pairs(state.Settings['Properties']) do
             ImGui.TableNextRow()
             ImGui.TableNextColumn()
             ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
-            self.selected = ImGui.Selectable(propName, self.selectedItem == propName and self.selectedItemType == 'property')
-            if self.selected then
+            self.Selected = ImGui.Selectable(propName, self.SelectedItem == propName and self.SelectedItemType == 'property')
+            if self.Selected then
                 self:selectItem(propName, 'property')
             end
             ImGui.PopStyleColor(1)
@@ -43,7 +43,7 @@ function ConfigurationPanel:drawPropertiesTreeSelector()
         ImGui.TreePop()
     else
         ImGui.PopStyleColor(1)
-        if self.selectedItemType == 'property' or self.selectedItemType == 'addnewproperty' then
+        if self.SelectedItemType == 'property' or self.SelectedItemType == 'addnewproperty' then
             self:selectItem(nil, nil)
         end
     end
@@ -55,19 +55,19 @@ function ConfigurationPanel:drawColumnTreeSelector()
         ImGui.PopStyleColor(1)
         ImGui.TableNextRow()
         ImGui.TableNextColumn()
-        self.selected = ImGui.Selectable('Add new column...', self.selectedItemType == 'addnewcolumn')
-        if self.selected then
-            if self.selectedItemType ~= 'addnewcolumn' then
-                self.newColumn = ColumnInput()
+        self.Selected = ImGui.Selectable('Add new column...', self.SelectedItemType == 'addnewcolumn')
+        if self.Selected then
+            if self.SelectedItemType ~= 'addnewcolumn' then
+                self.NewColumn = ColumnInput()
             end
             self:selectItem(nil, 'addnewcolumn')
         end
-        for columnName, columnSettings in pairs(state.settings['Columns']) do
+        for columnName, columnSettings in pairs(state.Settings['Columns']) do
             ImGui.TableNextRow()
             ImGui.TableNextColumn()
             ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
-            self.selected = ImGui.Selectable(columnName, self.selectedItem == columnName and self.selectedItemType == 'column')
-            if self.selected then
+            self.Selected = ImGui.Selectable(columnName, self.SelectedItem == columnName and self.SelectedItemType == 'column')
+            if self.Selected then
                 self:selectItem(columnName, 'column')
             end
             ImGui.PopStyleColor(1)
@@ -75,7 +75,7 @@ function ConfigurationPanel:drawColumnTreeSelector()
         ImGui.TreePop()
     else
         ImGui.PopStyleColor(1)
-        if self.selectedItemType == 'column' or self.selectedItemType == 'addnewcolumn' then
+        if self.SelectedItemType == 'column' or self.SelectedItemType == 'addnewcolumn' then
             self:selectItem(nil, nil)
         end
     end
@@ -87,19 +87,19 @@ function ConfigurationPanel:drawTabTreeSelector()
         ImGui.PopStyleColor(1)
         ImGui.TableNextRow()
         ImGui.TableNextColumn()
-        self.selected = ImGui.Selectable('Add new tab...', self.selectedItemType == 'addnewtab')
-        if self.selected then
-            if self.selectedItemType ~= 'addnewtab' then
-                self.newTab = TabInput()
+        self.Selected = ImGui.Selectable('Add new tab...', self.SelectedItemType == 'addnewtab')
+        if self.Selected then
+            if self.SelectedItemType ~= 'addnewtab' then
+                self.NewTab = TabInput()
             end
             self:selectItem(nil, 'addnewtab')
         end
-        for tabIdx, tab in pairs(state.settings['Tabs']) do
+        for tabIdx, tab in pairs(state.Settings['Tabs']) do
             ImGui.TableNextRow()
             ImGui.TableNextColumn()
             ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
-            self.selected = ImGui.Selectable(tab['Name'], self.selectedItem == tabIdx and self.selectedItemType == 'tab')
-            if self.selected then
+            self.Selected = ImGui.Selectable(tab['Name'], self.SelectedItem == tabIdx and self.SelectedItemType == 'tab')
+            if self.Selected then
                 self:selectItem(tabIdx, 'tab')
             end
             ImGui.PopStyleColor(1)
@@ -107,7 +107,7 @@ function ConfigurationPanel:drawTabTreeSelector()
         ImGui.TreePop()
     else
         ImGui.PopStyleColor(1)
-        if self.selectedItemType == 'tab' or self.selectedItemType == 'addnewtab' then
+        if self.SelectedItemType == 'tab' or self.SelectedItemType == 'addnewtab' then
             self:selectItem(nil, nil)
         end
     end
@@ -115,25 +115,23 @@ end
 
 function ConfigurationPanel:drawWindowTreeSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
-    if ImGui.TreeNodeEx('Windows', ImGuiTreeNodeFlags.SpanFullWidth) then
+    if ImGui.TreeNodeEx('Windows', ImGuiTreeNodeFlags.SpanAvailWidth) then
         ImGui.PopStyleColor(1)
         ImGui.TableNextRow()
         ImGui.TableNextColumn()
-        --[[
-        self.selected = ImGui.Selectable('Add new window...', self.selectedItemType == 'addnewwindow')
-        if self.selected then
-            if self.selectedItemType ~= 'addnewwindow' then
-                self.newWindow = WindowInput()
+        self.Selected = ImGui.Selectable('Add new window...', self.SelectedItemType == 'addnewwindow')
+        if self.Selected then
+            if self.SelectedItemType ~= 'addnewwindow' then
+                self.NewWindow = WindowInput()
             end
             self:selectItem(nil, 'addnewwindow')
         end
-        --]]
-        for windowName, _ in pairs(state.settings['Windows']) do
+        for windowName, _ in pairs(state.Settings['Windows']) do
             ImGui.TableNextRow()
             ImGui.TableNextColumn()
             ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
-            self.selected = ImGui.Selectable(windowName, self.selectedItem == windowName and self.selectedItemType == 'window')
-            if self.selected then
+            self.Selected = ImGui.Selectable(windowName, self.SelectedItem == windowName and self.SelectedItemType == 'window')
+            if self.Selected then
                 self:selectItem(windowName, 'window')
             end
             ImGui.PopStyleColor(1)
@@ -141,7 +139,7 @@ function ConfigurationPanel:drawWindowTreeSelector()
         ImGui.TreePop()
     else
         ImGui.PopStyleColor(1)
-        if self.selectedItemType == 'window' or self.selectedItemType == 'addnewwindow' then
+        if self.SelectedItemType == 'window' or self.SelectedItemType == 'addnewwindow' then
             self:selectItem(nil, nil)
         end
     end
@@ -149,18 +147,18 @@ end
 
 function ConfigurationPanel:drawAboutSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
-    self.selected = ImGui.Selectable('About', self.selectedItemType == 'about')
+    self.Selected = ImGui.Selectable('About', self.SelectedItemType == 'about')
     ImGui.PopStyleColor(1)
-    if self.selected then
+    if self.Selected then
         self:selectItem(nil, 'about')
     end
 end
 
 function ConfigurationPanel:drawLeftPaneWindow()
     local x,y = ImGui.GetContentRegionAvail()
-    if ImGui.BeginChild("left", self.lpanesize, y-1, true) then
+    if ImGui.BeginChild("left", self.LeftPaneSize, y-1, true) then
         local flags = bit32.bor(ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY)
-        if ImGui.BeginTable('##configmenu'..self.name, 1, flags, 0, 0, 0.0) then
+        if ImGui.BeginTable('##configmenu'..self.Name, 1, flags, 0, 0, 0.0) then
             ImGui.TableNextRow()
             ImGui.TableNextColumn()
             self:drawDisplaySettingsSelector()
@@ -173,7 +171,7 @@ function ConfigurationPanel:drawLeftPaneWindow()
             ImGui.TableNextRow()
             ImGui.TableNextColumn()
             self:drawTabTreeSelector()
-            if utils.peer_source == 'dannet' then
+            if utils.PeerSource == 'dannet' then
                 ImGui.TableNextRow()
                 ImGui.TableNextColumn()
                 self:drawWindowTreeSelector()
@@ -191,31 +189,31 @@ end
 function ConfigurationPanel:drawDisplaySettings()
     ImGui.TextColored(1, 0, 1, 1, 'Window Settings')
     ImGui.Separator()
-    state.settings.Windows[self.name].Transparency = helpers.DrawCheckBox('Transparent Window: ', '##transparency', state.settings.Windows[self.name].Transparency, 'Check this box to toggle transparency of the window.')
-    state.settings.Windows[self.name].TitleBar = helpers.DrawCheckBox('Show Title Bar: ', '##titlebar', state.settings.Windows[self.name].TitleBar, 'Check this box to toggle showing the title bar.')
+    state.Settings.Windows[self.Name].Transparency = helpers.DrawCheckBox('Transparent Window: ', '##transparency', state.Settings.Windows[self.Name].Transparency, 'Check this box to toggle transparency of the window.')
+    state.Settings.Windows[self.Name].TitleBar = helpers.DrawCheckBox('Show Title Bar: ', '##titlebar', state.Settings.Windows[self.Name].TitleBar, 'Check this box to toggle showing the title bar.')
     ImGui.Separator()
     ImGui.Text('Column Text Colors:')
-    state.settings['Colors']['Default'] = helpers.DrawColorEditor("Default Color", state.settings['Colors']['Default'])
+    state.Settings['Colors']['Default'] = helpers.DrawColorEditor("Default Color", state.Settings['Colors']['Default'])
     ImGui.SameLine()
     ImGui.SetCursorPosX(175)
-    state.settings['Colors']['InZone'] = helpers.DrawColorEditor("Character names in zone", state.settings['Colors']['InZone'])
-    state.settings['Colors']['Low'] = helpers.DrawColorEditor("Below Threshold", state.settings['Colors']['Low'])
+    state.Settings['Colors']['InZone'] = helpers.DrawColorEditor("Character names in zone", state.Settings['Colors']['InZone'])
+    state.Settings['Colors']['Low'] = helpers.DrawColorEditor("Below Threshold", state.Settings['Colors']['Low'])
     ImGui.SameLine()
     ImGui.SetCursorPosX(175)
-    state.settings['Colors']['Invis'] = helpers.DrawColorEditor("Invis characters in zone", state.settings['Colors']['Invis'])
-    state.settings['Colors']['Medium'] = helpers.DrawColorEditor("Medium Threshold", state.settings['Colors']['Medium'])
+    state.Settings['Colors']['Invis'] = helpers.DrawColorEditor("Invis characters in zone", state.Settings['Colors']['Invis'])
+    state.Settings['Colors']['Medium'] = helpers.DrawColorEditor("Medium Threshold", state.Settings['Colors']['Medium'])
     ImGui.SameLine()
     ImGui.SetCursorPosX(175)
-    state.settings['Colors']['IVU'] = helpers.DrawColorEditor("IVU characters in zone", state.settings['Colors']['IVU'])
-    state.settings['Colors']['High'] = helpers.DrawColorEditor("Above Threshold", state.settings['Colors']['High'])
+    state.Settings['Colors']['IVU'] = helpers.DrawColorEditor("IVU characters in zone", state.Settings['Colors']['IVU'])
+    state.Settings['Colors']['High'] = helpers.DrawColorEditor("Above Threshold", state.Settings['Colors']['High'])
     ImGui.SameLine()
     ImGui.SetCursorPosX(175)
-    state.settings['Colors']['DoubleInvis'] = helpers.DrawColorEditor("Double Invis characters in zone", state.settings['Colors']['DoubleInvis'])
-    state.settings['Colors']['True'] = helpers.DrawColorEditor("True values", state.settings['Colors']['True'])
+    state.Settings['Colors']['DoubleInvis'] = helpers.DrawColorEditor("Double Invis characters in zone", state.Settings['Colors']['DoubleInvis'])
+    state.Settings['Colors']['True'] = helpers.DrawColorEditor("True values", state.Settings['Colors']['True'])
     ImGui.SameLine()
     ImGui.SetCursorPosX(175)
-    state.settings['Colors']['NotInZone'] = helpers.DrawColorEditor("Characters not in zone", state.settings['Colors']['NotInZone'])
-    state.settings['Colors']['False'] = helpers.DrawColorEditor("False values", state.settings['Colors']['False'])
+    state.Settings['Colors']['NotInZone'] = helpers.DrawColorEditor("Characters not in zone", state.Settings['Colors']['NotInZone'])
+    state.Settings['Colors']['False'] = helpers.DrawColorEditor("False values", state.Settings['Colors']['False'])
     ImGui.Separator()
     if ImGui.Button('Save##displaysettings') then
         settings.SaveSettings()
@@ -226,7 +224,7 @@ end
 function ConfigurationPanel:drawAbout()
     ImGui.TextColored(1, 0, 1, 1, 'About')
     ImGui.Separator()
-    helpers.DrawLabelAndTextValue('Version: ', utils.version)
+    helpers.DrawLabelAndTextValue('Version: ', utils.Version)
 end
 
 function ConfigurationPanel:drawInfo(width)
@@ -242,37 +240,37 @@ end
 function ConfigurationPanel:drawRightPaneWindow()
     local x,y = ImGui.GetContentRegionAvail()
     if ImGui.BeginChild("right", x, y-1, true) then
-        if self.selectedItemType == 'displaysettings' then
+        if self.SelectedItemType == 'displaysettings' then
             self:drawDisplaySettings()
-        elseif self.selectedItemType == 'addnewproperty' then
-            self.newProperty:draw(x, self)
-        elseif self.selectedItemType == 'addnewcolumn' then
-            self.newColumn:draw(x, self)
-        elseif self.selectedItemType == 'addnewtab' then
-            self.newTab:draw(x, self)
-        --elseif self.selectedItemType == 'addnewwindow' then
-        --    self.newWindow:draw(x, self)
-        elseif self.selectedItemType == 'property' then
-            local property = state.settings['Properties'][self.selectedItem]
+        elseif self.SelectedItemType == 'addnewproperty' then
+            self.NewProperty:draw(x, self)
+        elseif self.SelectedItemType == 'addnewcolumn' then
+            self.NewColumn:draw(x, self)
+        elseif self.SelectedItemType == 'addnewtab' then
+            self.NewTab:draw(x, self)
+        elseif self.SelectedItemType == 'addnewwindow' then
+            self.NewWindow:draw(x, self)
+        elseif self.SelectedItemType == 'property' then
+            local property = state.Settings['Properties'][self.SelectedItem]
             if property then
                 property:draw(self)
             end
-        elseif self.selectedItemType == 'column' then
-            local column = state.settings['Columns'][self.selectedItem]
+        elseif self.SelectedItemType == 'column' then
+            local column = state.Settings['Columns'][self.SelectedItem]
             if column ~= nil then
                 column:draw(self)
             end
-        elseif self.selectedItemType == 'tab' then
-            local tab = state.settings['Tabs'][self.selectedItem]
+        elseif self.SelectedItemType == 'tab' then
+            local tab = state.Settings['Tabs'][self.SelectedItem]
             if tab then
                 tab:draw(self)
             end
-        elseif self.selectedItemType == 'window' then
-            local window = state.settings['Windows'][self.selectedItem]
+        elseif self.SelectedItemType == 'window' then
+            local window = state.Settings['Windows'][self.SelectedItem]
             if window then
                 window:draw(self)
             end
-        elseif self.selectedItemType == 'about' then
+        elseif self.SelectedItemType == 'about' then
             self:drawAbout()
         else
             self:drawInfo(x)
@@ -305,16 +303,16 @@ function ConfigurationPanel:drawSplitter(thickness, size0, min_size0)
         end
 
         size0 = size0 + delta
-        self.lpanesize = size0
+        self.LeftPaneSize = size0
     else
-        self.baselpanesize = self.lpanesize
+        self.BaseLeftPaneSize = self.LeftPaneSize
     end
     ImGui.SetCursorPosX(x)
     ImGui.SetCursorPosY(y)
 end
 
 function ConfigurationPanel:draw()
-    self:drawSplitter(8, self.baselpanesize, 135)
+    self:drawSplitter(8, self.BaseLeftPaneSize, 135)
     ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, 6, 6)
     self:drawLeftPaneWindow()
     ImGui.PopStyleVar()

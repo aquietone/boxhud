@@ -34,7 +34,7 @@ function TabInput:draw(width, configPanel)
     helpers.HelpMarker('The list of columns which will be displayed in the tab.')
     for columnIdx, columnName in ipairs(self.Columns) do
         if self.Columns[columnIdx] ~= nil then
-            self.Columns[columnIdx] = helpers.DrawComboBox("##columncombo"..columnIdx, self.Columns[columnIdx], state.settings['Columns'], true)
+            self.Columns[columnIdx] = helpers.DrawComboBox("##columncombo"..columnIdx, self.Columns[columnIdx], state.Settings['Columns'], true)
             ImGui.SameLine()
             if ImGui.Button('X##deleteRow'..columnIdx) then
                 local columnIter = columnIdx
@@ -52,13 +52,13 @@ function TabInput:draw(width, configPanel)
         self.Columns[self.ColumnCount] = ''
     end
     ImGui.Separator()
-    if ImGui.Button('Save##newtab'..configPanel.name) then
+    if ImGui.Button('Save##newtab'..configPanel.Name) then
         local ok = false
         local tab = self:toTab()
-        ok, self.message = tab:validate()
+        ok, self.Message = tab:validate()
         if ok then
             local foundExisting = false
-            for tabIdx,existingTab in ipairs(state.settings['Tabs']) do
+            for tabIdx,existingTab in ipairs(state.Settings['Tabs']) do
                 if existingTab['Name'] == self.Name then
                     -- replace existing tab
                     existingTab['Columns'] = self.Columns
@@ -66,25 +66,25 @@ function TabInput:draw(width, configPanel)
                 end
             end
             if not foundExisting then
-                table.insert(state.settings['Tabs'], tab)
+                table.insert(state.Settings['Tabs'], tab)
             end
             settings.SaveSettings()
             configPanel:clearSelection()
         else
-            self.valid = false
+            self.Valid = false
         end
     end
-    if not self.valid then
+    if not self.Valid then
         ImGui.SameLine()
         ImGui.PushTextWrapPos(width-10)
-        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', self.message))
+        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', self.Message))
         ImGui.PopTextWrapPos()
     end
 end
 
 function Tab:references(draw)
     local refFound = false
-    for _,window in pairs(state.settings['Windows']) do
+    for _,window in pairs(state.Settings['Windows']) do
         if window['Tabs'] then
             for _,tabNameIter in pairs(window['Tabs']) do
                 if self.Name == tabNameIter then
@@ -103,18 +103,18 @@ function Tab:draw(configPanel)
     ImGui.TextColored(1, 0, 1, 1, self.Name)
     ImGui.Separator()
     if ImGui.SmallButton('Edit##'..self.Name) then
-        configPanel.newTab = TabInput:fromTab(self)
+        configPanel.NewTab = TabInput:fromTab(self)
         configPanel:selectItem(nil, 'addnewtab')
     end
     ImGui.SameLine()
     if ImGui.SmallButton('Delete##'..self.Name) then
         if not self:references(false) then
-            local tabIter = configPanel.selectedItem
-            for tabIdx = tabIter+1, #state.settings['Tabs'] do
-                state.settings['Tabs'][tabIter] = state.settings['Tabs'][tabIdx]
+            local tabIter = configPanel.SelectedItem
+            for tabIdx = tabIter+1, #state.Settings['Tabs'] do
+                state.Settings['Tabs'][tabIter] = state.Settings['Tabs'][tabIdx]
                 tabIter = tabIter+1
             end
-            state.settings['Tabs'][tabIter] = nil
+            state.Settings['Tabs'][tabIter] = nil
             settings.SaveSettings()
             configPanel:clearSelection()
         end

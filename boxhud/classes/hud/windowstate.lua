@@ -5,12 +5,12 @@ static window settings stored in boxhud-settings.lua
 local BaseClass = require 'boxhud.classes.base'
 
 local WindowState = BaseClass(function(w, name, peerGroup, configPanel)
-    w.name = name
-    w.peerGroup = peerGroup
-    w.peers = nil
-    w.peersDirty = false
-    w.sortedPeers = nil
-    w.configPanel = configPanel
+    w.Name = name
+    w.PeerGroup = peerGroup
+    w.Peers = nil
+    w.PeersDirty = false
+    w.SortedPeers = nil
+    w.ConfigPanel = configPanel
 end)
 
 return WindowState

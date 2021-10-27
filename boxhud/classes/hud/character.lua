@@ -4,10 +4,10 @@ in a boxhud window.
 --]]
 local BaseClass = require 'boxhud.classes.base'
 
-local Character = BaseClass(function(b, name, className)
-    b.name = name
-    b.className = className
-    b.properties = nil
+local Character = BaseClass(function(c, name, className)
+    c.Name = name
+    c.ClassName = className
+    c.Properties = nil
 end)
 
 return Character

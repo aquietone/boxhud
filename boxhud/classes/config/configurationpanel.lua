@@ -5,27 +5,27 @@ including what is selected, and the input objects for creating new configuration
 local BaseClass = require 'boxhud.classes.base'
 
 local ConfigurationPanel = BaseClass(function(c, name)
-    c.name = name
-    c.selected = false
-    c.selectedItem = nil
-    c.selectedItemType = nil
-    c.newProperty = nil
-    c.newColumn = nil
-    c.newTab = nil
-    c.newWindow = nil
-    c.lpanesize = 200
-    c.baselpanesize = 200
+    c.Name = name
+    c.Selected = false
+    c.SelectedItem = nil
+    c.SelectedItemType = nil
+    c.NewProperty = nil
+    c.NewColumn = nil
+    c.NewTab = nil
+    c.NewWindow = nil
+    c.LeftPaneSize = 200
+    c.BaseLeftPaneSize = 200
 end)
 
 function ConfigurationPanel:clearSelection()
-    self.selected = false
-    self.selectedItem = nil
-    self.selectedItemType = nil
+    self.Selected = false
+    self.SelectedItem = nil
+    self.SelectedItemType = nil
 end
 
 function ConfigurationPanel:selectItem(item, itemType)
-    self.selectedItem = item
-    self.selectedItemType = itemType
+    self.SelectedItem = item
+    self.SelectedItemType = itemType
 end
 
 return ConfigurationPanel

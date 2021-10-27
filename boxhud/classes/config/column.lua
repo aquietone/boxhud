@@ -21,7 +21,7 @@ function Column:validateProperties()
     local valid = true
     for _,propName in pairs(self.Properties) do
         if string.len(propName) > 0 then
-            if not state.settings['Properties'][propName] then
+            if not state.Settings['Properties'][propName] then
                 message = string.format('Column \'Properties\' must reference a valid \'Observed\', \'NetBots\' or \'Spawn\' property. Name=%s', propName)
                 print_err(string.format('[Column %s] %s', self.Name, message))
                 valid = false

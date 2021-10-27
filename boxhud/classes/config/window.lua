@@ -13,7 +13,7 @@ local Window = BaseClass(function(w,windowSettings)
 end)
 
 local function GetTabByName(tabName)
-    for _,tab in ipairs(state.settings['Tabs']) do
+    for _,tab in ipairs(state.Settings['Tabs']) do
         if tab['Name'] == tabName then
             return tab
         end

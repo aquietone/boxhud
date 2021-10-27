@@ -3,6 +3,7 @@ The Property class represents the static configuration of a property defined in 
 --]]
 local BaseClass = require 'boxhud.classes.base'
 local state = require 'boxhud.state'
+local utils = require 'boxhud.utils.utils'
 
 local Property = BaseClass(function(p,propSettings)
     p.Name = propSettings['Name']
@@ -26,7 +27,7 @@ function Property:validate()
                     print_err('Adding CWTN properties without limiting the classes they apply to will almost certainly break macros on non-CWTN boxes!')
                 end
             end
-            if self.DependsOnName and not state.settings['Properties'][self.DependsOnName] then
+            if self.DependsOnName and not state.Settings['Properties'][self.DependsOnName] then
                 message = string.format(
                         '[Properties %s] \'DependsOnName\' must refer to another observed property name. DependsOnName=%s', 
                         self.Name, self.DependsOnName)
@@ -43,9 +44,9 @@ function Property:validate()
                 print_err(message)
                 return false, message
             end
-            isUsingDanNet = true
+            utils.IsUsingDanNet = true
         elseif self.Type == 'Spawn' then
-            if self.FromIDProperty and not state.settings['Properties'][self.FromIDProperty] then
+            if self.FromIDProperty and not state.Settings['Properties'][self.FromIDProperty] then
                 message = string.format(
                         '[Properties %s] \'FromIDProperty\' must refer to a valid Observed or NetBots property. FromIDProperty=%s',
                         self.Name, self.FromIDProperty)
@@ -53,7 +54,7 @@ function Property:validate()
                 return false, message
             end
         elseif self.Type == 'NetBots' then
-            isUsingNetBots = true
+            utils.IsUsingNetBots = true
         else
             message = string.format('[Properties %s] Property type not supported. Type=%s', self.Name, self.Type)
             print_err(message)

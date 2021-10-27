@@ -9,30 +9,30 @@ local DanNet = mq.TLO.DanNet
 local NetBots = mq.TLO.NetBots
 
 function WindowState:refreshPeers()
-    local windowSettings = state.settings.Windows[self.name]
+    local windowSettings = state.Settings.Windows[self.Name]
     if windowSettings.PeerGroup == 'zone' then
-        self.peerGroup = utils.GetZonePeerGroup()
+        self.PeerGroup = utils.GetZonePeerGroup()
     elseif windowSettings.PeerGroup == 'group' then
-        self.peerGroup = utils.GetGroupPeerGroup()
-    elseif self.peerGroup ~= windowSettings.PeerGroup then
-        self.peerGroup = windowSettings.PeerGroup
+        self.PeerGroup = utils.GetGroupPeerGroup()
+    elseif self.PeerGroup ~= windowSettings.PeerGroup then
+        self.PeerGroup = windowSettings.PeerGroup
     end
     local t = {}
-    if utils.peer_source == 'dannet' then
-        t = utils.Split(DanNet.Peers(self.peerGroup)())
+    if utils.PeerSource == 'dannet' then
+        t = utils.Split(DanNet.Peers(self.PeerGroup)())
     else
         for i=1,NetBots.Counts() do
             table.insert(t, NetBots.Client.Arg(i)())
         end
     end
 
-    if not self.peers or not utils.DoTablesMatch(self.peers, t) then
-        self.peers = t
-        self.peersDirty = true
+    if not self.Peers or not utils.DoTablesMatch(self.Peers, t) then
+        self.Peers = t
+        self.PeersDirty = true
     end
-    for _,peerName in ipairs(self.peers) do
-        if not state.characters[peerName] then
-            state.characters[peerName] = Character(peerName,nil)
+    for _,peerName in ipairs(self.Peers) do
+        if not state.Characters[peerName] then
+            state.Characters[peerName] = Character(peerName,nil)
         end
     end
 end

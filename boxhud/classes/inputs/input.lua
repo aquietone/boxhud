@@ -5,9 +5,8 @@ local BaseClass = require 'boxhud.classes.base'
 
 local Input = BaseClass(function(i)
     i.Name=''
-    i.valid=true
-    i.message=nil
-    i.shouldDrawCombo = false
+    i.Valid=true
+    i.Message=nil
 end)
 
 return Input

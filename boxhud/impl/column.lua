@@ -99,7 +99,7 @@ function ColumnInput:draw(width, configPanel)
                 ImGui.PopItemWidth()
                 ImGui.SameLine()
                 ImGui.PushItemWidth(160)
-                self.Properties[propIdx][2] = helpers.DrawComboBox("##colpropcombo2"..propIdx, self.Properties[propIdx][2], state.settings['Properties'], true)
+                self.Properties[propIdx][2] = helpers.DrawComboBox("##colpropcombo2"..propIdx, self.Properties[propIdx][2], state.Settings['Properties'], true)
                 ImGui.PopItemWidth()
                 ImGui.SameLine()
                 if ImGui.Button('X##deleteRow'..propIdx) then
@@ -124,9 +124,9 @@ function ColumnInput:draw(width, configPanel)
         for mappingIdx, mappingName in ipairs(self.Mappings) do
             if self.Mappings[mappingIdx] ~= nil then
                 ImGui.PushItemWidth(100)
-                self.Mappings[mappingIdx][1], configPanel.selected = ImGui.InputText('##newcolmappings1-'..tostring(mappingIdx), self.Mappings[mappingIdx][1], ImGuiInputTextFlags.EnterReturnsTrue)
+                self.Mappings[mappingIdx][1], configPanel.Selected = ImGui.InputText('##newcolmappings1-'..tostring(mappingIdx), self.Mappings[mappingIdx][1], ImGuiInputTextFlags.EnterReturnsTrue)
                 ImGui.SameLine()
-                self.Mappings[mappingIdx][2], configPanel.selected = ImGui.InputText('##newcolmappings2-'..tostring(mappingIdx), self.Mappings[mappingIdx][2], ImGuiInputTextFlags.EnterReturnsTrue)
+                self.Mappings[mappingIdx][2], configPanel.Selected = ImGui.InputText('##newcolmappings2-'..tostring(mappingIdx), self.Mappings[mappingIdx][2], ImGuiInputTextFlags.EnterReturnsTrue)
                 ImGui.SameLine()
                 if ImGui.Button('X##deleteMappingRow'..mappingIdx) then
                     local mappingIter = mappingIdx
@@ -151,7 +151,7 @@ function ColumnInput:draw(width, configPanel)
         for thresholdIdx, thresholdValue in ipairs(self.Thresholds) do
             if self.Thresholds[thresholdIdx] ~= nil then
                 ImGui.PushItemWidth(80)
-                self.Thresholds[thresholdIdx], configPanel.selected = ImGui.InputText('##newcolthresholds'..tostring(thresholdIdx), self.Thresholds[thresholdIdx], ImGuiInputTextFlags.EnterReturnsTrue)
+                self.Thresholds[thresholdIdx], configPanel.Selected = ImGui.InputText('##newcolthresholds'..tostring(thresholdIdx), self.Thresholds[thresholdIdx], ImGuiInputTextFlags.EnterReturnsTrue)
                 ImGui.PopItemWidth()
                 ImGui.SameLine()
                 if ImGui.Button('X##deleteThresholdRow'..thresholdIdx) then
@@ -179,28 +179,28 @@ function ColumnInput:draw(width, configPanel)
         self.Action = helpers.DrawLabelAndTextInput('Action(*): ', '##newcolumnaction', self.Action, 'The action to take on left click. The string \'#botName#\' will be replaced with the character name from the row of the button.\nExample: \'/dex #botName# /mqp\'')
     end
     ImGui.Separator()
-    if ImGui.Button('Save##newcolumn'..configPanel.name) then
+    if ImGui.Button('Save##newcolumn'..configPanel.Name) then
         local column = self:toColumn()
-        ok, self.message = column:validate()
+        ok, self.Message = column:validate()
         if ok then
-            state.settings['Columns'][self.Name] = column
+            state.Settings['Columns'][self.Name] = column
             settings.SaveSettings()
             configPanel:clearSelection()
         else
-            self.valid = false
+            self.Valid = false
         end
     end
-    if not self.valid then
+    if not self.Valid then
         ImGui.SameLine()
         ImGui.PushTextWrapPos(width-10)
-        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', self.message))
+        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', self.Message))
         ImGui.PopTextWrapPos()
     end
 end
 
 function Column:references(draw)
     local refFound = false
-    for _,tab in pairs(state.settings['Tabs']) do
+    for _,tab in pairs(state.Settings['Tabs']) do
         if tab['Columns'] then
             for _,columnNameIter in pairs(tab['Columns']) do
                 if self.Name == columnNameIter then
@@ -220,13 +220,13 @@ function Column:draw(configPanel)
     ImGui.Separator()
     if self.Name ~= 'Name' then
         if ImGui.SmallButton('Edit##'..self.Name) then
-            configPanel.newColumn = ColumnInput:fromColumn(self)
+            configPanel.NewColumn = ColumnInput:fromColumn(self)
             configPanel:selectItem(nil, 'addnewcolumn')
         end
         ImGui.SameLine()
         if ImGui.SmallButton('Delete##'..self.Name) then
             if not self:references(false) then
-                state.settings['Columns'][self.Name] = nil
+                state.Settings['Columns'][self.Name] = nil
                 settings.SaveSettings()
                 configPanel:clearSelection()
             end

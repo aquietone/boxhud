@@ -58,11 +58,11 @@ local HUDGUI = function()
     local myname = mq.TLO.Me.CleanName()
     if not myname or myname == 'load' then return end
     if not openGUI then return end
-    for _,window in pairs(state.settings['Windows']) do
+    for _,window in pairs(state.Settings['Windows']) do
         local flags = 0
         if not window['TitleBar'] then flags = bit32.bor(flags, ImGuiWindowFlags.NoTitleBar) end
         if window['Transparency'] then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
-        if state.windowStates[window.Name] and state.windowStates[window.Name].peers then
+        if state.WindowStates[window.Name] and state.WindowStates[window.Name].Peers then
             openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..myname..window.Name, openGUI, flags)
             if shouldDrawGUI then
                 if ImGui.GetWindowHeight() == 32 and ImGui.GetWindowWidth() == 32 then
@@ -81,7 +81,7 @@ local Admin = function(action, name)
         openGUI = not adminMode
         print_msg('Setting \ayadminMode\ax = \ay'..tostring(adminMode))
     elseif action == 'anon' then
-        state.anonymize = not state.anonymize
+        state.Anonymize = not state.Anonymize
     elseif action  == 'reset' then
         if not adminMode then
             print_err('\ayadminMode\ax must be enabled')
@@ -89,14 +89,14 @@ local Admin = function(action, name)
         end
         if name == nil then
             print_msg('Resetting observed properties for: \ayALL')
-            for _,char in pairs(state.characters) do
+            for _,char in pairs(state.Characters) do
                 char:manageObservers(true)
                 char:manageObservers(false)
             end
         else
             print_msg('Resetting observed properties for: \ay'..name)
-            state.characters[name]:manageObservers(true)
-            state.characters[name]:manageObservers(false)
+            state.Characters[name]:manageObservers(true)
+            state.Characters[name]:manageObservers(false)
         end
     end
 end
@@ -114,7 +114,7 @@ local Help = function()
 end
 
 local ShowVersion = function()
-    print_msg('Version '..utils.version)
+    print_msg('Version '..utils.Version)
 end
 
 local function SetupBindings()
@@ -132,23 +132,23 @@ local function SetupBindings()
 end
 
 local function CleanupStaleData(currTime)
-    for name, char in pairs(state.characters) do
-        if os.difftime(currTime, char.properties['lastUpdated']) > utils.stale_data_timeout then
+    for name, char in pairs(state.Characters) do
+        if os.difftime(currTime, char.Properties['lastUpdated']) > utils.StaleDataTimeout then
             print_msg('Removing stale toon data: \ay'..name)
-            state.characters[name] = nil
+            state.Characters[name] = nil
         end
     end
 end
 
 local function SendCommand()
-    mq.cmd(state.storedCommand)
-    state.storedCommand = nil
+    mq.cmd(state.StoredCommand)
+    state.StoredCommand = nil
 end
 
 local function SetupWindowStates()
-    for _,window in pairs(state.settings['Windows']) do
-        state.windowStates[window.Name] = WindowState(window.Name, window.PeerGroup or utils.GetZonePeerGroup(), ConfigurationPanel(window.Name))
-        state.windowStates[window.Name]:refreshPeers()
+    for _,window in pairs(state.Settings['Windows']) do
+        state.WindowStates[window.Name] = WindowState(window.Name, window.PeerGroup or utils.GetZonePeerGroup(), ConfigurationPanel(window.Name))
+        state.WindowStates[window.Name]:refreshPeers()
     end
 end
 
@@ -170,8 +170,8 @@ local function main()
     mq.imgui.init('BOXHUDUI', HUDGUI)
 
     -- Initial setup of observers
-    if utils.IsUsingDanNet() then
-        for _, char in pairs(state.characters) do
+    if utils.IsUsingDanNet then
+        for _, char in pairs(state.Characters) do
             char:manageObservers(false)
         end
     end
@@ -179,33 +179,33 @@ local function main()
     -- Main run loop to populate observed property data of toons
     while not terminate do
         CheckGameState()
-        if state.storedCommand then
+        if state.StoredCommand then
             SendCommand()
         end
         local currTime = os.time(os.date("!*t"))
-        for windowName,window in pairs(state.settings['Windows']) do
-            if not state.windowStates[windowName] then
-                state.windowStates[windowName] = WindowState(windowName, window.PeerGroup or utils.GetZonePeerGroup(), ConfigurationPanel(windowName))
+        for windowName,window in pairs(state.Settings['Windows']) do
+            if not state.WindowStates[windowName] then
+                state.WindowStates[windowName] = WindowState(windowName, window.PeerGroup or utils.GetZonePeerGroup(), ConfigurationPanel(windowName))
             end
-            state.windowStates[windowName]:refreshPeers()
-            if state.windowStates[windowName].peers then
-                for _, charName in pairs(state.windowStates[windowName].peers) do
-                    local char = state.characters[charName]
+            state.WindowStates[windowName]:refreshPeers()
+            if state.WindowStates[windowName].Peers then
+                for _, charName in pairs(state.WindowStates[windowName].Peers) do
+                    local char = state.Characters[charName]
                     -- Ensure observers are set for the toon
-                    if utils.IsUsingDanNet() then
-                        if state.adminPeerName == char.name then
+                    if utils.IsUsingDanNet then
+                        if state.AdminPeerName == char.name then
                             if state.adminPeerAction == 'reset' then
                                 char:manageObservers(true)
                                 char:manageObservers(false)
                             elseif state.adminPeerAction == 'check' then
-                                local obsSet = char:isObserverSet(state.adminPeerItem)
-                                print_msg(string.format('Observer set for \ay%s\ax: \ay%s\ax', state.adminPeerItem, tostring(obsSet)))
+                                local obsSet = char:isObserverSet(state.AdminPeerItem)
+                                print_msg(string.format('Observer set for \ay%s\ax: \ay%s\ax', state.AdminPeerItem, tostring(obsSet)))
                             elseif state.adminPeerAction == 'drop' then
-                                char:removeObserver(state.adminPeerItem)
+                                char:removeObserver(state.AdminPeerItem)
                             end
-                            state.adminPeerName = nil
+                            state.AdminPeerName = nil
                             state.adminPeerAction = nil
-                            state.adminPeerItem = ''
+                            state.AdminPeerItem = ''
                         elseif not char:verifyObservers() then
                             char:manageObservers(false)
                         end
@@ -215,7 +215,7 @@ local function main()
             end
         end
         CleanupStaleData(currTime)
-        mq.delay(utils.refresh_interval)
+        mq.delay(utils.RefreshInterval)
     end
 end
 

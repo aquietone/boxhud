@@ -19,7 +19,7 @@ local function CompareWithSortSpecs(a, b)
         local delta = 0
 
         local columnName = current_columns[sort_spec.ColumnUserID]
-        local column = state.settings['Columns'][columnName]
+        local column = state.Settings['Columns'][columnName]
         if not column then
             return a < b
         end
@@ -28,9 +28,9 @@ local function CompareWithSortSpecs(a, b)
         if column['Name'] == 'Name' or not column['Properties'] or not column['Properties']['all'] then
             aVal = tostring(a)
             bVal = tostring(b)
-        elseif state.characters[a].properties and state.characters[b].properties then
-            aVal = tostring(state.characters[a].properties[column['Properties']['all']] or -1)
-            bVal = tostring(state.characters[b].properties[column['Properties']['all']] or -1)
+        elseif state.Characters[a].Properties and state.Characters[b].Properties then
+            aVal = tostring(state.Characters[a].Properties[column['Properties']['all']] or -1)
+            bVal = tostring(state.Characters[b].Properties[column['Properties']['all']] or -1)
         else
             aVal = tostring(a)
             bVal = tostring(b)
@@ -70,7 +70,7 @@ function Window:drawTableTab(columns, tabName)
             ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY, ImGuiTableFlags.NoSavedSettings)
     if ImGui.BeginTable('##bhtable'..tabName..tostring(tableRandom), #columns, flags, 0, 0, 0.0) then
         for i, columnName in ipairs(columns) do
-            local column = state.settings['Columns'][columnName]
+            local column = state.Settings['Columns'][columnName]
             if columnName == 'Name' then
                 ImGui.TableSetupColumn('Name',     bit32.bor(ImGuiTableColumnFlags.DefaultSort, ImGuiTableColumnFlags.WidthFixed),   -1.0, i)
             elseif column['Type'] ~= 'button' then
@@ -82,37 +82,37 @@ function Window:drawTableTab(columns, tabName)
         ImGui.TableSetupScrollFreeze(0, 1) -- Make row always visible
         local sort_specs = ImGui.TableGetSortSpecs()
         if sort_specs then
-            if sort_specs.SpecsDirty or state.windowStates[self.Name].peersDirty then
-                if #state.windowStates[self.Name].peers > 0 then
+            if sort_specs.SpecsDirty or state.WindowStates[self.Name].PeersDirty then
+                if #state.WindowStates[self.Name].Peers > 0 then
                     current_sort_specs = sort_specs
                     current_columns = columns
-                    state.windowStates[self.Name].sortedPeers = utils.TableClone(state.windowStates[self.Name].peers)
-                    table.sort(state.windowStates[self.Name].sortedPeers, CompareWithSortSpecs)
+                    state.WindowStates[self.Name].SortedPeers = utils.TableClone(state.WindowStates[self.Name].Peers)
+                    table.sort(state.WindowStates[self.Name].SortedPeers, CompareWithSortSpecs)
                     current_sort_specs = nil
                     current_columns = nil
                 end
                 sort_specs.SpecsDirty = false
-                state.windowStates[self.Name].peersDirty = false
+                state.WindowStates[self.Name].PeersDirty = false
             end
         end
 
         -- Display data
         ImGui.TableHeadersRow()
         local clipper = ImGuiListClipper.new()
-        if state.windowStates[self.Name].sortedPeers == nil then
-            state.windowStates[self.Name].sortedPeers = utils.TableClone(state.windowStates[self.Name].peers)
+        if state.WindowStates[self.Name].SortedPeers == nil then
+            state.WindowStates[self.Name].SortedPeers = utils.TableClone(state.WindowStates[self.Name].Peers)
         end
-        clipper:Begin(#state.windowStates[self.Name].sortedPeers)
+        clipper:Begin(#state.WindowStates[self.Name].SortedPeers)
         while clipper:Step() do
             for row_n = clipper.DisplayStart, clipper.DisplayEnd - 1, 1 do
-                local clipName = state.windowStates[self.Name].sortedPeers[row_n+1]
-                local char = state.characters[clipName]
-                if char and char.properties then
+                local clipName = state.WindowStates[self.Name].SortedPeers[row_n+1]
+                local char = state.Characters[clipName]
+                if char and char.Properties then
                     ImGui.PushID(clipName)
                     ImGui.TableNextRow()
                     ImGui.TableNextColumn()
                     for i,columnName in ipairs(columns) do
-                        local column = state.settings['Columns'][columnName]
+                        local column = state.Settings['Columns'][columnName]
                         if columnName == 'Name' then
                             char:drawNameButton()
                         else
@@ -152,39 +152,39 @@ function Window:drawTabs()
         end
 
         -- Admin tab only allows resetting observers, so only show if dannet is being used
-        if utils.IsUsingDanNet() then
+        if utils.IsUsingDanNet then
             if ImGui.BeginTabItem('Admin') then
                 ImGui.Text('DanNet Peer Group: ')
                 ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, state.windowStates[self.Name].peerGroup)
+                ImGui.TextColored(0, 1, 0, 1, state.WindowStates[self.Name].PeerGroup)
                 ImGui.Text('Administer Observers for:')
-                adminPeerSelected, _ = ImGui.Combo("##combo", adminPeerSelected, state.windowStates[self.Name].peers, #state.windowStates[self.Name].peers, 5)
+                adminPeerSelected, _ = ImGui.Combo("##combo", adminPeerSelected, state.WindowStates[self.Name].Peers, #state.WindowStates[self.Name].Peers, 5)
                 ImGui.SameLine()
                 if ImGui.Button('Reset All Observers') then
-                    print_msg('Resetting observed properties for: \ay'..state.windowStates[self.Name].peers[adminPeerSelected+1])
+                    print_msg('Resetting observed properties for: \ay'..state.WindowStates[self.Name].Peers[adminPeerSelected+1])
                     state.adminPeerAction = 'reset'
-                    state.adminPeerName = state.windowStates[self.Name].peers[adminPeerSelected+1]
+                    state.AdminPeerName = state.WindowStates[self.Name].Peers[adminPeerSelected+1]
                 end
                 ImGui.Text('Enter an observed property to check or drop:')
-                state.adminPeerItem = ImGui.InputText('##checkobs', state.adminPeerItem)
+                state.AdminPeerItem = ImGui.InputText('##checkobs', state.AdminPeerItem)
                 ImGui.SameLine()
                 if ImGui.Button('Check') then
-                    print_msg('Check observed property \ay'..state.adminPeerItem..'\ax for: \ay'..state.windowStates[self.Name].peers[adminPeerSelected+1])
+                    print_msg('Check observed property \ay'..state.AdminPeerItem..'\ax for: \ay'..state.WindowStates[self.Name].Peers[adminPeerSelected+1])
                     state.adminPeerAction = 'check'
-                    state.adminPeerName = state.windowStates[self.Name].peers[adminPeerSelected+1]
+                    state.AdminPeerName = state.WindowStates[self.Name].Peers[adminPeerSelected+1]
                 end
                 ImGui.SameLine()
                 if ImGui.Button('Drop') then
-                    print_msg('Drop observed property \ay'..state.adminPeerItem..'\ax for: \ay'..state.windowStates[self.Name].peers[adminPeerSelected+1])
+                    print_msg('Drop observed property \ay'..state.AdminPeerItem..'\ax for: \ay'..state.WindowStates[self.Name].Peers[adminPeerSelected+1])
                     state.adminPeerAction = 'drop'
-                    state.adminPeerName = state.windowStates[self.Name].peers[adminPeerSelected+1]
+                    state.AdminPeerName = state.WindowStates[self.Name].Peers[adminPeerSelected+1]
                 end
                 ImGui.EndTabItem()
             end
         end
 
         if ImGui.BeginTabItem('Configuration##'..self.Name) then
-            state.windowStates[self.Name].configPanel:draw()
+            state.WindowStates[self.Name].ConfigPanel:draw()
             ImGui.EndTabItem()
         end
         ImGui.EndTabBar()
@@ -212,12 +212,6 @@ function WindowInput:fromWindow(window)
     local o = WindowInput()
     o.Name = window.Name
     o.PeerGroup = window.PeerGroup
-    if window.PeerGroup ~= 'all' and window.PeerGroup ~= 'zone' and window.PeerGroup ~= 'group' then
-        o.PeerGroup = window.PeerGroup
-        o.newPeerGroupSelection = 'other'
-    else
-        o.newPeerGroupSelection = window.PeerGroup
-    end
     for idx,tab in ipairs(window.Tabs) do
         o.Tabs[idx] = tab
     end
@@ -229,23 +223,28 @@ function WindowInput:draw(width, configPanel)
     ImGui.TextColored(1, 0, 1, 1, "Add New Window")
     ImGui.Separator()
     self.Name = helpers.DrawLabelAndTextInput('Name(*): ', '##newwindowname', self.Name, 'The name of the window to be added.')
-    if state.settings['PeerSource'] == 'dannet' then
-        if not self.newPeerGroupSelection then self.newPeerGroupSelection = 'all' end
-        self.newPeerGroupSelection = helpers.DrawComboBox('Peer Group', self.newPeerGroupSelection, { 'all', 'group', 'zone', 'other' }, false)
-        if self.newPeerGroupSelection == 'other' then
+    if state.Settings['PeerSource'] == 'dannet' then
+        local peerGroupSelection = self.PeerGroup
+        if self.PeerGroup ~= 'all' and self.PeerGroup ~= 'zone' and self.PeerGroup ~= 'group' then
+            peerGroupSelection = 'other'
+        end
+        local currentSelection = peerGroupSelection
+        peerGroupSelection = helpers.DrawComboBox('Peer Group', peerGroupSelection, { 'all', 'group', 'zone', 'other' }, false)
+        if peerGroupSelection == 'other' then
+            if currentSelection ~= peerGroupSelection then self.PeerGroup = '' end
             self.PeerGroup = helpers.DrawLabelAndTextInput('Enter a peer group name:', '##peergroup', self.PeerGroup, 'The DanNet Peer Group to source peers from. For a list of groups, use "/dnet info".')
         else
-            self.PeerGroup = self.newPeerGroupSelection
+            self.PeerGroup = peerGroupSelection
         end
     end
 
     ImGui.Text('Tabs: ')
     ImGui.SameLine()
     helpers.HelpMarker('The list of tabs which will be displayed in the window.')
-    for tabIdx, tabName in ipairs(self.Tabs) do
+    for tabIdx, _ in ipairs(self.Tabs) do
         if self.Tabs[tabIdx] ~= nil then
             local tabNameList = {}
-            for _,tab in ipairs(state.settings['Tabs']) do
+            for _,tab in ipairs(state.Settings['Tabs']) do
                 table.insert(tabNameList, tab['Name'])
             end
             self.Tabs[tabIdx] = helpers.DrawComboBox("##tabcombo"..tabIdx, self.Tabs[tabIdx], tabNameList, false)
@@ -267,27 +266,27 @@ function WindowInput:draw(width, configPanel)
     end
 
     ImGui.Separator()
-    if ImGui.Button('Save##newwindow'..configPanel.name) then
+    if ImGui.Button('Save##newwindow'..configPanel.Name) then
         local ok = false
         local window = self:toWindow()
-        ok, self.message = window:validate()
+        ok, self.Message = window:validate()
         if ok then
-            if state.settings.Windows[self.Name] then
-                state.settings.Windows[self.Name].Tabs = window.Tabs
-                state.settings.Windows[self.Name].PeerGroup = window.PeerGroup
+            if state.Settings.Windows[self.Name] then
+                state.Settings.Windows[self.Name].Tabs = window.Tabs
+                state.Settings.Windows[self.Name].PeerGroup = window.PeerGroup
             else
-                state.settings.Windows[self.Name] = window
+                state.Settings.Windows[self.Name] = window
             end
             settings.SaveSettings()
             configPanel:clearSelection()
         else
-            self.valid = false
+            self.Valid = false
         end
     end
-    if not self.valid then
+    if not self.Valid then
         ImGui.SameLine()
         ImGui.PushTextWrapPos(width-10)
-        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', self.message))
+        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', self.Message))
         ImGui.PopTextWrapPos()
     end
 end
@@ -296,13 +295,13 @@ function Window:draw(configPanel)
     ImGui.TextColored(1, 0, 1, 1, self.Name)
     ImGui.Separator()
     if ImGui.SmallButton('Edit##'..self.Name) then
-        configPanel.newWindow = WindowInput:fromWindow(self)
+        configPanel.NewWindow = WindowInput:fromWindow(self)
         configPanel:selectItem(nil, 'addnewwindow')
     end
-    if TableLength(state.settings['Windows']) > 1 then
+    if TableLength(state.Settings['Windows']) > 1 then
         ImGui.SameLine()
         if ImGui.SmallButton('Delete##'..self.Name) then
-            state.settings['Windows'][self.Name] = nil
+            state.Settings['Windows'][self.Name] = nil
             settings.SaveSettings()
             configPanel:clearSelection()
         end
