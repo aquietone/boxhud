@@ -102,7 +102,7 @@ utils.GetZonePeerGroup = function()
 end
 
 utils.GetGroupPeerGroup = function ()
-    return ('group_%s_%s'):format(mq.TLO.EverQuest.Server(), mq.TLO.Me.CleanName():lower())
+    return ('group_%s_%s'):format(mq.TLO.EverQuest.Server(), state.MyName:lower())
 end
 
 utils.GetTabByName = function(tabName)
