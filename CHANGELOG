@@ -1,9 +1,12 @@
+2.2.1
+- fix to column buttons no longer doing anything
 2.2.0
 - OOP-ify the code, maybe not the best decision
 - Add multiple window support
 - Add ability to set the dannet peer group for the window
 - Add 'group' as an option for the peer group similar to 'zone'
 - Add admin dannet helpers for checking and dropping observers
+- Set name once at startup to avoid reading funny names while dead or loading
 2.1.4
 - Update to work with non-default luaDir
 2.1.3

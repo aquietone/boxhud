@@ -1,5 +1,4 @@
 local helpers = require 'boxhud.utils.uihelpers'
-local utils = require 'boxhud.utils.utils'
 local PropertyInput = require 'boxhud.classes.inputs.propertyinput'
 local ColumnInput = require 'boxhud.classes.inputs.columninput'
 local TabInput = require  'boxhud.classes.inputs.tabinput'
