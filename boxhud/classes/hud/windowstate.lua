@@ -9,6 +9,7 @@ local WindowState = BaseClass(function(w, name, peerGroup, configPanel)
     w.PeerGroup = peerGroup
     w.Peers = nil
     w.PeersDirty = false
+    w.PeerRefreshCount = 20
     w.SortedPeers = nil
     w.ConfigPanel = configPanel
 end)
