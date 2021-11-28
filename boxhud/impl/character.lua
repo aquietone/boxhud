@@ -323,7 +323,7 @@ function Character:updateCharacterProperties(currTime, peerGroup)
     for propName, propSettings in pairs(state.Settings['Properties']) do
         if propSettings['Type'] == 'Observed' then
             if self:shouldObserveProperty(propSettings) then
-                properties[propName] = mq.TLO.DanNet(self.Name).Observe('"'..propName..'"')()
+                properties[propName] = mq.TLO.DanNet(self.Name).Observe('"'..propName..'"')() or ''
             else
                 properties[propName] = ''
             end
