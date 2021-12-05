@@ -39,7 +39,8 @@ end
 function Character:verifyObservers()
     for propName, propSettings in pairs(state.Settings['Properties']) do
         if propSettings['Type'] == 'Observed' and self:shouldObserveProperty(propSettings) then
-            if not self:isObserverSet(propName) then
+            --if not self:isObserverSet(propName) then
+            if not self.Observers[propName] then
                 return false
             end
         end
@@ -57,34 +58,46 @@ function Character:addObserver(propName, propSettings)
     end
     if self:shouldObserveProperty(propSettings) then
         -- Add the observation if it is not set
-        if not mq.TLO.DanNet(self.Name).ObserveSet(string.format('"%s"', propName))() then
-            mq.cmdf('/dobserve %s -q "%s"', self.Name, propName)
-        end
-        local verifyStartTime = os.time(os.date("!*t"))
-        while not self:isObserverSet(propName) do
-            mq.delay(100)
-            if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 30 then
-                print_err('Timed out waiting for observer to be added for \ay'..self.Name)
-                print_err('Exiting the script.')
-                mq.exit()
+        -- then
+        if not self.Observers[propName] then
+            if mq.TLO.DanNet(self.Name).ObserveSet(string.format('"%s"', propName))() then
+                -- remove potentially stale observer and re-add it
+                self:removeObserver(propName, true)
             end
+            if not mq.TLO.DanNet(self.Name).ObserveSet(string.format('"%s"', propName))() then
+                mq.cmdf('/dobserve %s -q "%s"', self.Name, propName)
+                local verifyStartTime = os.time(os.date("!*t"))
+                while not self:isObserverSet(propName) do
+                    mq.delay(100)
+                    if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 30 then
+                        print_err('Timed out waiting for observer to be added for \ay'..self.Name)
+                        print_err('Exiting the script.')
+                        mq.exit()
+                    end
+                end
+            end
+            self.Observers[propName] = 1
         end
     end
 end
 
-function Character:removeObserver(propName)
+function Character:removeObserver(propName, force)
     -- Drop the observation if it is set
-    if mq.TLO.DanNet(self.Name).ObserveSet(string.format('"%s"', propName))() then
-        mq.cmdf('/dobserve %s -q "%s" -drop', self.Name, propName)
-    end
-    local verifyStartTime = os.time(os.date("!*t"))
-    while self:isObserverSet(propName) do
-        mq.delay(100)
-        if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 30 then
-            print_err('Timed out waiting for observer to be removed for \ay'..self.Name)
-            print_err('Exiting the script.')
-            mq.exit()
+    --
+    if self.Observers[propName] or force then
+        if force or mq.TLO.DanNet(self.Name).ObserveSet(string.format('"%s"', propName))() then
+            mq.cmdf('/dobserve %s -q "%s" -drop', self.Name, propName)
+            local verifyStartTime = os.time(os.date("!*t"))
+            while self:isObserverSet(propName) do
+                mq.delay(100)
+                if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 30 then
+                    print_err('Timed out waiting for observer to be removed for \ay'..self.Name)
+                    print_err('Exiting the script.')
+                    mq.exit()
+                end
+            end
         end
+        self.Observers[propName] = nil
     end
 end
 
@@ -95,6 +108,9 @@ function Character:manageObservers(drop)
             if propSettings['Type'] == 'Observed' then
                 self:removeObserver(propName)
             end
+        end
+        for propName, _ in pairs(self.Observers) do
+            self:removeObserver(propName)
         end
         print_msg('Removed observed properties for: \ay'..self.Name)
     else

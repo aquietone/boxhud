@@ -179,7 +179,7 @@ s.LoadSettings = function(arg)
 end
 
 s.SaveSettings = function()
-    local settings_path = ('%s/boxhud/settings/%s'):format(mq.luaDir, settings_file)
+    local settings_path = string.format('%s/%s', mq.configDir, settings_file)
     persistence.store(settings_path, state.Settings)
     return true
 end
