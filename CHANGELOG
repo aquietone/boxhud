@@ -1,3 +1,7 @@
+2.3.0
+- Add new property and column library
+- Fix save location for settings to new config dir location
+- Changes around managing observers
 2.2.2
 - Some updates around creating dannet observers and timeouts
 2.2.1
