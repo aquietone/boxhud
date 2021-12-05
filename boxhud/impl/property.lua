@@ -55,8 +55,13 @@ function PropertyInput:draw(width, configPanel)
     self.Type,_ = ImGui.RadioButton("Spawn", self.Type, 3)
     
     self.Name = helpers.DrawLabelAndTextInput('Name(*): ', '##newpropname', self.Name, 'The data member this property should display. Examples:\nObserved: \'Me.PctHPs\'\nNetBots: \'PctHPs\'\nSpawn: \'Distance3D\'\n')
+    self.Name = self.Name:gsub('^${','')
+    self.Name = self.Name:gsub('}$','')
 
     if self.Type == 1 then
+        ImGui.PushTextWrapPos(width-17)
+        ImGui.TextColored(1, 0, 0, 1, 'WARNING: Observed property names are case sensitive and must be valid TLO members on each character that will be observed. They MUST NOT include the brackets around them like ${ }.')
+        ImGui.PopTextWrapPos()
         self.DependsOnName = helpers.DrawLabelAndTextInput('DependsOnName: ', '##newpropdepname', self.DependsOnName, 'Optional. The name of another property which this property depends on. This property will be ignored for a character if the property it depends on doesn\'t have the desired value.')
         self.DependsOnValue = helpers.DrawLabelAndTextInput('DependsOnValue: ', '##newpropdepvalue', self.DependsOnValue, 'Optional. The value of another property which this property depends on. This property will be ignored for a character if the property it depends on doesn\'t have the desired value.')
         self.Inverse = helpers.DrawCheckBox('Inverse', '##newpropinverse', self.Inverse, 'Optional. Validate that the dependency condition is false instead of true.')

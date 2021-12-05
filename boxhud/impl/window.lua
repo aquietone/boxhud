@@ -1,3 +1,5 @@
+--- @type mq
+local mq = require 'mq'
 local Window = require 'boxhud.classes.config.window'
 local WindowInput = require 'boxhud.classes.inputs.windowinput'
 local helpers = require 'boxhud.utils.uihelpers'
@@ -178,6 +180,11 @@ function Window:drawTabs()
                     print_msg('Drop observed property \ay'..state.AdminPeerItem..'\ax for: \ay'..state.WindowStates[self.Name].Peers[adminPeerSelected+1])
                     state.AdminPeerAction = 'drop'
                     state.AdminPeerName = state.WindowStates[self.Name].Peers[adminPeerSelected+1]
+                end
+                ImGui.Separator()
+                ImGui.TextColored(1, 0, 0, 1, 'BEWARE!')
+                if ImGui.Button('Restart Boxhud and Reload DanNet') then
+                    mq.cmdf('/multiline | /dga %s /multiline ; /plugin dannet unload noauto; /timed 10 /plugin dannet load noauto ; | /lua stop boxhud | /timed 20 /lua run boxhud |', state.WindowStates[self.Name].PeerGroup)
                 end
                 ImGui.EndTabItem()
             end

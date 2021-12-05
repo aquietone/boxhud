@@ -4,8 +4,6 @@ local state = require 'boxhud.state'
 
 --- @type mq
 local mq = require 'mq'
-local DanNet = mq.TLO.DanNet
-local NetBots = mq.TLO.NetBots
 
 function Character:shouldObserveProperty(propSettings)
     if not propSettings['DependsOnName'] then
@@ -15,7 +13,7 @@ function Character:shouldObserveProperty(propSettings)
         -- Does not care what the value is of the property, just that it is observed
         return true
     elseif propSettings['DependsOnValue'] then
-        local dependentValue = DanNet(self.Name).Observe(string.format('"%s"', propSettings['DependsOnName']))()
+        local dependentValue = mq.TLO.DanNet(self.Name).Observe(string.format('"%s"', propSettings['DependsOnName']))()
         if dependentValue then
             if not propSettings['Inverse'] and string.lower(propSettings['DependsOnValue']):find(string.lower(dependentValue)) ~= nil then
                 -- The value of the dependent property matches
@@ -31,7 +29,7 @@ end
 
 -- Return whether or not a property is observed for a toon
 function Character:isObserverSet(propName)
-    if not DanNet(self.Name)() or DanNet(self.Name).ObserveSet('"'..propName..'"')() then
+    if not mq.TLO.DanNet(self.Name)() or mq.TLO.DanNet(self.Name).ObserveSet('"'..propName..'"')() then
         return true
     end
     return false
@@ -59,13 +57,13 @@ function Character:addObserver(propName, propSettings)
     end
     if self:shouldObserveProperty(propSettings) then
         -- Add the observation if it is not set
-        if not DanNet(self.Name).ObserveSet(string.format('"%s"', propName))() then
+        if not mq.TLO.DanNet(self.Name).ObserveSet(string.format('"%s"', propName))() then
             mq.cmdf('/dobserve %s -q "%s"', self.Name, propName)
         end
         local verifyStartTime = os.time(os.date("!*t"))
         while not self:isObserverSet(propName) do
-            mq.delay(25)
-            if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 20 then
+            mq.delay(100)
+            if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 30 then
                 print_err('Timed out waiting for observer to be added for \ay'..self.Name)
                 print_err('Exiting the script.')
                 mq.exit()
@@ -76,13 +74,13 @@ end
 
 function Character:removeObserver(propName)
     -- Drop the observation if it is set
-    if DanNet(self.Name).ObserveSet(string.format('"%s"', propName))() then
+    if mq.TLO.DanNet(self.Name).ObserveSet(string.format('"%s"', propName))() then
         mq.cmdf('/dobserve %s -q "%s" -drop', self.Name, propName)
     end
     local verifyStartTime = os.time(os.date("!*t"))
     while self:isObserverSet(propName) do
-        mq.delay(25)
-        if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 20 then
+        mq.delay(100)
+        if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 30 then
             print_err('Timed out waiting for observer to be removed for \ay'..self.Name)
             print_err('Exiting the script.')
             mq.exit()
@@ -325,21 +323,21 @@ function Character:updateCharacterProperties(currTime, peerGroup)
     for propName, propSettings in pairs(state.Settings['Properties']) do
         if propSettings['Type'] == 'Observed' then
             if self:shouldObserveProperty(propSettings) then
-                properties[propName] = DanNet(self.Name).Observe('"'..propName..'"')()
+                properties[propName] = mq.TLO.DanNet(self.Name).Observe('"'..propName..'"')() or ''
             else
                 properties[propName] = ''
             end
         elseif propSettings['Type'] == 'NetBots' then
             -- tostring instead of ending with () because class returned a number instead of class string
             if propName:find('Class') then
-                properties[propName] = tostring(NetBots(utils.TitleCase(self.Name))[propName])
+                properties[propName] = tostring(mq.TLO.NetBots(utils.TitleCase(self.Name))[propName])
             else
-                properties[propName] = NetBots(utils.TitleCase(self.Name))[propName]()
+                properties[propName] = mq.TLO.NetBots(utils.TitleCase(self.Name))[propName]()
             end
         elseif propSettings['Type'] == 'Spawn' then
             if propSettings['FromIDProperty'] then
                 if state.Settings['Properties'][propSettings.FromIDProperty]['Type'] == 'NetBots' then
-                    properties[propSettings.FromIDProperty] = NetBots(utils.TitleCase(self.Name))[propSettings.FromIDProperty]()
+                    properties[propSettings.FromIDProperty] = mq.TLO.NetBots(utils.TitleCase(self.Name))[propSettings.FromIDProperty]()
                 end
                 properties[propName] = mq.TLO.Spawn(string.format('id %s', properties[propSettings['FromIDProperty']]))[propName]()
             else
