@@ -14,6 +14,9 @@ local Column = BaseClass(function(c,columnSettings)
     c.Ascending = columnSettings['Ascending']
     c.InZone = columnSettings['InZone']
     c.Action = columnSettings['Action']
+    c.IncludeLevel = columnSettings['IncludeLevel']
+    c.OwnColor = columnSettings['OwnColor']
+    c.Color = columnSettings['Color']
 end)
 
 function Column:validateProperties()
