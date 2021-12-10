@@ -11,6 +11,7 @@ local classes = {'all', 'melee', 'caster', 'hybrids', 'ranged', 'ber', 'brd',
 function ColumnInput:toColumn()
     local column = Column({Name=self.Name,Type='property'})
     if self.Type == 1 then
+        column['IncludeLevel'] = self.IncludeLevel
         column['Ascending']=self.Ascending
         column['InZone']=self.InZone
         column['Percentage']=self.Percentage
@@ -30,6 +31,8 @@ function ColumnInput:toColumn()
         for i,j in ipairs(self.Thresholds) do
             column['Thresholds'][i] = tonumber(j)
         end
+        column['OwnColor'] = self.OwnColor
+        column['Color'] = self.Color
     elseif self.Type == 2 then
         column['Type'] = 'button'
         column['Action'] = self.Action
@@ -42,9 +45,12 @@ function ColumnInput:fromColumn(column)
     o.Name = column['Name']
     if column['Type'] == 'property' then
         o.Type = 1
+        o.IncludeLevel = column['IncludeLevel']
         o.Ascending = column['Ascending']
         o.InZone = column['InZone']
         o.Percentage = column['Percentage']
+        o.OwnColor = column['OwnColor']
+        o.Color = column['Color']
         o.PropertyCount = 0
         o.Properties = {}
         if column['Properties'] then
@@ -121,7 +127,7 @@ function ColumnInput:draw(width, configPanel)
         ImGui.Text('Mappings: ')
         ImGui.SameLine()
         helpers.HelpMarker('Optional. Define mappings from raw property values to values that should be displayed.\nExample: Map \'TRUE\' to \'Paused\' for \'Macro.Paused\'.')
-        for mappingIdx, mappingName in ipairs(self.Mappings) do
+        for mappingIdx, _ in ipairs(self.Mappings) do
             if self.Mappings[mappingIdx] ~= nil then
                 ImGui.PushItemWidth(100)
                 self.Mappings[mappingIdx][1], configPanel.Selected = ImGui.InputText('##newcolmappings1-'..tostring(mappingIdx), self.Mappings[mappingIdx][1], ImGuiInputTextFlags.EnterReturnsTrue)
@@ -148,7 +154,7 @@ function ColumnInput:draw(width, configPanel)
         ImGui.Text('Thresholds: ')
         ImGui.SameLine()
         helpers.HelpMarker('Optional. Set up to (2) numbers, in increasing order, for column text color thresholds.\nExample: Set Me.PctHPs thresholds to 35, 70 so that values below 35 will be red, between 35-70 will be yellow, and above 70 will be green.')
-        for thresholdIdx, thresholdValue in ipairs(self.Thresholds) do
+        for thresholdIdx, _ in ipairs(self.Thresholds) do
             if self.Thresholds[thresholdIdx] ~= nil then
                 ImGui.PushItemWidth(80)
                 self.Thresholds[thresholdIdx], configPanel.Selected = ImGui.InputText('##newcolthresholds'..tostring(thresholdIdx), self.Thresholds[thresholdIdx], ImGuiInputTextFlags.EnterReturnsTrue)
@@ -175,6 +181,19 @@ function ColumnInput:draw(width, configPanel)
         self.Percentage = helpers.DrawCheckBox('Percentage', '##newcolumnpercent', self.Percentage, 'Check this box if the values displayed in this column are percents.')
         self.Ascending = helpers.DrawCheckBox('Ascending', '##newcolumnascending', self.Ascending, 'Check this box if higher values are \'better\', i.e. 100%% HP is better than 10%%.')
         self.InZone = helpers.DrawCheckBox('InZone', '##newcolumninzone', self.InZone, 'Check this box if this column should only display values for characters in the same zone.')
+
+        self.OwnColor = helpers.DrawCheckBox('Set color', '##newcolumncolor', self.OwnColor, 'Check this box if the column should have its own color settings. Overrides any global color settings.')
+        if self.OwnColor then
+            local tmpColor = self.Color or {1,1,1}
+            local oldR, oldG, oldB = tmpColor[1], tmpColor[2], tmpColor[3]
+            tmpColor = helpers.DrawColorEditor("Color", tmpColor)
+            if tmpColor[1] ~= oldR or tmpColor[2] ~= oldG or tmpColor[3] ~= oldB then
+                self.Color = tmpColor
+            end
+        else
+            self.Color = nil
+        end
+
     elseif self.Type == 2 then
         self.Action = helpers.DrawLabelAndTextInput('Action(*): ', '##newcolumnaction', self.Action, 'The action to take on left click. The string \'#botName#\' will be replaced with the character name from the row of the button.\nExample: \'/dex #botName# /mqp\'')
     end

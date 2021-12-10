@@ -1,3 +1,6 @@
+2.3.1
+- Add setting under `Display Settings` to include levels in name column, like `Myname (120)`.
+- Add column specific color settings which will override global color settings.
 2.3.0
 - Add new property and column library
 - Fix save location for settings to new config dir location
