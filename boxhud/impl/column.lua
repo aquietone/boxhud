@@ -33,6 +33,7 @@ function ColumnInput:toColumn()
         end
         column['OwnColor'] = self.OwnColor
         column['Color'] = self.Color
+        column['Prettify'] = self.Prettify
     elseif self.Type == 2 then
         column['Type'] = 'button'
         column['Action'] = self.Action
@@ -51,6 +52,7 @@ function ColumnInput:fromColumn(column)
         o.Percentage = column['Percentage']
         o.OwnColor = column['OwnColor']
         o.Color = column['Color']
+        o.Prettify = column['Prettify']
         o.PropertyCount = 0
         o.Properties = {}
         if column['Properties'] then
@@ -194,6 +196,8 @@ function ColumnInput:draw(width, configPanel)
             self.Color = nil
         end
 
+        self.Prettify = helpers.DrawCheckBox('Prettify', '##newcolumnprettify', self.Prettify, 'Check this box if the column should prettify number values, like 1,000 instead of 1000.')
+
     elseif self.Type == 2 then
         self.Action = helpers.DrawLabelAndTextInput('Action(*): ', '##newcolumnaction', self.Action, 'The action to take on left click. The string \'#botName#\' will be replaced with the character name from the row of the button.\nExample: \'/dex #botName# /mqp\'')
     end
@@ -298,6 +302,9 @@ function Column:draw(configPanel)
         end
         if self.InZone then
             helpers.DrawLabelAndTextValue('InZone: ', tostring(self.InZone))
+        end
+        if self.Prettify then
+            helpers.DrawLabelAndTextValue('Prettify: ', tostring(self.Prettify))
         end
     elseif self.Type == 'button' then
         if self.Action then
