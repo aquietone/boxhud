@@ -151,9 +151,7 @@ local function ValidateSettings()
             ["IncludeLevel"] = false,
         }
     else
-        print(state.Settings['Columns']['Name']['IncludeLevel'])
         state.Settings['Columns']['Name']['IncludeLevel'] = state.Settings['Columns']['Name']['IncludeLevel'] or false
-        print(state.Settings['Columns']['Name']['IncludeLevel'])
     end
     if not state.Settings['Tabs'] then
         state.Settings['Tabs'] = {}

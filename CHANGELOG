@@ -1,3 +1,5 @@
+2.3.2
+- Option to prettify number values in columns.
 2.3.1
 - Add setting under `Display Settings` to include levels in name column, like `Myname (120)`.
 - Add column specific color settings which will override global color settings.

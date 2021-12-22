@@ -17,6 +17,7 @@ local Column = BaseClass(function(c,columnSettings)
     c.IncludeLevel = columnSettings['IncludeLevel']
     c.OwnColor = columnSettings['OwnColor']
     c.Color = columnSettings['Color']
+    c.Prettify = columnSettings['Prettify']
 end)
 
 function Column:validateProperties()
