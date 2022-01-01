@@ -218,7 +218,7 @@ local function SetText(value, thresholds, ascending, percentage, colColor, prett
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetColumnWidth() - ImGui.CalcTextSize(tostring(value)) 
             - ImGui.GetScrollX())
         -- CalcTextSize doesn't consider that `%%` is used to escape the % sign, so add the second % after.
-        if percentage then value = value..'%' end
+        --if percentage then value = value..'%' end
     end
     ImGui.Text(value)
     ImGui.PopStyleColor(1)
