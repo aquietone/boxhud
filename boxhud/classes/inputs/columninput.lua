@@ -15,6 +15,8 @@ local ColumnInput = BaseClass(Input(), function(c)
     c.Percentage=false
     c.Ascending=true
     c.InZone=true
+    c.OwnColor=false
+    c.Prettify=false
     c.Action=''
 end)
 

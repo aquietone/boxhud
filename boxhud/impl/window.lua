@@ -74,7 +74,8 @@ function Window:drawTableTab(columns, tabName)
         for i, columnName in ipairs(columns) do
             local column = state.Settings['Columns'][columnName]
             if columnName == 'Name' then
-                ImGui.TableSetupColumn('Name',     bit32.bor(ImGuiTableColumnFlags.DefaultSort, ImGuiTableColumnFlags.WidthFixed),   -1.0, i)
+                local name = ('Name (%s)###Name'):format(#state.WindowStates[self.Name].Peers)
+                ImGui.TableSetupColumn(name,       bit32.bor(ImGuiTableColumnFlags.DefaultSort, ImGuiTableColumnFlags.WidthFixed),   -1.0, i)
             elseif column['Type'] ~= 'button' then
                 ImGui.TableSetupColumn(columnName, ImGuiTableColumnFlags.WidthFixed,                                                 -1.0, i)
             else

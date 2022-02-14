@@ -1,3 +1,6 @@
+2.3.4
+- Init some column properties to false
+- Add # of characters to name column header
 2.3.3
 - % symbol no longer needs escaping in percentage columns?
 2.3.2
