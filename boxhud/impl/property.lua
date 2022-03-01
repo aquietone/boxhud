@@ -1,3 +1,4 @@
+local mq = require 'mq'
 local Property = require 'boxhud.classes.config.property'
 local PropertyInput = require 'boxhud.classes.inputs.propertyinput'
 local helpers = require 'boxhud.utils.uihelpers'
@@ -69,17 +70,44 @@ function PropertyInput:draw(width, configPanel)
         self.FromIDProperty = helpers.DrawLabelAndTextInput('FromIDProperty: ', '##newpropfromid', self.FromIDProperty, 'Optional. The name of another property to use as the ID in the Spawn search. The property MUST return a Spawn ID.')
     end
     ImGui.Separator()
-    if ImGui.Button('Save##newprop'..configPanel.Name) then
-        local property = self:toProperty()
-        local ok = false
-        ok, self.Message = property:validate()
-        if ok then
-            state.Settings['Properties'][self.Name] = property
-            settings.SaveSettings()
-            configPanel:clearSelection()
-        else
-            self.Valid = false
+    if self.savewarningname ~= self.Name then
+        self.showsavewarning = false
+        self.savewarningname = ''
+    end
+    if not self.showsavewarning then
+        if ImGui.Button('Save##newprop'..configPanel.Name) then
+            self.showsavewarning = true
+            self.savewarningname = self.Name
         end
+    else
+        if ImGui.Button('Confirm') then
+            local property = self:toProperty()
+            local ok = false
+            ok, self.Message = property:validate()
+            if ok then
+                state.Settings['Properties'][self.Name] = property
+                settings.SaveSettings()
+                configPanel:clearSelection()
+            else
+                self.Valid = false
+            end
+            self.showsavewarning = false
+            self.savewarningname = ''
+        end
+        local prefix,_ = self.Name:gsub('%..*', '')
+        prefix,_ = prefix:gsub('%[.*', '')
+        local suffix,_ = self.Name:gsub('.*%.', '')
+        ImGui.PushTextWrapPos(width-10)
+        if not mq.TLO[prefix] then
+            ImGui.TextColored(1, 1, 0, 1, string.format('TLO "%s" doesn\'t look familiar.', prefix))
+        elseif suffix ~= prefix and not mq.TLO[prefix][suffix] then
+            ImGui.TextColored(1, 1, 0, 1, string.format('"%s" TLO Member "%s" doesn\'t look familiar', prefix, suffix))
+        end
+        if self.Name:find('%[') and not self.Name:find(']') then
+            ImGui.TextColored(1, 1, 0, 1, string.format('Mismatched [ ] in property "%s"', self.Name))
+        end
+        ImGui.TextColored(1, 1, 0, 1, string.format('Are you sure you want to add property: %s', self.Name))
+        ImGui.PopTextWrapPos()
     end
     if not self.Valid then
         ImGui.SameLine()

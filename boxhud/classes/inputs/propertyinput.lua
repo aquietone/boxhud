@@ -10,6 +10,8 @@ local PropertyInput = BaseClass(Input(), function(p)
     p.DependsOnValue=''
     p.Inverse=false
     p.FromIDProperty=''
+    p.showsavewarning = false
+    p.savewarningname = ''
 end)
 
 return PropertyInput
