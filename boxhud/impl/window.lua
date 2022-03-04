@@ -140,7 +140,7 @@ function Window:drawTableTab(columns, tabName)
 end
 
 function Window:drawTabs()
-    if ImGui.BeginTabBar('BOXHUDTABS##'..self.Name) then
+    if ImGui.BeginTabBar('BOXHUDTABS##'..self.Name, ImGuiTabBarFlags.Reorderable) then
         for _,tabName in ipairs(self.Tabs) do
             local tab = utils.GetTabByName(tabName)
             if ImGui.BeginTabItem(tab['Name']) then

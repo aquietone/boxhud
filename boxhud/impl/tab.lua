@@ -32,8 +32,9 @@ function TabInput:draw(width, configPanel)
     ImGui.Text('Columns: ')
     ImGui.SameLine()
     helpers.HelpMarker('The list of columns which will be displayed in the tab.')
-    for columnIdx, columnName in ipairs(self.Columns) do
+    for columnIdx, columnName in ipairs(self.Columns) do 
         if self.Columns[columnIdx] ~= nil then
+            ImGui.BeginGroup()
             self.Columns[columnIdx] = helpers.DrawComboBox("##columncombo"..columnIdx, self.Columns[columnIdx], state.Settings['Columns'], true)
             ImGui.SameLine()
             if ImGui.Button('X##deleteRow'..columnIdx) then
@@ -44,6 +45,21 @@ function TabInput:draw(width, configPanel)
                 end
                 self.Columns[columnIter] = nil
                 self.ColumnCount = self.ColumnCount - 1
+            end
+            ImGui.EndGroup()
+            if ImGui.BeginDragDropSource() then
+                ImGui.SetDragDropPayload("ColumnIdx", columnIdx)
+                ImGui.Text(self.Columns[columnIdx])
+                ImGui.EndDragDropSource()
+            end
+            if ImGui.BeginDragDropTarget() then
+                local payload = ImGui.AcceptDragDropPayload("ColumnIdx")
+                if payload ~= nil then
+                    local num = payload.Data;
+                    -- swap the list entries
+                    self.Columns[num], self.Columns[columnIdx] = self.Columns[columnIdx], self.Columns[num]
+                end
+                ImGui.EndDragDropTarget()
             end
         end
     end

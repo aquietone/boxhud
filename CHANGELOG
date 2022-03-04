@@ -1,3 +1,11 @@
+2.5.1
+- Fix adding spawn or netbots properties after property validation change
+- Make column list drag/droppable when editing tab configuration
+2.5.0
+- Add new `Import Configuration` to `Configuration` tab. This allows you to select another boxhud-settings.lua file from your config folder and import selected properties and columns from it into your current configuration.
+- Adds dependency on lfs.dll which adds dependency on MicroSoft vc_redist as well.
+2.4.0
+- Finally add some basic property input validation
 2.3.4
 - Init some column properties to false
 - Add # of characters to name column header

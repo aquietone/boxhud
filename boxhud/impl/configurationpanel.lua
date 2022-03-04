@@ -1,3 +1,4 @@
+local mq = require 'mq'
 local helpers = require 'boxhud.utils.uihelpers'
 local PropertyInput = require 'boxhud.classes.inputs.propertyinput'
 local ColumnInput = require 'boxhud.classes.inputs.columninput'
@@ -7,6 +8,7 @@ local ConfigurationPanel = require 'boxhud.classes.config.configurationpanel'
 local state = require 'boxhud.state'
 local settings = require 'boxhud.settings.settings'
 local library = require 'boxhud.library'
+local filedialog = require 'boxhud.utils.imguifiledialog'
 
 function ConfigurationPanel:drawDisplaySettingsSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
@@ -162,6 +164,15 @@ function ConfigurationPanel:drawWindowTreeSelector()
     end
 end
 
+function ConfigurationPanel:drawImportSelector()
+    ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
+    self.Selected = ImGui.Selectable('Import Configuration', self.selectedItemType == 'import')
+    ImGui.PopStyleColor(1)
+    if self.Selected then
+        self:selectItem(nil, 'import')
+    end
+end
+
 function ConfigurationPanel:drawAboutSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
     self.Selected = ImGui.Selectable('About', self.SelectedItemType == 'about')
@@ -195,8 +206,11 @@ function ConfigurationPanel:drawLeftPaneWindow()
             end
             ImGui.TableNextRow()
             ImGui.TableNextColumn()
+            self:drawImportSelector()
+            ImGui.TableNextRow()
+            ImGui.TableNextColumn()
             self:drawAboutSelector()
-            
+
             ImGui.EndTable()
         end
     end
@@ -283,6 +297,71 @@ function ConfigurationPanel:drawColumnLibrary()
     end
 end
 
+function ConfigurationPanel:drawImport()
+    if ImGui.Button('Choose...') then
+        filedialog.set_file_selector_open(true)
+    end
+    ImGui.SameLine()
+    if ImGui.Button('Import') then
+        if self.tmp_settings then
+            settings.ImportSettings(self.tmp_settings)
+            self.tmp_settings = nil
+            self.ImportFileName = ''
+            settings.SaveSettings()
+        end
+    end
+    if filedialog.is_file_selector_open() then
+        filedialog.draw_file_selector(mq.configDir, '.lua')
+    end
+    if not filedialog.is_file_selector_open() and filedialog.get_filename() ~= '' then
+        self.ImportFileName = filedialog.get_filename()
+        filedialog:reset_filename()
+        self.tmp_settings = nil
+    end
+    ImGui.Text('Import settings from: ' .. self.ImportFileName)
+    if not self.tmp_settings and self.ImportFileName ~= '' then
+        self.tmp_settings = assert(loadfile(mq.configDir..'/'..self.ImportFileName))()
+        -- validate settings file
+    end
+    if self.tmp_settings then
+        local flags = bit32.bor(ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY)
+        if self.tmp_settings['Properties'] then
+            if ImGui.BeginTable('Import Properties', 2, flags, ImGui.GetContentRegionAvail() - 100, 200, 0.0) then
+                ImGui.TableSetupColumn('Select',        bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed),   -1.0, 0)
+                ImGui.TableSetupColumn('Property Name', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed),   -1.0, 1)
+                ImGui.TableSetupScrollFreeze(0, 1) -- Make row always visible
+                ImGui.TableHeadersRow()
+                for i,j in pairs(self.tmp_settings['Properties']) do
+                    ImGui.TableNextRow()
+                    ImGui.TableNextColumn()
+                    self.tmp_settings['Properties'][i].selected = ImGui.Checkbox('##'..i, self.tmp_settings['Properties'][i].selected or false)
+                    ImGui.TableNextColumn()
+                    ImGui.Text(i)
+                    ImGui.TableNextColumn()
+                end
+                ImGui.EndTable()
+            end
+        end
+        if self.tmp_settings['Columns'] then
+            if ImGui.BeginTable('Import Columns', 2, flags, ImGui.GetContentRegionAvail() - 100, 200, 0.0) then
+                ImGui.TableSetupColumn('Select',        bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed),   -1.0, 0)
+                ImGui.TableSetupColumn('Column Name', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed),   -1.0, 1)
+                ImGui.TableSetupScrollFreeze(0, 1) -- Make row always visible
+                ImGui.TableHeadersRow()
+                for i,j in pairs(self.tmp_settings['Columns']) do
+                    ImGui.TableNextRow()
+                    ImGui.TableNextColumn()
+                    self.tmp_settings['Columns'][i].selected = ImGui.Checkbox('##'..i, self.tmp_settings['Columns'][i].selected or false)
+                    ImGui.TableNextColumn()
+                    ImGui.Text(i)
+                    ImGui.TableNextColumn()
+                end
+                ImGui.EndTable()
+            end
+        end
+    end
+end
+
 function ConfigurationPanel:drawAbout()
     ImGui.TextColored(1, 0, 1, 1, 'About')
     ImGui.Separator()
@@ -336,6 +415,8 @@ function ConfigurationPanel:drawRightPaneWindow()
             if window then
                 window:draw(self)
             end
+        elseif self.SelectedItemType == 'import' then
+            self:drawImport()
         elseif self.SelectedItemType == 'about' then
             self:drawAbout()
         else
@@ -349,7 +430,7 @@ function ConfigurationPanel:drawSplitter(thickness, size0, min_size0)
     local x,y = ImGui.GetCursorPos()
     local delta = 0
     ImGui.SetCursorPosX(x + size0)
-    
+
     ImGui.PushStyleColor(ImGuiCol.Button, 0, 0, 0, 0)
     ImGui.PushStyleColor(ImGuiCol.ButtonActive, 0, 0, 0, 0)
     ImGui.PushStyleColor(ImGuiCol.ButtonHovered, 0.6, 0.6, 0.6, 0.1)
@@ -360,7 +441,7 @@ function ConfigurationPanel:drawSplitter(thickness, size0, min_size0)
 
     if ImGui.IsItemActive() then
         delta,_ = ImGui.GetMouseDragDelta()
-        
+
         if delta < min_size0 - size0 then
             delta = min_size0 - size0
         end

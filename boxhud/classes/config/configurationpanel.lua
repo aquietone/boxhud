@@ -15,6 +15,8 @@ local ConfigurationPanel = BaseClass(function(c, name)
     c.NewWindow = nil
     c.LeftPaneSize = 200
     c.BaseLeftPaneSize = 200
+    c.ImportFileName = ''
+    c.tmp_settings = nil
 end)
 
 function ConfigurationPanel:clearSelection()
