@@ -1,5 +1,8 @@
 2.0.0
-- Refactor settings and project structure
+- Add in game configuration of tabs, columns and properties
+- Rearrange configuration a bit
+- Break up the script into a few files in a boxhud folder
+- Add persistence.lua library for dumping table to save configuration
 1.8.1
 - Updated for RG build 216 changes
 - Switch to use mq.cmd and mq.cmdf
