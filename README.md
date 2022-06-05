@@ -28,13 +28,19 @@ Stop the script with:
 ```
 or
 ```
-lua stop boxhud
+/lua stop boxhud
 ```
 
 Toggle the window with:
 
 ```
 /boxhud
+```
+
+Show help output:
+
+```
+/bhhelp
 ```
 
 # Overview
@@ -66,7 +72,7 @@ Additionally, the character names are buttons with the following function:
 - Left click -- Brings the character to the foreground with `/dex toonname /foreground`.
 - Right click -- Opens a context menu with some helpful buttons specific to the selected toon. Also includes a `Send Command` text input which will do `/dex toonname <text input>`
 
-These button actions are more just to play around with the capabilities we have now with an interactive window like this. 
+These button actions are more just to play around with the capabilities provided by lua and ImGui. 
 
 Example:
 
@@ -75,8 +81,6 @@ Example:
 ![](images/example-tab2.png)
 
 ![](images/example-tab3.png)
-
-![](images/example-tab4.png)
 
 Context menu on Name column:  
 ![](images/example-popup.png)
@@ -89,6 +93,23 @@ Hide columns using the table menu:
 
 Click and drag headers to rearrange table columns:  
 ![](images/example-tablerearrange.png)
+
+Configuration:  
+![](images/example-add-observed.png)
+
+![](images/example-add-column.png)
+
+![](images/example-add-tab.png)
+
+![](images/example-general-settings.png)
+
+![](images/example-save-pending.png)
+
+![](images/example-save-none.png)
+
+![](images/example-height-tall.png)
+
+![](images/example-height-short.png)
 
 The script takes a few seconds to start up as it waits for the DanNet observers to be ready.
 Characters which log off or for some reason stop being available will go stale and be removed from the table after 30 seconds.
