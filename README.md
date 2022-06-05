@@ -136,7 +136,10 @@ There are 3 types of properties: Observed, NetBots and Spawn.
 
 ```
   Properties = {
-    ['Me.PctHPs'] = { Type='Observed' }
+    ['Me.PctHPs'] = { 
+      ['Name']='Me.PctHPs',
+      ['Type']='Observed'
+    }
   }
 ```
 
@@ -147,9 +150,10 @@ Observing properties which are not defined on a toon can impact running macros. 
 ```
   Properties = {
     ['CWTN.Mode'] = {
-      Type='Observed',
-      DependsOnName='Me.Class.ShortName',
-      DependsOnValue='MNK,ROG,WAR,SHD,MAG,ENC,CLR,BST,SHM'
+      ['Name']='CWTN.Mode',
+      ['Type='Observed',
+      ['DependsOnName']='Me.Class.ShortName',
+      ['DependsOnValue']='MNK,ROG,WAR,SHD,MAG,ENC,CLR,BST,SHM'
     }
   }
 ```
@@ -160,7 +164,10 @@ The example above would observe `CWTN.Mode` only on toons whose class is listed 
 
 ```
   Properties = {
-    ['PctMana'] = { Type='NetBots' }
+    ['PctMana'] = {
+      ['Name']='PctMana',
+      ['Type']='NetBots'
+    }
   }
 ```
 
@@ -182,10 +189,11 @@ All 3 types of properties can be mixed together, provided they have unique names
 
 ```
   Properties = {
-    ['Me.PctHPs'] = { Type='Observed' },
-    ['PctMana'] = { Type='NetBots' },
-    ['Distance3D'] = { Type='Spawn' },
+    ['Me.PctHPs'] = { Name='Me.PctHPs', Type='Observed' },
+    ['PctMana'] = { Name='PctMana', Type='NetBots' },
+    ['Distance3D'] = { Name='Distance3D', Type='Spawn' },
     ['CWTN.Mode'] = {
+      Name='CWTN.Mode',
       Type='Observed',
       DependsOnName='Me.Class.ShortName',
       DependsOnValue='MNK,ROG,WAR,SHD,MAG,ENC,CLR,BST,SHM'

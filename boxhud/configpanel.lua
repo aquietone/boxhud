@@ -1,3 +1,4 @@
+-- boxhud/configpanel.lua 2.0.4 -- aquietone
 --- @type ImGui
 require 'ImGui'
 require('boxhud.utils')
@@ -151,6 +152,10 @@ end)
 function TabInput:toTab()
     local tab = Tab({})
     tab.Name = self.Name
+    tab.Columns = {}
+    for idx,column in ipairs(self.Columns) do
+        tab.Columns[idx] = column
+    end
     tab.Columns = self.Columns
     return tab
 end
@@ -158,6 +163,10 @@ end
 function TabInput:fromTab(tab)
     local o = TabInput()
     o.Name = tab['Name']
+    o.Columns = {}
+    for idx,column in ipairs(tab.Columns) do
+        o.Columns[idx] = column
+    end
     o.ColumnCount = #tab['Columns']
     return o
 end
@@ -360,7 +369,7 @@ function PropertyInput:draw(width)
         self.FromIDProperty, selected = ImGui.InputText('##newpropfromid', self.FromIDProperty, 32)
     end
     ImGui.Separator()
-    if ImGui.Button('Save##newprop') then
+    if ImGui.Button('Apply##newprop') then
         local property = self:toProperty()
         local ok = false
         ok, self.message = property:validate()
@@ -618,7 +627,7 @@ function ColumnInput:draw(width)
         self.Action, selected = ImGui.InputText('##newcolumnaction', self.Action, 32)
     end
     ImGui.Separator()
-    if ImGui.Button('Save##newcolumn') then
+    if ImGui.Button('Apply##newcolumn') then
         local column = self:toColumn()
         ok, self.message = column:validate()
         if ok then
@@ -791,7 +800,7 @@ function TabInput:draw(width)
         self.Columns[self.ColumnCount] = ''
     end
     ImGui.Separator()
-    if ImGui.Button('Save##newtab') then
+    if ImGui.Button('Apply##newtab') then
         local ok = false
         local tab = self:toTab()
         ok, self.message = tab:validate()
@@ -815,7 +824,7 @@ function TabInput:draw(width)
     end
     if not self.valid then
         ImGui.SameLine()
-        ImGui.PushTextWrapPos(x-10)
+        ImGui.PushTextWrapPos(width-10)
         ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', self.message))
         ImGui.PopTextWrapPos()
     end
