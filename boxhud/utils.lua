@@ -4,7 +4,7 @@ local mq = require('mq')
 local converter = require('boxhud.settings-converter')
 dofile('boxhud/persistence.lua')
 
-local lyaml = require('lyaml.init')
+--local lyaml = require('lyaml.init')
 local utils = {}
 
 VERSION = '2.0.0'
@@ -380,11 +380,27 @@ end
 local function ValidateSettings()
     local valid = true
     valid = valid and ValidateOptionalSettings()
+    if not SETTINGS['Properties'] then
+        SETTINGS['Properties'] = {}
+    end
     for propName,propSettings in pairs(SETTINGS['Properties']) do
         valid,_ = ValidateProperty(propName, propSettings) and valid
     end
+    if not SETTINGS['Columns'] then
+        SETTINGS['Columns'] = {}
+    end
     for columnName,columnSettings in pairs(SETTINGS['Columns']) do
         valid,_ = ValidateColumn(columnName, columnSettings) and valid
+    end
+    if not SETTINGS['Columns']['Name'] then
+        SETTINGS['Columns']['Name'] = {
+            ["Type"] = "property",
+			["InZone"] = false,
+			["Percentage"] = false
+        }
+    end
+    if not SETTINGS['Tabs'] then
+        SETTINGS['Tabs'] = {}
     end
     for idx,tab in pairs(SETTINGS['Tabs']) do
         valid,_ = ValidateTab(tab, idx) and valid
@@ -453,6 +469,7 @@ function SaveSettings()
     local boxhud_dir = lua_dir .. '/boxhud'
     local settings_path = string.format('%s/%s', boxhud_dir, SETTINGS_FILE)
     persistence.store(settings_path, SETTINGS)
+    return true
 end
 
 return utils
