@@ -140,6 +140,9 @@ local observedToons = {}
 local anonymize = false
 local adminMode = false
 local adminPeerSelected = 0
+local initialRun = true
+math.randomseed(os.time())
+local tableRandom = math.random()
 
 -- Utility functions
 
@@ -653,8 +656,8 @@ end
 
 local function DrawHUDColumns(columns, tabName)
     local flags = bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Reorderable, ImGuiTableFlags.Hideable, ImGuiTableFlags.MultiSortable,
-            ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY)
-    if ImGui.BeginTable('##bhtable'..tabName, table.getn(columns), flags, 0, 0, 0.0) then
+            ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY, ImGuiTableFlags.NoSavedSettings)
+    if ImGui.BeginTable('##bhtable'..tabName..tostring(tableRandom), table.getn(columns), flags, 0, 0, 0.0) then
         for i, column in pairs(columns) do
             if column['Name'] == 'Name' then
                 ImGui.TableSetupColumn('Name',         bit32.bor(ImGuiTableColumnFlags.DefaultSort, ImGuiTableColumnFlags.WidthFixed),   -1.0, i)
@@ -706,7 +709,6 @@ local function DrawHUDColumns(columns, tabName)
                     ImGui.PushID(clipName)
                     ImGui.TableNextRow()
                     ImGui.TableNextColumn()
-
                     for i,column in pairs(columns) do
                         if column['Name'] == 'Name' then
                             DrawNameButton(clipName, botName, botInZone, botInvis)
@@ -765,9 +767,12 @@ end
 
 -- ImGui main function for rendering the UI window
 local HUDGUI = function()
-    openGUI, shouldDrawGUI = ImGui.Begin('BOXHUDUI', openGUI, ImGuiWindowFlags.NoTitleBar)
+    openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..mq.TLO.Me.CleanName(), openGUI, ImGuiWindowFlags.NoTitleBar)
     if shouldDrawGUI then
-        
+        if initialRun and ImGui.GetWindowHeight() == 32 and ImGui.GetWindowWidth() == 32 then
+            ImGui.SetWindowSize(460, 177)
+            initialRun = false
+        end
         if settings['Tabs'] and #settings['Tabs'] > 0 then
             DrawHUDTabs()
         elseif settings['Columns'] and #settings['Columns'] > 0 then
@@ -892,6 +897,13 @@ local function CleanupStaleData(currTime)
     end
 end
 
+local CheckGameState = function()
+    if mq.TLO.MacroQuest.GameState() ~= 'INGAME' then
+        print_err('\arNot in game, stopping boxhud.\ax')
+        mq.exit()
+    end
+end
+
 local function main()
     LoadSettingsFile()
     PluginCheck()
@@ -911,6 +923,7 @@ local function main()
 
     -- Main run loop to populate observed property data of toons
     while not terminate do
+        CheckGameState()
         -- Update peerGroup if we've zoned and using the zone peer group
         if peerSource == 'dannet' and peerGroup ~= 'all' and zoneID ~= mq.TLO.Zone.ID() then
             peerGroup = GetZonePeerGroup()
