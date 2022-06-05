@@ -30,6 +30,9 @@ Changes:
 - Add in option to use NetBots properties incase people want them
 - Changes to text threshold based coloring, can now define ascending/descending
   to say whether values should be red to green or green to red
+- Fixes to escape values in observed property names
+- Fix zone peer group name crash
+- Try out a send command option on right click toon name
 1.3.1
 - Small fixes
 - Properly escape some values for observed properties with [ ], etc.
@@ -358,11 +361,11 @@ function DrawHUDColumns(columns)
                     ImGui.PopStyleColor(1)
                     
                     if ImGui.BeginPopupContextItem("popup##"..botName) then
-                        ImGui.Text('Send Command: ')
+                        ImGui.Text('Send Command to '..botName..': ')
                         text = ""
                         text, selected = ImGui.InputText("##input"..botName, text, 32)
                         if selected then
-                            print('/dex '..botName..' '..text)
+                            print_msg('Sending command: /dex '..botName..' '..text)
                             mq.cmd.dex(botName..' '..text)
                             ImGui.CloseCurrentPopup()
                         end
@@ -371,14 +374,6 @@ function DrawHUDColumns(columns)
                         end
                         ImGui.EndPopup()
                     end
-                    
-                    --[[
-                    if ImGui.IsItemHovered() and ImGui.IsMouseReleased(ImGuiMouseButton.ImGuiMouseButton_Right) then
-                        -- target the toon on right click
-                        --mq.cmd.target('id '..botID)
-                        ImGui.OpenPopup()
-                    end
-                    --]]
                 else
                     ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
                     if ImGui.SmallButton(titleCase(botName)) then
