@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.4.4 -- aquietone
+boxhud.lua 1.5.0 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer 
@@ -26,6 +26,12 @@ Usage: /lua run boxhud [settings.lua]
        /boxhudend - end the script
 
 Changes:
+1.5.0
+- Add some right click actions on name buttons
+- Add /boxhudanon binding to replace names with class names in name column
+  Mostly so I don't have to draw over names in screenshots
+- Try to adjust observe timeouts based on # of peers
+- Misc cleanup
 1.4.4
 - Fix for some columns showing |server_name instead of correct data
 - Make sure peer list is initialized before UI
@@ -64,7 +70,7 @@ Changes:
 - Initial release, static configuration UI
 
 --]]
-mq = require('mq')
+local mq = require('mq')
 
 local arg = {...}
 
@@ -86,23 +92,30 @@ local dataTable = {}
 -- Tracks what toons observers have been added for to avoid adding multiple times
 local observedToons = {}
 local windowWidth = 0
+local observeWaitMod = 1
+-- Set to 1 to use classname instead of player names
+local anonymize = false
 
 -- Utility functions
 
-function print_msg(msg) print('\at[\ayBOXHUD\at] \at' .. msg) end
-function print_err(msg) print('\at[\ayBOXHUD\at] \ar' .. msg) end
+local function print_msg(msg) print('\at[\ayBOXHUD\at] \at' .. msg) end
+local function print_err(msg) print('\at[\ayBOXHUD\at] \ar' .. msg) end
 
 -- Load required plugins
-function PluginCheck()
+local function PluginCheck()
     if mq.TLO.DanNet == nil then
         print_msg("Plugin \ayMQ2DanNet\ax is required. Loading it now.")
         mq.cmd.plugin('mq2dannet noauto')
+    end
+    -- turn off fullname mode in DanNet
+    if mq.TLO.DanNet.FullNames() == 1 then
+        mq.cmd.dnet('fullnames off')
     end
 end
 
 -- Create a table of {key:true, ..} from a list for checking a value
 -- is in the list 
-function Set(list)
+local function Set(list)
     local set = {}
     for _, l in ipairs(list) do set[l] = true end
     return set
@@ -113,7 +126,7 @@ local casters = Set { 'CLR', 'DRU', 'SHM', 'ENC', 'MAG', 'NEC', 'WIZ' }
 local melee = Set { 'BRD', 'ROG', 'MNK', 'BER', 'RNG', 'BST', 'WAR', 'SHD', 'PAL'}
 
 -- Split a string using the provided separator, | by default
-function Split(input, sep)
+local function Split(input, sep)
     if sep == nil then
         sep = "|"
     end
@@ -126,11 +139,11 @@ end
 
 -- Return list of DanNet peers from the configured peer group
 -- peers list |peer1|peer2|peer3
-function Peers()
+local function Peers()
     return Split(mq.TLO.DanNet.Peers(peerGroup)())
 end
 
-function GetZonePeerGroup()
+local function GetZonePeerGroup()
     local zoneName = mq.TLO.Zone.ShortName()
     if zoneName:find('_') then
         return 'zone_'..zoneName
@@ -139,12 +152,12 @@ function GetZonePeerGroup()
     end
 end
 
-function FileExists(path)
+local function FileExists(path)
     local f = io.open(path, "r")
     if f ~= nil then io.close(f) return true else return false end
 end
 
-function ValidateSettings()
+local function CheckRequiredSettings()
     if not settings['Columns'] then
         print_err('ERROR: Missing \'Columns\' from settings')
         mq.exit()
@@ -160,33 +173,7 @@ function ValidateSettings()
     end
 end
 
-function CopySettingsFile(default_settings, new_settings)
-    local f = io.open(default_settings, 'r')
-    defaults = f:read('*a')
-    io.close(f)
-    f = io.open(new_settings, 'w')
-    f:write(defaults)
-    io.close(f)
-end
-
-function LoadSettings()
-    lua_dir = mq.TLO.MacroQuest.Path():gsub('\\', '/') .. '/lua/'
-    settings_file = arg[1] or 'boxhud-settings-'..string.lower(mq.TLO.Me.Name())..'.lua'
-    settings_path = lua_dir..settings_file
-    default_settings_path = lua_dir..'boxhud-settings.lua'
-
-    if FileExists(settings_path) then
-        print_msg('Loading settings from file: ' .. settings_file)
-        settings = require(settings_file:gsub('.lua', ''))
-        ValidateSettings()
-    else
-        print_msg('Loading default settings from file: boxhud-settings')
-        -- Default settings
-        settings = require('boxhud-settings')
-        -- Copy defaults into toon specific settings
-        CopySettingsFile(default_settings_path, settings_path)
-    end
-
+local function CheckOptionalSettings()
     if settings['PeerGroup'] and settings['PeerGroup'] == 'zone' then
         peerGroup = GetZonePeerGroup()
         zoneID = mq.TLO.Zone.ID()
@@ -197,12 +184,9 @@ function LoadSettings()
     if settings['StaleDataTimeout'] then
         staleDataTimeout = settings['StaleDataTimeout']
     end
+end
 
-    -- turn off fullname mode in DanNet
-    if mq.TLO.DanNet.FullNames() == 1 then
-        mq.cmd.dnet('fullnames off')
-    end
-
+local function SetWindowWidth()
     -- Calculate max tab width
     local globalColumnWidth = 0
     if settings['Columns'] and table.getn(settings['Columns']) > 0 then
@@ -230,14 +214,44 @@ function LoadSettings()
     end
 end
 
+local function CopySettingsFile(default_settings, new_settings)
+    local f = io.open(default_settings, 'r')
+    local defaults = f:read('*a')
+    io.close(f)
+    f = io.open(new_settings, 'w')
+    f:write(defaults)
+    io.close(f)
+end
+
+local function LoadSettingsFile()
+    local lua_dir = mq.TLO.MacroQuest.Path():gsub('\\', '/') .. '/lua/'
+    local settings_file = arg[1] or 'boxhud-settings-'..string.lower(mq.TLO.Me.Name())..'.lua'
+    local settings_path = lua_dir..settings_file
+    local default_settings_path = lua_dir..'boxhud-settings.lua'
+
+    if FileExists(settings_path) then
+        print_msg('Loading settings from file: ' .. settings_file)
+        settings = require(settings_file:gsub('.lua', ''))
+        CheckRequiredSettings()
+        CheckOptionalSettings()
+    else
+        print_msg('Loading default settings from file: boxhud-settings')
+        -- Default settings
+        settings = require('boxhud-settings')
+        -- Copy defaults into toon specific settings
+        CopySettingsFile(default_settings_path, settings_path)
+    end
+    SetWindowWidth()
+end
+
 -- Add or remove observers for the given toon
-function ManageObservers(botName, drop)
+local function ManageObservers(botName, drop)
     if drop then
         for _, obsProp in pairs(settings['ObservedProperties']) do
             -- Drop the observation if it is set
             if mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() == 1 then
                 mq.cmd.dobserve(botName..' -q "'..obsProp['Name']..'" -drop')
-                mq.delay(50)
+                mq.delay(50*observeWaitMod)
             end
         end
         observedToons[botName] = nil
@@ -247,7 +261,7 @@ function ManageObservers(botName, drop)
                 -- Add the observation if it is not set
                 if mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() == 0 then
                     mq.cmd.dobserve(botName..' -q "'..obsProp['Name']..'"')
-                    mq.delay(50)
+                    mq.delay(50*observeWaitMod)
                 end
             end
             observedToons[botName] = true
@@ -256,7 +270,7 @@ function ManageObservers(botName, drop)
 end
 
 -- Verify all observed properties are set for the given toon
-function VerifyObservers(botName)
+local function VerifyObservers(botName)
     for _, obsProp in pairs(settings['ObservedProperties']) do
         if mq.TLO.DanNet(botName).ObserveSet('"'..obsProp['Name']..'"')() == 0 then
             return false
@@ -265,7 +279,7 @@ function VerifyObservers(botName)
     return true
 end
 
-function SetText(value, thresholds, ascending, percentage)
+local function SetText(value, thresholds, ascending, percentage)
     if thresholds ~= nil then
         local valueNum = tonumber(value)
         if valueNum == nil then
@@ -324,7 +338,7 @@ function SetText(value, thresholds, ascending, percentage)
     ImGui.PopStyleColor(1)
 end
 
-titleCase = function(phrase)
+local function TitleCase(phrase)
     local result = string.gsub( phrase, "(%a)([%w_']*)",
         function(first, rest)
             return first:upper() .. rest:lower()
@@ -333,7 +347,7 @@ titleCase = function(phrase)
     return result
 end
 
-function table.concat(t1, t2)
+local function TableConcat(t1, t2)
     local t = {}
     for k,v in ipairs(t1) do
         table.insert(t, v)
@@ -344,57 +358,95 @@ function table.concat(t1, t2)
     return t
 end
 
-function DrawHUDColumns(columns)
+local function DrawHUDColumns(columns)
     ImGui.Columns(table.getn(columns))
     for _, column in pairs(columns) do
-        ImGui.CollapsingHeader(column['Name'], 256)
+        if column['Name'] == 'Name' then
+            ImGui.CollapsingHeader(column['Name']..' ('..table.getn(peerTable)..')', 256)
+        else
+            ImGui.CollapsingHeader(column['Name'], 256)
+        end
         ImGui.SetColumnWidth(-1, column['Width'])
         ImGui.NextColumn()
     end
-    for _, botName in pairs(peerTable) do
+    for _, name in pairs(peerTable) do
+        local botName = name
         local botValues = dataTable[botName]
         if not botValues then
             goto continue
         end
         -- Always read these properties for the toon
         -- as they are not specific to a column
-        botInZone = botValues['BotInZone']
-        botInvis = botValues['Me.Invis']
-        botID = botValues['Me.ID']
-        botClass = botValues['Me.Class.ShortName']
+        local botInZone = botValues['BotInZone']
+        local botInvis = botValues['Me.Invis']
+        local botID = botValues['Me.ID']
+        local botClass = botValues['Me.Class.ShortName']
 
+        if anonymize then
+            botName = botClass
+        end
         for _, column in pairs(columns) do
             if column['Name'] == 'Name' then
                 -- Treat Name column special
                 -- Fill name column
-                local buttonText = titleCase(botName)
+                local buttonText = TitleCase(botName..'##'..name)
                 if botInZone then
                     if not botInvis then
                         ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
-                        buttonText = titleCase(botName)
+                        buttonText = TitleCase(botName)
                     else
                         ImGui.PushStyleColor(ImGuiCol.Text, 0.26, 0.98, 0.98, 1)
-                        buttonText = '('..titleCase(botName)..')'
+                        buttonText = '('..TitleCase(botName)..')'
                     end
                 else
                     ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
                 end
-                if ImGui.SmallButton(buttonText) then
+                if ImGui.SmallButton(buttonText..'##'..name) then
                     -- bring left clicked toon to foreground
-                    mq.cmd.dex(botName..' /foreground')
+                    mq.cmd.dex(name..' /foreground')
                 end
                 ImGui.PopStyleColor(1)
                                     
-                if ImGui.BeginPopupContextItem("popup##"..botName) then
-                    ImGui.Text('Send Command to '..botName..': ')
-                    text = ""
-                    text, selected = ImGui.InputText("##input"..botName, text, 32)
-                    if selected then
-                        print_msg('Sending command: \ag/dex '..botName..' '..text)
-                        mq.cmd.dex(botName..' '..text)
+                if ImGui.BeginPopupContextItem("popup##"..name) then
+                    if ImGui.SmallButton("Target##"..name) then
+                        mq.cmd.target(name)
                         ImGui.CloseCurrentPopup()
                     end
-                    if ImGui.Button('Close##'..botName) then
+                    ImGui.SameLine()
+                    if ImGui.SmallButton("Nav To##"..name) then
+                        mq.cmd.nav('spawn '..name)
+                        ImGui.CloseCurrentPopup()
+                    end
+                    ImGui.SameLine()
+                    if ImGui.SmallButton("Come To Me##"..name) then
+                        mq.cmd.dex(name..' /nav id ${Me.ID} log=critical')
+                        ImGui.CloseCurrentPopup()
+                    end
+                    if ImGui.SmallButton("G Inv##"..name) then
+                        mq.cmd.invite(name)
+                        ImGui.CloseCurrentPopup()
+                    end
+                    ImGui.SameLine()
+                    if ImGui.SmallButton("R Inv##"..name) then
+                        mq.cmd.raidinvite(name)
+                        ImGui.CloseCurrentPopup()
+                    end
+                    ImGui.SameLine()
+                    if ImGui.SmallButton("DZAdd##"..name) then
+                        mq.cmd.dzadd(name)
+                        ImGui.CloseCurrentPopup()
+                    end
+                    ImGui.SameLine()
+                    if ImGui.SmallButton("TAdd##"..name) then
+                        mq.cmd.taskadd(name)
+                        ImGui.CloseCurrentPopup()
+                    end
+                    ImGui.Text('Send Command to '..botName..': ')
+                    local textInput = ""
+                    textInput, selected = ImGui.InputText("##input"..name, textInput, 32)
+                    if selected then
+                        print_msg('Sending command: \ag/dex '..botName..' '..textInput)
+                        mq.cmd.dex(name..' '..textInput)
                         ImGui.CloseCurrentPopup()
                     end
                     ImGui.EndPopup()
@@ -404,7 +456,7 @@ function DrawHUDColumns(columns)
                 -- Default column type is property (observed or spawn properties)
                 if not column['Type'] or column['Type'] == 'property' then
                     if not column['InZone'] or (column['InZone'] and botInZone) then
-                        value = 'NULL'
+                        local value = 'NULL'
                         if column['Properties']['all'] then
                             value = botValues[column['Properties']['all']]
                         end
@@ -418,7 +470,7 @@ function DrawHUDColumns(columns)
                             end
                         end
                         -- value, thresholds, ascending, percentage
-                        thresholds = column['Thresholds']
+                        local thresholds = column['Thresholds']
                         if value ~= 'NULL' then
                             if column['Mappings'] and column['Mappings'][value] then
                                 value = column['Mappings'][value]
@@ -427,8 +479,8 @@ function DrawHUDColumns(columns)
                         end
                     end
                 elseif column['Type'] == 'button' then
-                    if ImGui.SmallButton(column['Name']..'##'..botName) then
-                        local command = column['Action']:gsub('#botName#', botName)
+                    if ImGui.SmallButton(column['Name']..'##'..name) then
+                        local command = column['Action']:gsub('#botName#', name)
                         local noparseCmd = string.match(command, '/noparse (.*)')
                         if noparseCmd then
                             print_msg('Run command: \ag'..command)
@@ -446,12 +498,12 @@ function DrawHUDColumns(columns)
     end -- end dataTable loop
 end
 
-function DrawHUDTabs()
+local function DrawHUDTabs()
     if ImGui.BeginTabBar('BOXHUDTABS') then
         for _, tab in pairs(settings['Tabs']) do
             if ImGui.BeginTabItem(tab['Name']) then
                 if tab['Columns'] and table.getn(tab['Columns']) > 0 then
-                    DrawHUDColumns(table.concat(settings['Columns'], tab['Columns']))
+                    DrawHUDColumns(TableConcat(settings['Columns'], tab['Columns']))
                     ImGui.EndTabItem()
                     ImGui.Columns(1)
                 else
@@ -482,12 +534,13 @@ local HUDGUI = function()
     end
 end
 
-function main()
+local function main()
     PluginCheck()
-    LoadSettings()
+    LoadSettingsFile()
 
     -- Initialize peer list before the UI, since UI iterates over peer list
     peerTable = Peers()
+    observeWaitMod = 1+table.getn(peerTable)/10
 
     mq.imgui.init('BOXHUDUI', HUDGUI)
 
@@ -499,6 +552,10 @@ function main()
         mq.imgui.destroy('HUDGUI')
         shouldDrawGUI = false
         terminate = true
+    end)
+
+    mq.bind('/boxhudanon', function()
+        anonymize = not anonymize
     end)
 
     -- Initial setup of observers
@@ -515,7 +572,7 @@ function main()
         local verifyStartTime = os.time(os.date("!*t"))
         while not VerifyObservers(botName) do
             mq.delay(100)
-            if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 10 then
+            if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 20 then
                 print_err('Timed out verifying observers for \ay'..botName)
                 print_err('Exiting the script.')
                 mq.exit()
@@ -530,7 +587,7 @@ function main()
             peerGroup = GetZonePeerGroup()
             zoneID = mq.TLO.Zone.ID()
         end
-        currTime = os.time(os.date("!*t"))
+        local currTime = os.time(os.date("!*t"))
         peerTable = Peers()
         for botIdx, botName in pairs(peerTable) do
             -- Ensure observers are set for the toon
@@ -548,7 +605,7 @@ function main()
                 local verifyStartTime = os.time(os.date("!*t"))
                 while not VerifyObservers(botName) do
                     mq.delay(100)
-                    if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 10 then
+                    if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 20 then
                         print_err('Timed out verifying observers for \ay'..botName)
                         print_err('Exiting the script.')
                         mq.exit()
@@ -557,7 +614,7 @@ function main()
             end
 
             local botValues = {}
-            botSpawnData = mq.TLO.Spawn('='..botName)
+            local botSpawnData = mq.TLO.Spawn('='..botName)
             botValues['Me.ID'] = botSpawnData.ID()
             botValues['Me.Invis'] = botSpawnData.Invis()
             
@@ -569,7 +626,7 @@ function main()
             end
             if settings['NetBotsProperties'] then
                 for _, netbotsProp in pairs(settings['NetBotsProperties']) do
-                    botValues[netbotsProp['Name']] = mq.TLO.NetBots(titleCase(botName))[netbotsProp['Name']]()
+                    botValues[netbotsProp['Name']] = mq.TLO.NetBots(TitleCase(botName))[netbotsProp['Name']]()
                 end
             end
             if settings['SpawnProperties'] then
