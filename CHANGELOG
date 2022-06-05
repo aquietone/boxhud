@@ -1,5 +1,9 @@
 2.2.0
-- WTF
+- OOP-ify the code, maybe not the best decision
+- Add multiple window support
+- Add ability to set the dannet peer group for the window
+- Add 'group' as an option for the peer group similar to 'zone'
+- Add admin dannet helpers for checking and dropping observers
 2.1.4
 - Update to work with non-default luaDir
 2.1.3
