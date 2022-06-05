@@ -42,6 +42,8 @@ Changes:
 - Set initial window size if window has default 32x32 size.
 - Exit if game state is not INGAME.
 - Append character name to window ID so characters can have separate window settings.
+- Add strict settings validation to try and make sure data is correct
+- Update button command handling a bit for crashes
 1.7.3
 - Fix for toons being randomly removed from the table while sorting by something other than the default Name column
 1.7.2
@@ -145,7 +147,7 @@ local adminMode = false
 local adminPeerSelected = 0
 local initialRun = true
 math.randomseed(os.time())
-local tableRandom = math.random()
+local tableRandom = math.random(1,100)
 
 -- Utility functions
 
@@ -690,55 +692,57 @@ end
 local function DrawContextMenu(name, botName)
     if ImGui.BeginPopupContextItem("##popup"..name) then
         if ImGui.SmallButton("Target##"..name) then
-            mq.cmd.target(name)
             ImGui.CloseCurrentPopup()
+            mq.cmd.target(name)
         end
         ImGui.SameLine()
         if ImGui.SmallButton("Nav To##"..name) then
-            mq.cmd.nav('spawn '..name)
             ImGui.CloseCurrentPopup()
+            mq.cmd.nav('spawn '..name)
         end
         ImGui.SameLine()
         if ImGui.SmallButton("Come To Me##"..name) then
-            mq.cmd.dex(name..' /nav id ${Me.ID} log=critical')
             ImGui.CloseCurrentPopup()
+            mq.cmd.dex(name..' /nav id ${Me.ID} log=critical')
         end
         if ImGui.SmallButton("G Inv##"..name) then
-            mq.cmd.invite(name)
             ImGui.CloseCurrentPopup()
+            mq.cmd.invite(name)
         end
         ImGui.SameLine()
         if ImGui.SmallButton("R Inv##"..name) then
-            mq.cmd.raidinvite(name)
             ImGui.CloseCurrentPopup()
+            mq.cmd.raidinvite(name)
         end
         ImGui.SameLine()
         if ImGui.SmallButton("DZAdd##"..name) then
-            mq.cmd.dzadd(name)
             ImGui.CloseCurrentPopup()
+            mq.cmd.dzadd(name)
         end
         ImGui.SameLine()
         if ImGui.SmallButton("TAdd##"..name) then
-            mq.cmd.taskadd(name)
             ImGui.CloseCurrentPopup()
+            mq.cmd.taskadd(name)
         end
         if ImGui.SmallButton("Reset Obs##"..name) then
             print_msg('Resetting observed properties for: \ay'..name)
-            ManageObservers(name, true)
             ImGui.CloseCurrentPopup()
+            ManageObservers(name, true)
         end
         ImGui.Text('Send Command to '..botName..': ')
         local textInput = ""
         textInput, selected = ImGui.InputText("##input"..name, textInput, 32)
         if selected then
             print_msg('Sending command: \ag/dex '..botName..' '..textInput)
-            mq.cmd.dex(string.format('%s %s', name, textInput))
             ImGui.CloseCurrentPopup()
+            mq.cmd.dex(string.format('%s %s', name, textInput))
         end
         ImGui.EndPopup()
     end
 end
 
+local storedCommand = nil
+local storedCommandNoParse = false
 local function DrawNameButton(name, botName, botInZone, botInvis)
     -- Treat Name column special
     -- Fill name column
@@ -756,7 +760,7 @@ local function DrawNameButton(name, botName, botInZone, botInvis)
     end
 
     if ImGui.SmallButton(buttonText..'##'..name) then
-        mq.cmd.dex(name..' /foreground')
+        storedCommand = string.format('/dex %s /foreground', name)
     end
     ImGui.PopStyleColor(1)
     -- Context menu not working when using table API
@@ -796,10 +800,11 @@ local function DrawColumnButton(name, columnName, columnAction)
         local noparseCmd = string.match(command, '/noparse (.*)')
         if noparseCmd then
             print_msg('Run command: \ag'..command)
-            mq.cmd.noparse(noparseCmd)
+            storedCommand = noparseCmd
+            storedCommandNoParse = true
         else
             print_msg('Run command: \ag'..command)
-            mq.cmd.squelch(command)
+            storedCommand = command
         end
     end
 end
@@ -1106,7 +1111,17 @@ local function CleanupStaleData(currTime)
     end
 end
 
-local CheckGameState = function()
+local function SendCommand()
+    if storedCommandNoParse then
+        mq.cmd.noparse(storedCommand)
+    else
+        mq.cmd.squelch(storedCommand)
+    end
+    storedCommandNoParse = false
+    storedCommand = nil
+end
+
+local function CheckGameState()
     if mq.TLO.MacroQuest.GameState() ~= 'INGAME' then
         print_err('\arNot in game, stopping boxhud.\ax')
         openGUI = false
@@ -1136,6 +1151,9 @@ local function main()
     -- Main run loop to populate observed property data of toons
     while not terminate do
         CheckGameState()
+        if storedCommand then
+            SendCommand()
+        end
         -- Update peerGroup if we've zoned and using the zone peer group
         if peerSource == 'dannet' and peerGroup ~= 'all' and zoneID ~= mq.TLO.Zone.ID() then
             peerGroup = GetZonePeerGroup()
