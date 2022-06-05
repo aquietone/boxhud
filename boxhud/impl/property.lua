@@ -94,20 +94,37 @@ function PropertyInput:draw(width, configPanel)
             self.showsavewarning = false
             self.savewarningname = ''
         end
-        local prefix,_ = self.Name:gsub('%..*', '')
-        prefix,_ = prefix:gsub('%[.*', '')
-        local suffix,_ = self.Name:gsub('.*%.', '')
-        ImGui.PushTextWrapPos(width-10)
-        if not mq.TLO[prefix] then
-            ImGui.TextColored(1, 1, 0, 1, string.format('TLO "%s" doesn\'t look familiar.', prefix))
-        elseif suffix ~= prefix and not mq.TLO[prefix][suffix] then
-            ImGui.TextColored(1, 1, 0, 1, string.format('"%s" TLO Member "%s" doesn\'t look familiar', prefix, suffix))
+        if self.Type == 1 then
+            local prefix,_ = self.Name:gsub('%..*', '')
+            prefix,_ = prefix:gsub('%[.*', '')
+            local suffix,_ = self.Name:gsub('.*%.', '')
+            ImGui.PushTextWrapPos(width-10)
+            if not mq.TLO[prefix] then
+                ImGui.TextColored(1, 1, 0, 1, string.format('TLO "%s" doesn\'t look familiar.', prefix))
+            elseif suffix ~= prefix and not mq.TLO[prefix][suffix] then
+                ImGui.TextColored(1, 1, 0, 1, string.format('"%s" TLO Member "%s" doesn\'t look familiar', prefix, suffix))
+            end
+            if self.Name:find('%[') and not self.Name:find(']') then
+                ImGui.TextColored(1, 1, 0, 1, string.format('Mismatched [ ] in property "%s"', self.Name))
+            end
+            ImGui.TextColored(1, 1, 0, 1, string.format('Are you sure you want to add property: %s', self.Name))
+            ImGui.PopTextWrapPos()
+        elseif self.Type == 2 then
+            ImGui.PushTextWrapPos(width-10)
+            if not mq.TLO['NetBots'] or not mq.TLO['NetBots'][self.Name] then
+                ImGui.TextColored(1, 1, 0, 1, string.format('"NetBots" TLO Member "%s" doesn\'t look familiar.', self.Name))
+            end
+            ImGui.TextColored(1, 1, 0, 1, string.format('Are you sure you want to add property: %s', self.Name))
+            ImGui.PopTextWrapPos()
+        elseif self.Type == 3 then
+            ImGui.PushTextWrapPos(width-10)
+            if not mq.TLO['Spawn'][self.Name] then
+                ImGui.TextColored(1, 1, 0, 1, string.format('"Spawn" TLO Member "%s" doesn\'t look familiar', self.Name))
+            end
+            ImGui.TextColored(1, 1, 0, 1, string.format('Are you sure you want to add property: %s', self.Name))
+            ImGui.PopTextWrapPos()
         end
-        if self.Name:find('%[') and not self.Name:find(']') then
-            ImGui.TextColored(1, 1, 0, 1, string.format('Mismatched [ ] in property "%s"', self.Name))
-        end
-        ImGui.TextColored(1, 1, 0, 1, string.format('Are you sure you want to add property: %s', self.Name))
-        ImGui.PopTextWrapPos()
+
     end
     if not self.Valid then
         ImGui.SameLine()

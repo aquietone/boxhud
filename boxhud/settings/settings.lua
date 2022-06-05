@@ -4,6 +4,8 @@ local Tab = require 'boxhud.classes.config.tab'
 local Window = require 'boxhud.classes.config.window'
 local utils = require 'boxhud.utils.utils'
 local state = require 'boxhud.state'
+local lfs = require 'lfs'
+
 --- @type mq
 local mq = require 'mq'
 dofile('boxhud/utils/persistence.lua')
@@ -168,6 +170,12 @@ local function ValidateSettings()
 end
 
 s.LoadSettings = function(arg)
+    -- cleanup files
+    for file in lfs.dir(string.format('%s/boxhud/settings', mq.luaDir)) do
+        if file ~= '.' and file ~= '..' and file:find('boxhud%-settings%-.*%.lua') then
+            os.remove(string.format('%s/boxhud/settings/%s', mq.luaDir, file))
+        end
+    end
     settings_file = arg[1] or string.format('boxhud-settings-%s.lua', string.lower(mq.TLO.Me.Name()))
     local settings_path = string.format('%s/%s', mq.configDir, settings_file)
     local old_settings_path = string.format('%s/boxhud/settings/%s', mq.luaDir, settings_file)
@@ -197,6 +205,41 @@ s.SaveSettings = function()
     local settings_path = string.format('%s/%s', mq.configDir, settings_file)
     persistence.store(settings_path, state.Settings)
     return true
+end
+
+s.ImportSettings = function(new_settings)
+    if new_settings['Properties'] then
+        for propName,propSettings in pairs(new_settings['Properties']) do
+            if propSettings.selected then
+                if not state.Settings['Properties'][propName] then
+                    local property = Property(propSettings)
+                    property['Name'] = propName
+                    local valid,_ = property:validate()
+                    if valid then
+                        state.Settings['Properties'][propName] = property
+                    end
+                else
+                    print_err(string.format('Property \'%s\' already exists, skipping import.', propName))
+                end
+            end
+        end
+    end
+    if new_settings['Columns'] then
+        for columnName,columnSettings in pairs(new_settings['Columns']) do
+            if columnSettings.selected then
+                if not state.Settings['Columns'][columnName] then
+                    local column = Column(columnSettings)
+                    column['Name'] = columnName
+                    local valid,_ = column:validate()
+                    if valid then
+                        state.Settings['Columns'][columnName] = column
+                    end
+                else
+                    print_err(string.format('Column \'%s\' already exists. skipping import.', columnName))
+                end
+            end
+        end
+    end
 end
 
 return s
