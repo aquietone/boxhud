@@ -600,11 +600,8 @@ local function DrawHUDColumns(columns)
             end
 
             table.sort(keys, function(a, b)
-                if tbl[a][sortBy] == nil and tbl[b][sortBy] == nil then
-                    return true
-                end
                 if tbl[a][sortBy] == nil then
-                    return true
+                    return false
                 end
                 if tbl[b][sortBy] == nil then
                     return true
