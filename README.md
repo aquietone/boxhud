@@ -78,16 +78,16 @@ Example:
 
 ![](images/example-tab4.png)
 
-Context menu on Name column:
+Context menu on Name column:  
 ![](images/example-popup.png)
 
-Context menu on table:
+Context menu on table:  
 ![](images/example-tablemenu.png)
 
-Hide columns using the table menu:
+Hide columns using the table menu:  
 ![](images/example-tablehide.png)
 
-Click and drag headers to rearrange table columns:
+Click and drag headers to rearrange table columns:  
 ![](images/example-tablerearrange.png)
 
 The script takes a few seconds to start up as it waits for the DanNet observers to be ready.
