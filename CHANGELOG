@@ -1,3 +1,5 @@
+2.3.3
+- % symbol no longer needs escaping in percentage columns?
 2.3.2
 - Option to prettify number values in columns.
 2.3.1
