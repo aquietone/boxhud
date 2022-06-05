@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.7.3 -- aquietone
+boxhud.lua 1.8.0 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer 
@@ -26,6 +26,19 @@ Usage: /lua run boxhud [settings.lua]
        /bhversion - Display the running version
 
 Changes:
+1.8.0
+- Add handling for observing TLOs that may not be present on all toons
+  Relies on defining dependencies between observed properties. For example:
+    If you have the MQ2Monk, MQ2Eskay and MQ2Rogue plugins, which add TLO `CWTN`, and you want to observe `CWTN.Mode`, then it may interfere
+    with macros running on toons without a CWTN class plugin loaded, like bards.
+    This can be handled by defining the observed property as:
+
+     {
+       Name='CWTN.Mode',
+       DependsOnName='Me.Class.ShortName',
+       DependsOnValue='MNK,SHD,ROG'
+     }
+
 1.7.3
 - Fix for toons being randomly removed from the table while sorting by something other than the default Name column
 1.7.2
@@ -103,7 +116,7 @@ require 'ImGui'
 local arg = {...}
 
 -- Control variables
-local VERSION = '1.7.3'
+local VERSION = '1.8.0'
 local openGUI = true
 local shouldDrawGUI = true
 local terminate = false
