@@ -1,8 +1,12 @@
 --[[
 Settings file for boxhud.lua script.
 
-- PeerGroup:            DanNet group to load peer data from. Options:
-                          - all: The All peer group
+- PeerSource:           The source plugin to retrieve peers from. Either:
+                          - dannet
+                          - netbots
+
+- DanNetPeerGroup:      DanNet group to load peer data from. Options:
+  PeerGroup(deprecated)   - all: The All peer group
                           - zone: The zone_servername_zonename peer group
                         
 - RefreshInterval:      Interval to poll observed data (separate from ImGui refresh rate)
@@ -44,6 +48,9 @@ Settings file for boxhud.lua script.
 - ObservedProperties:   List of properties to create observations for
 
 - SpawnProperties:      List of Spawn properties which are based on spawn data of the observed Me.ID
+                        Properties:
+                          - Name: (string)        Name of the Spawn property
+                          - FromIDProperty: (string) Name of ID property to use for spawn search
 
 - NetBotsProperties:    List of NetBots properties to grab
                         Incase ya still want to use some info from MQ2NetBots instead of DanNet
@@ -51,7 +58,8 @@ Settings file for boxhud.lua script.
 --]]
 
 return {
-    PeerGroup = 'zone',
+    PeerSource = 'dannet',
+    DanNetPeerGroup = 'zone',
 
     RefreshInterval = 250,
 
@@ -292,8 +300,6 @@ return {
     },
 
     ObservedProperties = {
-        -- Mandatory
-        {Name='Me.Class.ShortName'},
         -- Column specific
         {Name='Me.PctHPs'},
         {Name='Me.PctMana'},
