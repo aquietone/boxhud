@@ -9,6 +9,13 @@ local DanNet = mq.TLO.DanNet
 local NetBots = mq.TLO.NetBots
 
 function WindowState:refreshPeers()
+    self.PeerRefreshCount = self.PeerRefreshCount + 1
+    if self.PeerRefreshCount < 20 then
+        -- default interval .25, refresh peers every 20 loops, so every 5 seconds
+        return
+    else
+        self.PeerRefreshCount = 0
+    end
     local windowSettings = state.Settings.Windows[self.Name]
     if windowSettings.PeerGroup == 'zone' then
         self.PeerGroup = utils.GetZonePeerGroup()

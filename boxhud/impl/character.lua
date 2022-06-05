@@ -64,11 +64,11 @@ function Character:addObserver(propName, propSettings)
         end
         local verifyStartTime = os.time(os.date("!*t"))
         while not self:isObserverSet(propName) do
-            mq.delay(25)
-            if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 20 then
+            mq.delay(100)
+            if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 30 then
                 print_err('Timed out waiting for observer to be added for \ay'..self.Name)
-                print_err('Exiting the script.')
-                mq.exit()
+                --print_err('Exiting the script.')
+                --mq.exit()
             end
         end
     end
@@ -81,11 +81,11 @@ function Character:removeObserver(propName)
     end
     local verifyStartTime = os.time(os.date("!*t"))
     while self:isObserverSet(propName) do
-        mq.delay(25)
-        if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 20 then
+        mq.delay(100)
+        if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 30 then
             print_err('Timed out waiting for observer to be removed for \ay'..self.Name)
-            print_err('Exiting the script.')
-            mq.exit()
+            --print_err('Exiting the script.')
+            --mq.exit()
         end
     end
 end
