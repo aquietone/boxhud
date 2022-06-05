@@ -76,7 +76,19 @@ Example:
 
 ![](images/example-tab3.png)
 
+![](images/example-tab4.png)
+
+Context menu on Name column:
 ![](images/example-popup.png)
+
+Context menu on table:
+![](images/example-tablemenu.png)
+
+Hide columns using the table menu:
+![](images/example-tablehide.png)
+
+Click and drag headers to rearrange table columns:
+![](images/example-tablerearrange.png)
 
 The script takes a few seconds to start up as it waits for the DanNet observers to be ready.
 Characters which log off or for some reason stop being available will go stale and be removed from the table after 30 seconds.
