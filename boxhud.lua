@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.1 -- aquietone
+boxhud.lua 1.2 -- aquietone
 
 Recreates NetBots based HUD with DanNet observer based lua UI.
 It should handle peers dynamically coming/going. 
@@ -27,15 +27,6 @@ Changes:
 mq = require('mq')
 
 local arg = {...}
-
--- TLOs
-local CMD = mq.cmd
-local TLO = mq.TLO
-local Me = TLO.Me
-local DanNet = TLO.DanNet
-local Spawn = TLO.Spawn
-local Zone = TLO.Zone
-local EverQuest = TLO.EverQuest
 
 -- Control variables
 local openGUI = true
@@ -87,7 +78,7 @@ end
 -- Return list of DanNet peers from the configured peer group
 -- peers list |peer1|peer2|peer3
 function Peers()
-    return Split(tostring(DanNet.Peers(peerGroup)))
+    return Split(tostring(mq.TLO.DanNet.Peers(peerGroup)))
 end
 
 function FileExists(path)
@@ -95,8 +86,10 @@ function FileExists(path)
     if f ~= nil then io.close(f) return true else return false end
 end
 
+-- regular zone: zone_server_shortname
+-- instance zone: zone_shortname_progress
 function GetZonePeerGroup()
-    local peerGroupsString = tostring(DanNet.Joined)
+    local peerGroupsString = tostring(mq.TLO.DanNet.Joined)
     local peerGroups = Split(peerGroupsString)
     for _, group in pairs(peerGroups) do
         if group:find('zone_') then
@@ -131,8 +124,8 @@ function CopySettingsFile(default_settings, new_settings)
 end
 
 function LoadSettings()
-    lua_dir = TLO.MacroQuest.Path():gsub('\\', '/') .. '/lua/'
-    settings_file = arg[1] or 'boxhud-settings-'..string.lower(tostring(Me.Name))..'.lua'
+    lua_dir = mq.TLO.MacroQuest.Path():gsub('\\', '/') .. '/lua/'
+    settings_file = arg[1] or 'boxhud-settings-'..string.lower(tostring(mq.TLO.Me.Name))..'.lua'
     settings_path = lua_dir..settings_file
     default_settings_path = lua_dir..'boxhud-settings.lua'
 
@@ -150,7 +143,7 @@ function LoadSettings()
 
     if settings['PeerGroup'] and settings['PeerGroup'] == 'zone' then
         peerGroup = GetZonePeerGroup()
-        zoneID = tostring(Zone.ID)
+        zoneID = tostring(mq.TLO.Zone.ID)
     end
     if settings['RefreshInterval'] then
         refreshInterval = settings['RefreshInterval']
@@ -169,8 +162,8 @@ function ManageObservers(botName, drop)
     if drop then
         for _, obsProp in pairs(settings['ObservedProperties']) do
             -- Drop the observation if it is set
-            if tostring(DanNet(botName).ObserveSet(obsProp['Name'])) == 'TRUE' then
-                CMD.dobserve(botName..' -q '..obsProp['Name']..' -drop')
+            if tostring(mq.TLO.DanNet(botName).ObserveSet(obsProp['Name'])) == 'TRUE' then
+                mq.cmd.dobserve(botName..' -q '..obsProp['Name']..' -drop')
                 mq.delay(50)
             end
         end
@@ -179,8 +172,8 @@ function ManageObservers(botName, drop)
         if not observedToons[botName] then
             for _, obsProp in pairs(settings['ObservedProperties']) do
                 -- Add the observation if it is not set
-                if tostring(DanNet(botName).ObserveSet(obsProp['Name'])) == 'FALSE' then
-                    CMD.dobserve(botName..' -q '..obsProp['Name'])
+                if tostring(mq.TLO.DanNet(botName).ObserveSet(obsProp['Name'])) == 'FALSE' then
+                    mq.cmd.dobserve(botName..' -q '..obsProp['Name'])
                     mq.delay(50)
                 end
             end
@@ -192,7 +185,7 @@ end
 -- Verify all observed properties are set for the given toon
 function VerifyObservers(botName)
     for _, obsProp in pairs(settings['ObservedProperties']) do
-        if tostring(DanNet(botName).ObserveSet(obsProp['Name'])) == 'FALSE' then
+        if tostring(mq.TLO.DanNet(botName).ObserveSet(obsProp['Name'])) == 'FALSE' then
             return false
         end
     end
@@ -303,19 +296,19 @@ local HUDGUI = function()
                         end
                         if ImGui.SmallButton(buttonText) then
                             -- bring left clicked toon to foreground
-                            CMD.dex(botName..' /foreground')
+                            mq.cmd.dex(botName..' /foreground')
                         end
                         if ImGui.IsItemHovered() and ImGui.IsMouseReleased(ImGuiMouseButton.ImGuiMouseButton_Right) then
                             -- target the toon on right click
-                            CMD.target('id '..botID)
+                            mq.cmd.target('id '..botID)
                             -- nav to toon when right clicking toons name
-                            --CMD.nav('id '..botID)--..'|log=off')
+                            --mq.cmd.nav('id '..botID)--..'|log=off')
                         end
                     else
                         ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
                         if ImGui.SmallButton(botName) then
                             -- bring left clicked toon to foreground
-                            CMD.dex(botName..' /foreground')
+                            mq.cmd.dex(botName..' /foreground')
                         end
                     end
                     ImGui.PopStyleColor(1)
@@ -386,9 +379,9 @@ end)
 -- Main run loop to populate observed property data of toons
 while not terminate do
     -- Update peerGroup if we've zoned and using the zone peer group
-    if peerGroup ~= 'all' and zoneID ~= tostring(Zone.ID) then
+    if peerGroup ~= 'all' and zoneID ~= tostring(mq.TLO.Zone.ID) then
         peerGroup = GetZonePeerGroup()
-        zoneID = tostring(Zone.ID)
+        zoneID = tostring(mq.TLO.Zone.ID)
     end
     currTime = os.time(os.date("!*t"))
     local peerTable = Peers()
@@ -411,15 +404,15 @@ while not terminate do
         end
 
         local botValues = {}
-        botSpawnData = Spawn('='..botName)
+        botSpawnData = mq.TLO.Spawn('='..botName)
         botValues['Me.ID'] = tostring(botSpawnData.ID)
         botValues['Me.Invis'] = tostring(botSpawnData.Invis)
         -- Fill in data from this toons observed properties
         for _, obsProp in pairs(settings['ObservedProperties']) do
-            botValues[obsProp['Name']] = tostring(DanNet(botName).Observe(obsProp['Name']))
+            botValues[obsProp['Name']] = tostring(mq.TLO.DanNet(botName).Observe(obsProp['Name']))
         end
         for _, spawnProp in pairs(settings['SpawnProperties']) do
-            botValues[spawnProp['Name']] = tostring(Spawn('='..botName)[spawnProp['Name']])
+            botValues[spawnProp['Name']] = tostring(mq.TLO.Spawn('='..botName)[spawnProp['Name']])
         end
         if peerGroup == 'all' then
             botValues['BotInZone'] = (botValues['Me.ID'] ~= 'null')
