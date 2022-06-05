@@ -1,12 +1,16 @@
-local state = {}
-
-state.settings = {}
-state.characters = {}
-state.anonymize = false
-state.windowStates = {}
-state.storedCommand = nil
-state.adminPeerName = nil
-state.adminAction = nil
-state.adminPeerItem = ''
+--[[
+Leftover stuff i didn't squeeze into a class somewhere, mostly shared info
+accessed from several places.
+--]]
+local state = {
+    Settings = {},
+    Characters = {},
+    Anonymize = false,
+    WindowStates = {},
+    StoredCommand = nil,
+    AdminPeerName = nil,
+    AdminAction = nil,
+    AdminPeerItem = '',
+}
 
 return state

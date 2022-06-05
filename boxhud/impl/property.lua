@@ -64,29 +64,29 @@ function PropertyInput:draw(width, configPanel)
         self.FromIDProperty = helpers.DrawLabelAndTextInput('FromIDProperty: ', '##newpropfromid', self.FromIDProperty, 'Optional. The name of another property to use as the ID in the Spawn search. The property MUST return a Spawn ID.')
     end
     ImGui.Separator()
-    if ImGui.Button('Save##newprop'..configPanel.name) then
+    if ImGui.Button('Save##newprop'..configPanel.Name) then
         local property = self:toProperty()
         local ok = false
-        ok, self.message = property:validate()
+        ok, self.Message = property:validate()
         if ok then
-            state.settings['Properties'][self.Name] = property
+            state.Settings['Properties'][self.Name] = property
             settings.SaveSettings()
             configPanel:clearSelection()
         else
-            self.valid = false
+            self.Valid = false
         end
     end
-    if not self.valid then
+    if not self.Valid then
         ImGui.SameLine()
         ImGui.PushTextWrapPos(width-10)
-        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', self.message))
+        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', self.Message))
         ImGui.PopTextWrapPos()
     end
 end
 
 function Property:references(draw)
     local refFound = false
-    for columnName,column in pairs(state.settings['Columns']) do
+    for columnName,column in pairs(state.Settings['Columns']) do
         if column['Properties'] then
             for propKey,propValue in pairs(column['Properties']) do
                 if propValue == self.Name then
@@ -98,7 +98,7 @@ function Property:references(draw)
             end
         end
     end
-    for propNameIter,property in pairs(state.settings['Properties']) do
+    for propNameIter,property in pairs(state.Settings['Properties']) do
         if property['DependsOnName'] == self.Name then
             refFound = true
             if draw then
@@ -119,13 +119,13 @@ function Property:draw(configPanel)
     ImGui.Separator()
     if self.Name ~= 'Me.Class.ShortName' then
         if ImGui.SmallButton('Edit##'..self.Name) then
-            configPanel.newProperty = PropertyInput:fromProperty(self)
+            configPanel.NewProperty = PropertyInput:fromProperty(self)
             configPanel:selectItem(nil, 'addnewproperty')
         end
         ImGui.SameLine()
         if ImGui.SmallButton('Delete##'..self.Name) then
             if not self:references(false) then
-                state.settings['Properties'][self.Name] = nil
+                state.Settings['Properties'][self.Name] = nil
                 settings.SaveSettings()
                 configPanel:clearSelection()
             end

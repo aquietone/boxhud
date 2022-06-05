@@ -6,7 +6,6 @@ local Input = require 'boxhud.classes.inputs.input'
 
 local WindowInput = BaseClass(Input(), function(w)
     w.PeerGroup = ''
-    w.newPeerGroupSelection = nil
     w.Tabs = {}
     w.TabCount = 0
 end)

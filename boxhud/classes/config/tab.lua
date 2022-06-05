@@ -21,7 +21,7 @@ function Tab:validate()
         if type(self.Columns) == 'table' then
             for columnIdx,column in ipairs(self.Columns) do
                 if string.len(column) > 0 then
-                    if not state.settings['Columns'][column] then
+                    if not state.Settings['Columns'][column] then
                         message = string.format('Tab references a column which does not exist. Column=%s', column)
                         print_err(string.format('[Tab %s] %s', self.Name, message))
                         valid = false

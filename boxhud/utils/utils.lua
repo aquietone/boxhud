@@ -6,16 +6,15 @@ function print_msg(msg) print('\at[\ayBOXHUD\at] \at' .. msg) end
 function print_err(msg) print('\at[\ayBOXHUD\at] \ar' .. msg) end
 
 local utils = {
-    version = '2.2.0',
-    peer_source = 'dannet',
-    peer_groups = {},
-    class_var = 'Me.Class.ShortName',
+    Version = '2.2.0',
+    PeerSource = 'dannet',
+    ClassVar = 'Me.Class.ShortName',
     -- Default observer polling interval (0.25 seconds)
-    refresh_interval = 250,
+    RefreshInterval = 250,
     -- Default stale observed data timeout (60 seconds)
-    stale_data_timeout = 60,
-    isUsingDanNet = false,
-    isUsingNetBots = false,
+    StaleDataTimeout = 60,
+    IsUsingDanNet = false,
+    IsUsingNetBots = false,
 }
 
 utils.FileExists = function(path)
@@ -79,13 +78,9 @@ utils.DoTablesMatch = function(a, b)
     return table.concat(a) == table.concat(b)
 end
 
-utils.IsUsingDanNet = function()
-    return utils.isUsingDanNet
-end
-
 -- Load required plugins
 utils.PluginCheck = function()
-    if utils.isUsingDanNet then
+    if utils.IsUsingDanNet then
         if not mq.TLO.Plugin('mq2dannet').IsLoaded() then
             print_msg("Plugin \ayMQ2DanNet\ax is required. Loading it now.")
             mq.cmd('/plugin mq2dannet noauto')
@@ -95,7 +90,7 @@ utils.PluginCheck = function()
             mq.cmd('/dnet fullnames off')
         end
     end
-    if utils.isUsingNetBots then
+    if utils.IsUsingNetBots then
         if not mq.TLO.Plugin('mq2eqbc').IsLoaded() then
             print_msg("Plugin \ayMQ2EQBC\ax is required. Loading it now.")
             mq.cmd('/plugin mq2eqbc noauto')
@@ -121,7 +116,7 @@ utils.GetGroupPeerGroup = function ()
 end
 
 utils.GetTabByName = function(tabName)
-    for _,tab in ipairs(state.settings['Tabs']) do
+    for _,tab in ipairs(state.Settings['Tabs']) do
         if tab['Name'] == tabName then
             return tab
         end

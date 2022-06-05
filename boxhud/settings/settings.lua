@@ -28,123 +28,123 @@ local function deepcopy(orig)
 end
 
 local function ValidateOptionalSettings()
-    if not state.settings['Windows'] then
+    if not state.Settings['Windows'] then
         print_msg('No windows defined, adding default')
-        state.settings['Windows'] = {
+        state.Settings['Windows'] = {
             ['default'] = Window({Name='default',Tabs={},Transparency=false,TitleBar=false})
         }
-        for _,tab in ipairs(state.settings['Tabs']) do
-            table.insert(state.settings['Windows']['default']['Tabs'], tab['Name'])
+        for _,tab in ipairs(state.Settings['Tabs']) do
+            table.insert(state.Settings['Windows']['default']['Tabs'], tab['Name'])
         end
-        if state.settings['PeerSource'] and state.settings['PeerSource'] == 'dannet' then
-            print_msg('Setting default window peer group to '..state.settings['DanNetPeerGroup'])
-            state.settings['Windows']['default']['PeerGroup'] = state.settings['DanNetPeerGroup']
+        if state.Settings['PeerSource'] and state.Settings['PeerSource'] == 'dannet' then
+            print_msg('Setting default window peer group to '..state.Settings['DanNetPeerGroup'])
+            state.Settings['Windows']['default']['PeerGroup'] = state.Settings['DanNetPeerGroup']
         end
     else
-        for name,window in pairs(state.settings['Windows']) do
-            state.settings['Windows'][name] = Window(window)
+        for name,window in pairs(state.Settings['Windows']) do
+            state.Settings['Windows'][name] = Window(window)
         end
     end
 
-    if state.settings['PeerSource'] then
-        if state.settings['PeerSource'] ~= 'dannet' and  state.settings['PeerSource'] ~= 'netbots' then
+    if state.Settings['PeerSource'] then
+        if state.Settings['PeerSource'] ~= 'dannet' and  state.Settings['PeerSource'] ~= 'netbots' then
             print_err('PeerSource must be either \'dannet\' or \'netbots\'')
             return false
         end
-        utils.peer_source = state.settings['PeerSource']
+        utils.PeerSource = state.Settings['PeerSource']
     end
-    if utils.peer_source == 'dannet' then
-        utils.isUsingDanNet = true
+    if utils.PeerSource == 'dannet' then
+        utils.IsUsingDanNet = true
         local classPropertyFound = false
-        for propName, propSettings in pairs(state.settings['Properties']) do
+        for propName, propSettings in pairs(state.Settings['Properties']) do
             if (propName == 'Me.Class' or propName == 'Me.Class.ShortName') and propSettings['Type'] == 'Observed' then
                 classPropertyFound = true
-                utils.class_var = propName
+                utils.ClassVar = propName
             end
         end
         if not classPropertyFound then
-            utils.class_var = 'Me.Class.ShortName'
-            state.settings['Properties'][utils.class_var] = { Type='Observed' }
+            utils.ClassVar = 'Me.Class.ShortName'
+            state.Settings['Properties'][utils.ClassVar] = { Type='Observed' }
         end
-    elseif utils.peer_source == 'netbots' then
-        utils.isUsingNetBots = true
-        if table.getn(state.settings['Windows']) > 1 then
+    elseif utils.PeerSource == 'netbots' then
+        utils.IsUsingNetBots = true
+        if table.getn(state.Settings['Windows']) > 1 then
             print_err('NetBots only supports 1 window')
             return false
         end
         local classPropertyFound = false
-        for propName, propSettings in pairs(state.settings['Properties']) do
+        for propName, propSettings in pairs(state.Settings['Properties']) do
             if propName == 'Class' and propSettings['Type'] == 'NetBots' then
                 classPropertyFound = true
-                utils.class_var = propName
+                utils.ClassVar = propName
             end
         end
         if not classPropertyFound then
-            utils.class_var = 'Class'
-            state.settings['Properties'][utils.class_var] = { Type='NetBots' }
+            utils.ClassVar = 'Class'
+            state.Settings['Properties'][utils.ClassVar] = { Type='NetBots' }
         end
     end
-    if state.settings['RefreshInterval'] and type(state.settings['RefreshInterval']) == 'number' then
-        utils.refresh_interval = state.settings['RefreshInterval']
+    if state.Settings['RefreshInterval'] and type(state.Settings['RefreshInterval']) == 'number' then
+        utils.RefreshInterval = state.Settings['RefreshInterval']
     end
-    if state.settings['StaleDataTimeout'] and type(state.settings['StaleDataTimeout']) == 'number' then
-        utils.stale_data_timeout = state.settings['StaleDataTimeout']
+    if state.Settings['StaleDataTimeout'] and type(state.Settings['StaleDataTimeout']) == 'number' then
+        utils.StaleDataTimeout = state.Settings['StaleDataTimeout']
     end
-    if not state.settings['Colors'] then
-        state.settings['Colors'] = {}
+    if not state.Settings['Colors'] then
+        state.Settings['Colors'] = {}
     end
-    state.settings['Colors']['Default'] = state.settings['Colors']['Default'] or {1,1,1}
-    state.settings['Colors']['Low'] = state.settings['Colors']['Low'] or {1,0,0}
-    state.settings['Colors']['Medium'] = state.settings['Colors']['Medium'] or {1,1,0}
-    state.settings['Colors']['High'] = state.settings['Colors']['High'] or  {0,1,0}
-    state.settings['Colors']['True'] = state.settings['Colors']['True'] or {0,1,0}
-    state.settings['Colors']['False'] = state.settings['Colors']['False'] or {1,0,0}
-    state.settings['Colors']['InZone'] = state.settings['Colors']['InZone'] or {0,1,0}
-    state.settings['Colors']['Invis'] = state.settings['Colors']['Invis'] or {0.26, 0.98, 0.98}
-    state.settings['Colors']['IVU'] = state.settings['Colors']['IVU'] or {0.95, 0.98, 0.26}
-    state.settings['Colors']['DoubleInvis'] = state.settings['Colors']['DoubleInvis'] or {0.68, 0.98, 0.98}
-    state.settings['Colors']['NotInZone'] = state.settings['Colors']['NotInZone'] or {1,0,0}
-    state.settings['Transparency'] = state.settings['Transparency'] or false
-    state.settings['TitleBar'] = state.settings['TitleBar'] or false
+    state.Settings['Colors']['Default'] = state.Settings['Colors']['Default'] or {1,1,1}
+    state.Settings['Colors']['Low'] = state.Settings['Colors']['Low'] or {1,0,0}
+    state.Settings['Colors']['Medium'] = state.Settings['Colors']['Medium'] or {1,1,0}
+    state.Settings['Colors']['High'] = state.Settings['Colors']['High'] or  {0,1,0}
+    state.Settings['Colors']['True'] = state.Settings['Colors']['True'] or {0,1,0}
+    state.Settings['Colors']['False'] = state.Settings['Colors']['False'] or {1,0,0}
+    state.Settings['Colors']['InZone'] = state.Settings['Colors']['InZone'] or {0,1,0}
+    state.Settings['Colors']['Invis'] = state.Settings['Colors']['Invis'] or {0.26, 0.98, 0.98}
+    state.Settings['Colors']['IVU'] = state.Settings['Colors']['IVU'] or {0.95, 0.98, 0.26}
+    state.Settings['Colors']['DoubleInvis'] = state.Settings['Colors']['DoubleInvis'] or {0.68, 0.98, 0.98}
+    state.Settings['Colors']['NotInZone'] = state.Settings['Colors']['NotInZone'] or {1,0,0}
+    state.Settings['Transparency'] = state.Settings['Transparency'] or false
+    state.Settings['TitleBar'] = state.Settings['TitleBar'] or false
     return true
 end
 
 local function ValidateSettings()
     local valid = true
     valid = valid and ValidateOptionalSettings()
-    if not state.settings['Properties'] then
-        state.settings['Properties'] = {}
+    if not state.Settings['Properties'] then
+        state.Settings['Properties'] = {}
     end
-    for propName,propSettings in pairs(state.settings['Properties']) do
+    for propName,propSettings in pairs(state.Settings['Properties']) do
         local property = Property(propSettings)
         property['Name'] = propName
         valid,_ = property:validate() and valid
-        state.settings['Properties'][propName] = property
+        state.Settings['Properties'][propName] = property
     end
-    if not state.settings['Columns'] then
-        state.settings['Columns'] = {}
+    if not state.Settings['Columns'] then
+        state.Settings['Columns'] = {}
     end
-    for columnName,columnSettings in pairs(state.settings['Columns']) do
+    for columnName,columnSettings in pairs(state.Settings['Columns']) do
         local column = Column(columnSettings)
         column['Name'] = columnName
         valid,_ = column:validate() and valid
-        state.settings['Columns'][columnName] = column
+        state.Settings['Columns'][columnName] = column
     end
-    if not state.settings['Columns']['Name'] then
-        state.settings['Columns']['Name'] = {
+    if not state.Settings['Columns']['Name'] then
+        state.Settings['Columns']['Name'] = {
             ["Name"] = "Name",
             ["Type"] = "property",
 			["InZone"] = false,
 			["Percentage"] = false
         }
     end
-    if not state.settings['Tabs'] then
-        state.settings['Tabs'] = {}
+    if not state.Settings['Tabs'] then
+        state.Settings['Tabs'] = {}
     end
-    for idx,tabSettings in pairs(state.settings['Tabs']) do
+    for idx,tabSettings in pairs(state.Settings['Tabs']) do
         local tab = Tab(tabSettings)
         valid,_ = tab:validate() and valid
-        state.settings['Tabs'][idx] = tab
+        state.Settings['Tabs'][idx] = tab
     end
     if not valid then
         print_err('Exiting due to invalid configuration. Review the output above.')
@@ -161,17 +161,17 @@ s.LoadSettings = function(arg)
 
     if utils.FileExists(settings_path) then
         print_msg('Loading settings from file: ' .. settings_file)
-        state.settings = require(string.format('boxhud.settings.%s', settings_file:gsub('.lua', '')))
+        state.Settings = require(string.format('boxhud.settings.%s', settings_file:gsub('.lua', '')))
     elseif utils.FileExists(old_settings_path) then
         -- copy old settings to new location in boxhud folder
         print_msg(string.format('Moving lua/boxhud/%s to lua/boxhud/settings/%s', settings_file, settings_file))
         utils.CopyFile(old_settings_path, settings_path)
         print_msg('Loading settings from file: ' .. settings_file)
-        state.settings = require(string.format('boxhud.%s', settings_file:gsub('.lua', '')))
+        state.Settings = require(string.format('boxhud.%s', settings_file:gsub('.lua', '')))
     else
         print_msg('Loading default settings from file: boxhud-settings')
         -- Default settings
-        state.settings = require('boxhud.settings.boxhud-settings')
+        state.Settings = require('boxhud.settings.boxhud-settings')
         -- Copy defaults into toon specific settings
         utils.CopyFile(default_settings_path, settings_path)
     end
@@ -181,7 +181,7 @@ end
 
 s.SaveSettings = function()
     local settings_path = ('%s/boxhud/settings/%s'):format(mq.luaDir, settings_file)
-    persistence.store(settings_path, state.settings)
+    persistence.store(settings_path, state.Settings)
     return true
 end
 
