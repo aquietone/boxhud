@@ -19,7 +19,7 @@ end
 
 function ConfigurationPanel:drawPropertiesTreeSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
-    if ImGui.TreeNodeEx('Properties', ImGuiTreeNodeFlags.SpanFullWidth) then
+    if ImGui.TreeNodeEx('Properties##'..self.Name, ImGuiTreeNodeFlags.SpanFullWidth) then
         ImGui.PopStyleColor(1)
         ImGui.TableNextRow()
         ImGui.TableNextColumn()
@@ -30,7 +30,7 @@ function ConfigurationPanel:drawPropertiesTreeSelector()
             end
             self:selectItem(nil, 'addnewproperty')
         end
-        for propName, propSettings in pairs(state.Settings['Properties']) do
+        for propName, _ in pairs(state.Settings['Properties']) do
             ImGui.TableNextRow()
             ImGui.TableNextColumn()
             ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
@@ -51,7 +51,7 @@ end
 
 function ConfigurationPanel:drawColumnTreeSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
-    if ImGui.TreeNodeEx('Columns', ImGuiTreeNodeFlags.SpanFullWidth) then
+    if ImGui.TreeNodeEx('Columns##'..self.Name, ImGuiTreeNodeFlags.SpanFullWidth) then
         ImGui.PopStyleColor(1)
         ImGui.TableNextRow()
         ImGui.TableNextColumn()
@@ -62,7 +62,7 @@ function ConfigurationPanel:drawColumnTreeSelector()
             end
             self:selectItem(nil, 'addnewcolumn')
         end
-        for columnName, columnSettings in pairs(state.Settings['Columns']) do
+        for columnName, _ in pairs(state.Settings['Columns']) do
             ImGui.TableNextRow()
             ImGui.TableNextColumn()
             ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
@@ -83,7 +83,7 @@ end
 
 function ConfigurationPanel:drawTabTreeSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
-    if ImGui.TreeNodeEx('Tabs', ImGuiTreeNodeFlags.SpanFullWidth) then
+    if ImGui.TreeNodeEx('Tabs##'..self.Name, ImGuiTreeNodeFlags.SpanFullWidth) then
         ImGui.PopStyleColor(1)
         ImGui.TableNextRow()
         ImGui.TableNextColumn()
@@ -115,7 +115,7 @@ end
 
 function ConfigurationPanel:drawWindowTreeSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
-    if ImGui.TreeNodeEx('Windows', ImGuiTreeNodeFlags.SpanAvailWidth) then
+    if ImGui.TreeNodeEx('Windows##'..self.Name, ImGuiTreeNodeFlags.SpanAvailWidth) then
         ImGui.PopStyleColor(1)
         ImGui.TableNextRow()
         ImGui.TableNextColumn()
@@ -155,8 +155,8 @@ function ConfigurationPanel:drawAboutSelector()
 end
 
 function ConfigurationPanel:drawLeftPaneWindow()
-    local x,y = ImGui.GetContentRegionAvail()
-    if ImGui.BeginChild("left", self.LeftPaneSize, y-1, true) then
+    local _,y = ImGui.GetContentRegionAvail()
+    if ImGui.BeginChild("left##"..self.Name, self.LeftPaneSize, y-1, true) then
         local flags = bit32.bor(ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY)
         if ImGui.BeginTable('##configmenu'..self.Name, 1, flags, 0, 0, 0.0) then
             ImGui.TableNextRow()
@@ -239,7 +239,7 @@ end
 
 function ConfigurationPanel:drawRightPaneWindow()
     local x,y = ImGui.GetContentRegionAvail()
-    if ImGui.BeginChild("right", x, y-1, true) then
+    if ImGui.BeginChild("right##"..self.Name, x, y-1, true) then
         if self.SelectedItemType == 'displaysettings' then
             self:drawDisplaySettings()
         elseif self.SelectedItemType == 'addnewproperty' then

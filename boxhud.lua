@@ -56,11 +56,10 @@ local adminMode = false
 -- ImGui main function for rendering the UI window
 local HUDGUI = function()
     local myname = mq.TLO.Me.CleanName()
-    if not myname or myname == 'load' then return end
-    if not openGUI then return end
+    if not myname or myname == 'load' or not openGUI then return end
     for _,window in pairs(state.Settings['Windows']) do
         local flags = 0
-        if not window['TitleBar'] then flags = bit32.bor(flags, ImGuiWindowFlags.NoTitleBar) end
+        if not window['TitleBar'] then flags = ImGuiWindowFlags.NoTitleBar end
         if window['Transparency'] then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
         if state.WindowStates[window.Name] and state.WindowStates[window.Name].Peers then
             openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..myname..window.Name, openGUI, flags)
@@ -194,18 +193,7 @@ local function main()
                     -- Ensure observers are set for the toon
                     if state.IsUsingDanNet then
                         if state.AdminPeerName == char.Name then
-                            if state.AdminPeerAction == 'reset' then
-                                char:manageObservers(true)
-                                char:manageObservers(false)
-                            elseif state.AdminPeerAction == 'check' then
-                                local obsSet = char:isObserverSet(state.AdminPeerItem)
-                                print_msg(string.format('Observer set for \ay%s\ax: \ay%s\ax', state.AdminPeerItem, tostring(obsSet)))
-                            elseif state.AdminPeerAction == 'drop' then
-                                char:removeObserver(state.AdminPeerItem)
-                            end
-                            state.AdminPeerName = nil
-                            state.AdminPeerAction = nil
-                            state.AdminPeerItem = ''
+                            char:dannetAdminAction()
                         elseif not char:verifyObservers() then
                             char:manageObservers(false)
                         end
