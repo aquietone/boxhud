@@ -1,6 +1,6 @@
 --[[
-boxhud.lua 2.5.1 -- aquietone
-https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
+boxhud.lua 2.5.2 -- aquietone
+https://www.redguides.com/community/resources/boxhud.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
 based lua/ImGui UI.

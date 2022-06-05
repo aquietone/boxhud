@@ -1,3 +1,5 @@
+2.5.2
+- Remove /noparse in addition to the /dex name when sending a command to the local character
 2.5.1
 - Fix adding spawn or netbots properties after property validation change
 - Make column list drag/droppable when editing tab configuration
