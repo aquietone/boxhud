@@ -5,8 +5,6 @@ local state = require 'boxhud.state'
 
 --- @type mq
 local mq = require 'mq'
-local DanNet = mq.TLO.DanNet
-local NetBots = mq.TLO.NetBots
 
 function WindowState:refreshPeers()
     self.PeerRefreshCount = self.PeerRefreshCount + 1
@@ -26,10 +24,10 @@ function WindowState:refreshPeers()
     end
     local t = {}
     if state.PeerSource == 'dannet' then
-        t = utils.Split(DanNet.Peers(self.PeerGroup)())
+        t = utils.Split(mq.TLO.DanNet.Peers(self.PeerGroup)())
     else
-        for i=1,NetBots.Counts() do
-            table.insert(t, NetBots.Client.Arg(i)())
+        for i=1,mq.TLO.NetBots.Counts() do
+            table.insert(t, mq.TLO.NetBots.Client.Arg(i)())
         end
     end
 
