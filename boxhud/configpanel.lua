@@ -360,10 +360,23 @@ local function DrawPropertySettings()
     if propSettings ~= nil then
         ImGui.TextColored(1, 0, 1, 1, selectedItem)
         ImGui.Separator()
-        --if ImGui.SmallButton('Edit##'..selectedItem) then
-            -- TODO: property editing
-        --end
-        --ImGui.SameLine()
+        if ImGui.SmallButton('Edit##'..selectedItem) then
+            if selectedItem ~= 'Me.Class.ShortName' then
+                newPropertyName = selectedItem
+                if propSettings['Type'] == 'Observed' then
+                    typeRadioValue = 1
+                    newPropertyDependsOnName = ''
+                    newPropertyDependsOnValue = ''
+                elseif propSettings['Type'] == 'Spawn' then
+                    typeRadioValue = 3
+                    newPropertyFromIDProperty = ''
+                else
+                    typeRadioValue = 2
+                end
+                selectedItemType = 'addnewproperty'
+            end
+        end
+        ImGui.SameLine()
         if ImGui.SmallButton('Delete##'..selectedItem) then
             if selectedItem ~= 'Me.Class.ShortName' then -- do not allow deleting class
                 -- TODO: ref check
@@ -629,10 +642,46 @@ local function DrawColumnSettings()
     if columnSettings ~= nil then
         ImGui.TextColored(1, 0, 1, 1, selectedItem)
         ImGui.Separator()
-        --if ImGui.SmallButton('Edit##'..selectedItem) then
-            -- TODO: column editing
-        --end
-        --ImGui.SameLine()
+        if ImGui.SmallButton('Edit##'..selectedItem) then
+            if selectedItem ~= 'Name' then
+                newColumnName = selectedItem
+                if columnSettings['Type'] == 'property' then
+                    typeRadioValue = 1
+                    newColumnAscending = columnSettings['Ascending']
+                    newColumnInZone = columnSettings['InZone']
+                    newColumnPercentage = columnSettings['Percentage']
+                    newColumnPropCount = 0
+                    newColumnProperties = {}
+                    if columnSettings['Properties'] then
+                        for propKey,propValue in pairs(columnSettings['Properties']) do
+                            newColumnPropCount = newColumnPropCount + 1
+                            newColumnProperties[newColumnPropCount] = {[1]=propKey,[2]=propValue}
+                        end
+                    end
+                    newColumnMappingCount = 0
+                    newColumnMappings = {}
+                    if columnSettings['Mappings'] then
+                        for mappingKey,mappingValue in pairs(columnSettings['Mappings']) do
+                            newColumnMappingCount = newColumnMappingCount + 1
+                            newColumnMappings[newColumnMappingCount] = {[1]=mappingKey,[2]=mappingValue}
+                        end
+                    end
+                    newColumnThresholdCount = 0
+                    newColumnThresholds = {}
+                    if columnSettings['Thresholds'] then
+                        for thresholdIdx,thresholdValue in ipairs(columnSettings['Thresholds']) do
+                            newColumnThresholdCount = newColumnThresholdCount + 1
+                            newColumnThresholds[thresholdIdx] = tostring(thresholdValue)
+                        end
+                    end
+                else
+                    typeRadioValue = 2
+                    newColumnAction = columnSettings['Action']
+                end
+                selectedItemType = 'addnewcolumn'
+            end
+        end
+        ImGui.SameLine()
         if ImGui.SmallButton('Delete##'..selectedItem) then
             if selectedItem ~= 'Name' then -- Don't allow deleting name column
                 -- TODO: ref check
@@ -766,7 +815,17 @@ local function DrawAddTabOptions()
                 print(string.format('Column %s: %s', i, j))
             end
             --]]
-            table.insert(SETTINGS['Tabs'], tab)
+            local foundExisting = false
+            for tabIdx,existingTab in ipairs(SETTINGS['Tabs']) do
+                if existingTab['Name'] == newTabName then
+                    -- replace existing tab
+                    existingTab['Columns'] = newTabColumns
+                    foundExisting = true
+                end
+            end
+            if not foundExisting then
+                table.insert(SETTINGS['Tabs'], tab)
+            end
             ResetTabOptions()
             selectedItemType = nil
             configDirty = true
@@ -787,10 +846,13 @@ local function DrawTabSettings()
     if tab then
         ImGui.TextColored(1, 0, 1, 1, tab['Name'])
         ImGui.Separator()
-        --if ImGui.SmallButton('Edit##'..tab['Name']) then
-            -- TODO: tab editing
-        --end
-        --ImGui.SameLine()
+        if ImGui.SmallButton('Edit##'..tab['Name']) then
+            newTabName = tab['Name']
+            newTabColumns = tab['Columns']
+            newTabColumnCount = #tab['Columns']
+            selectedItemType = 'addnewtab'
+        end
+        ImGui.SameLine()
         if ImGui.SmallButton('Delete##'..tab['Name']) then
             local i = 1
             local tabIter = selectedItem
