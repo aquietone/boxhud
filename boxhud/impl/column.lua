@@ -50,9 +50,9 @@ function ColumnInput:fromColumn(column)
         o.Ascending = column['Ascending']
         o.InZone = column['InZone']
         o.Percentage = column['Percentage']
-        o.OwnColor = column['OwnColor']
+        o.OwnColor = column['OwnColor'] or false
         o.Color = column['Color']
-        o.Prettify = column['Prettify']
+        o.Prettify = column['Prettify'] or false
         o.PropertyCount = 0
         o.Properties = {}
         if column['Properties'] then
