@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.0.6 -- aquietone
+boxhud.lua 2.0.7 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -236,7 +236,15 @@ function Character:drawCmdButton(label, action)
 end
 
 function Character:getDisplayName()
-    if anonymize then return string.upper(self.className) else return TitleCase(self.name) end
+    if anonymize then
+        if self.className then
+            return string.upper(self.className)
+        else
+            return 'UNKNOWN'
+        end
+    else
+        return TitleCase(self.name)
+    end
 end
 
 function Character:drawContextMenu()
@@ -367,7 +375,9 @@ function Character:updateCharacterProperties(currTime)
         properties['BotInZone'] = true
     end
     properties['lastUpdated'] = currTime
-    self.className = properties[CLASS_VAR]:lower()
+    if properties[CLASS_VAR] and not self.className then
+        self.className = properties[CLASS_VAR]:lower()
+    end
     self.properties = properties
 end
 
