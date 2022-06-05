@@ -869,14 +869,16 @@ function bh.Tab:draw(configPanel)
     end
     ImGui.SameLine()
     if ImGui.SmallButton('Delete##'..self.Name) then
-        local tabIter = configPanel.selectedItem
-        for tabIdx = tabIter+1, #bh.settings['Tabs'] do
-            bh.settings['Tabs'][tabIter] = bh.settings['Tabs'][tabIdx]
-            tabIter = tabIter+1
+        if not self:references(false) then
+            local tabIter = configPanel.selectedItem
+            for tabIdx = tabIter+1, #bh.settings['Tabs'] do
+                bh.settings['Tabs'][tabIter] = bh.settings['Tabs'][tabIdx]
+                tabIter = tabIter+1
+            end
+            bh.settings['Tabs'][tabIter] = nil
+            bh.SaveSettings()
+            configPanel:clearSelection()
         end
-        bh.settings['Tabs'][tabIter] = nil
-        bh.SaveSettings()
-        configPanel:clearSelection()
     end
     ImGui.Text('Columns:')
     if self.Columns then
