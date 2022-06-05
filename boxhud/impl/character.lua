@@ -150,7 +150,19 @@ local hybrids = utils.Set { 'bard', 'brd', 'ranger', 'rng', 'beastlord', 'bst', 
                       'shd', 'paladin', 'pal' }
 local ranged = utils.Set { 'ranger', 'rng' }
 
-local function SetText(value, thresholds, ascending, percentage, colColor)
+local function format_int(number)
+
+    local i, j, minus, int, fraction = tostring(number):find('([-]?)(%d+)([.]?%d*)')
+  
+    -- reverse the int-string and append a comma to all blocks of 3 digits
+    int = int:reverse():gsub("(%d%d%d)", "%1,")
+  
+    -- reverse the int-string back remove an optional comma and put the 
+    -- optional minus and fractional part back
+    return minus .. int:reverse():gsub("^,", "") .. fraction
+end
+
+local function SetText(value, thresholds, ascending, percentage, colColor, prettify)
     local col = state.Settings['Colors']['Default']
     if not colColor then
         if thresholds ~= nil then
@@ -200,6 +212,7 @@ local function SetText(value, thresholds, ascending, percentage, colColor)
     end
     ImGui.PushStyleColor(ImGuiCol.Text, col[1], col[2], col[3], 1)
     if tonumber(value) then
+        if prettify then value = format_int(value) end
         -- right align number values
         if percentage then value = value..'%' end
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetColumnWidth() - ImGui.CalcTextSize(tostring(value)) 
@@ -320,7 +333,7 @@ function Character:drawColumnProperty(column)
             if column['Mappings'] and column['Mappings'][value] then
                 value = column['Mappings'][value]
             end
-            SetText(tostring(value), thresholds, column['Ascending'], column['Percentage'], column['Color'])
+            SetText(tostring(value), thresholds, column['Ascending'], column['Percentage'], column['Color'], column['Prettify'])
         end
     end
 end
