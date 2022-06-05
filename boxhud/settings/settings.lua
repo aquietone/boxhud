@@ -56,15 +56,21 @@ local function ValidateOptionalSettings()
     if state.PeerSource == 'dannet' then
         state.IsUsingDanNet = true
         local classPropertyFound = false
+        local levelPropertyFound = false
         for propName, propSettings in pairs(state.Settings['Properties']) do
             if (propName == 'Me.Class' or propName == 'Me.Class.ShortName') and propSettings['Type'] == 'Observed' then
                 classPropertyFound = true
                 state.ClassVar = propName
+            elseif propName == 'Me.Level' and propSettings['Type'] == 'Observed' then
+                levelPropertyFound = true
             end
         end
         if not classPropertyFound then
             state.ClassVar = 'Me.Class.ShortName'
             state.Settings['Properties'][state.ClassVar] = { Type='Observed' }
+        end
+        if not levelPropertyFound then
+            state.Settings['Properties']['Me.Level'] = { Type='Observed' }
         end
     elseif state.PeerSource == 'netbots' then
         state.IsUsingNetBots = true
@@ -73,15 +79,21 @@ local function ValidateOptionalSettings()
             return false
         end
         local classPropertyFound = false
+        local levelPropertyFound = false
         for propName, propSettings in pairs(state.Settings['Properties']) do
             if propName == 'Class' and propSettings['Type'] == 'NetBots' then
                 classPropertyFound = true
                 state.ClassVar = propName
+            elseif propName == 'Level' and propSettings['Type'] == 'NetBots' then
+                levelPropertyFound = true
             end
         end
         if not classPropertyFound then
             state.ClassVar = 'Class'
             state.Settings['Properties'][state.ClassVar] = { Type='NetBots' }
+        end
+        if not levelPropertyFound then
+            state.Settings['Properties']['Level'] = { Type='NetBots' }
         end
     end
     if state.Settings['RefreshInterval'] and type(state.Settings['RefreshInterval']) == 'number' then
@@ -135,8 +147,13 @@ local function ValidateSettings()
             ["Name"] = "Name",
             ["Type"] = "property",
 			["InZone"] = false,
-			["Percentage"] = false
+			["Percentage"] = false,
+            ["IncludeLevel"] = false,
         }
+    else
+        print(state.Settings['Columns']['Name']['IncludeLevel'])
+        state.Settings['Columns']['Name']['IncludeLevel'] = state.Settings['Columns']['Name']['IncludeLevel'] or false
+        print(state.Settings['Columns']['Name']['IncludeLevel'])
     end
     if not state.Settings['Tabs'] then
         state.Settings['Tabs'] = {}

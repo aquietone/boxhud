@@ -150,49 +150,53 @@ local hybrids = utils.Set { 'bard', 'brd', 'ranger', 'rng', 'beastlord', 'bst', 
                       'shd', 'paladin', 'pal' }
 local ranged = utils.Set { 'ranger', 'rng' }
 
-local function SetText(value, thresholds, ascending, percentage)
+local function SetText(value, thresholds, ascending, percentage, colColor)
     local col = state.Settings['Colors']['Default']
-    if thresholds ~= nil then
-        local valueNum = tonumber(value)
-        if valueNum == nil then
-            return
-        end
-        if #thresholds == 1 then
-            if valueNum >= thresholds[1] then
-                if ascending then
-                    col = state.Settings['Colors']['High']
-                else -- red if above
-                    col = state.Settings['Colors']['Low']
+    if not colColor then
+        if thresholds ~= nil then
+            local valueNum = tonumber(value)
+            if valueNum == nil then
+                return
+            end
+            if #thresholds == 1 then
+                if valueNum >= thresholds[1] then
+                    if ascending then
+                        col = state.Settings['Colors']['High']
+                    else -- red if above
+                        col = state.Settings['Colors']['Low']
+                    end
+                else
+                    if ascending then
+                        col = state.Settings['Colors']['Low']
+                    else -- green if below
+                        col = state.Settings['Colors']['High']
+                    end
                 end
-            else
-                if ascending then
-                    col = state.Settings['Colors']['Low']
-                else -- green if below
-                    col = state.Settings['Colors']['High']
+            elseif #thresholds == 2 then
+                if valueNum >= thresholds[2] then
+                    if ascending then
+                        col = state.Settings['Colors']['High']
+                    else
+                        col = state.Settings['Colors']['Low']
+                    end
+                elseif valueNum >= thresholds[1] and valueNum < thresholds[2] then
+                    col = state.Settings['Colors']['Medium']
+                else
+                    if ascending then
+                        col = state.Settings['Colors']['Low']
+                    else
+                        col = state.Settings['Colors']['High']
+                    end
                 end
             end
-        elseif #thresholds == 2 then
-            if valueNum >= thresholds[2] then
-                if ascending then
-                    col = state.Settings['Colors']['High']
-                else
-                    col = state.Settings['Colors']['Low']
-                end
-            elseif valueNum >= thresholds[1] and valueNum < thresholds[2] then
-                col = state.Settings['Colors']['Medium']
-            else
-                if ascending then
-                    col = state.Settings['Colors']['Low']
-                else
-                    col = state.Settings['Colors']['High']
-                end
-            end
         end
-    end
-    if value:lower() == 'true' then
-        col = state.Settings['Colors']['True']
-    elseif value:lower() == 'false' then
-        col = state.Settings['Colors']['False']
+        if value:lower() == 'true' then
+            col = state.Settings['Colors']['True']
+        elseif value:lower() == 'false' then
+            col = state.Settings['Colors']['False']
+        end
+    else
+        col = colColor
     end
     ImGui.PushStyleColor(ImGuiCol.Text, col[1], col[2], col[3], 1)
     if tonumber(value) then
@@ -283,6 +287,9 @@ function Character:drawNameButton()
         col = state.Settings['Colors']['NotInZone'] or {1,0,0}
     end
     ImGui.PushStyleColor(ImGuiCol.Text, col[1], col[2], col[3], 1)
+    if state.Settings['Columns']['Name']['IncludeLevel'] then
+        buttonText = buttonText .. ' (' .. self.Properties['Me.Level'] .. ')'
+    end
 
     if ImGui.SmallButton(buttonText..'##'..self.Name) then
         mq.cmdf('/squelch /dex %s /foreground', self.Name)
@@ -313,7 +320,7 @@ function Character:drawColumnProperty(column)
             if column['Mappings'] and column['Mappings'][value] then
                 value = column['Mappings'][value]
             end
-            SetText(tostring(value), thresholds, column['Ascending'], column['Percentage'])
+            SetText(tostring(value), thresholds, column['Ascending'], column['Percentage'], column['Color'])
         end
     end
 end
