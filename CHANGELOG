@@ -1,3 +1,7 @@
+1.8.1
+- Updated for RG build 216 changes
+- Switch to use mq.cmd and mq.cmdf
+- Updates to some conditions due to type changes
 1.8.0
 - Add handling for observing TLOs that may not be present on all toons
   Relies on defining dependencies between observed properties. For example:
@@ -5,11 +9,8 @@
     with macros running on toons without a CWTN class plugin loaded, like bards.
     This can be handled by defining the observed property as:
 ```
-    {
-        Name='CWTN.Mode',
-        DependsOnName='Me.Class.ShortName',
-        DependsOnValue='MNK,SHD,ROG'
-    }
+     { Name='Me.Class.ShortName' },
+     { Name='CWTN.Mode', DependsOnName='Me.Class.ShortName', DependsOnValue='MNK,SHD,ROG' }
 ```
     This will result in the `CWTN.Mode` property only being observed on monks, shadow knights and rogues.
 - Set initial window size if window has default 32x32 size.
