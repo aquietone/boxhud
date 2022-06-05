@@ -271,7 +271,7 @@ function Character:drawNameButton()
     ImGui.PushStyleColor(ImGuiCol.Text, col[1], col[2], col[3], 1)
 
     if ImGui.SmallButton(buttonText..'##'..self.Name) then
-        state.StoredCommand = string.format('/squelch /dex %s /foreground', self.Name)
+        mq.cmdf('/squelch /dex %s /foreground', self.Name)
     end
     ImGui.PopStyleColor(1)
     self:drawContextMenu()
