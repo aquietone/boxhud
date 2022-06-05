@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.6.0 -- aquietone
+boxhud.lua 1.6.1 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer 
@@ -26,8 +26,9 @@ Usage: /lua run boxhud [settings.lua]
        /bhversion - Display the running version
 
 Changes:
-1.6.0
+1.6.1
 - Add sorting by column
+1.6.0
 - Add PeerSource to allow getting peer list from either dannet or netbots
 - Add "FromIDProperty" to spawn properties to allow getting spawn properties
   for something other than botName. The referred property must be a Spawn ID.
@@ -90,7 +91,7 @@ local mq = require('mq')
 local arg = {...}
 
 -- Control variables
-local VERSION = '1.6.0'
+local VERSION = '1.6.1'
 local openGUI = true
 local shouldDrawGUI = true
 local terminate = false
