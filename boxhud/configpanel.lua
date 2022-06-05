@@ -250,7 +250,7 @@ local function BuildProperty()
     return property
 end
 
-local function DrawAddPropertyOptions()
+local function DrawAddPropertyOptions(x)
     ImGui.TextColored(1, 0, 1, 1, "Add New Property")
     ImGui.Separator()
     ImGui.Text('Type: ')
@@ -301,7 +301,7 @@ local function DrawAddPropertyOptions()
     end
     if invalidInput then
         ImGui.SameLine()
-        ImGui.PushTextWrapPos(300)
+        ImGui.PushTextWrapPos(x-10)
         ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', message))
         ImGui.PopTextWrapPos()
     end
@@ -446,7 +446,7 @@ local function BuildColumn()
     return column
 end
 
-local function DrawAddColumnOptions()
+local function DrawAddColumnOptions(x)
     ImGui.TextColored(1, 0, 1, 1, "Add New Column")
     ImGui.Separator()
     ImGui.Text('Type: ')
@@ -609,7 +609,7 @@ local function DrawAddColumnOptions()
     end
     if invalidInput then
         ImGui.SameLine()
-        ImGui.PushTextWrapPos(300)
+        ImGui.PushTextWrapPos(x-10)
         ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', message))
         ImGui.PopTextWrapPos()
     end
@@ -759,7 +759,7 @@ local function DrawColumnSettings()
 end
 
 local shouldDrawCombo = false
-local function DrawAddTabOptions()
+local function DrawAddTabOptions(x)
     ImGui.TextColored(1, 0, 1, 1, "Add New Tab")
     ImGui.Separator()
     ImGui.Text('Name(*): ')
@@ -829,7 +829,7 @@ local function DrawAddTabOptions()
     end
     if invalidInput then
         ImGui.SameLine()
-        ImGui.PushTextWrapPos(300)
+        ImGui.PushTextWrapPos(x-10)
         ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', message))
         ImGui.PopTextWrapPos()
     end
@@ -912,17 +912,27 @@ local function DrawSaveChanges()
     end
 end
 
+local function DrawInfo(x)
+    ImGui.PushTextWrapPos(x-10)
+    ImGui.Text('To get started with configuring boxhud, select an item from the menu on the left.')
+    ImGui.Text('Properties define the data members which will be either observed with MQ2DanNet, read from MQ2NetBots or read from Spawn data.')
+    ImGui.Text('Columns define how specific properties should be displayed.')
+    ImGui.Text('Tabs define groupings of columns and will appear in the top tab bar.')
+    ImGui.Text('Configuration changes take effect immediately. However, changes won\'t be persisted unless you click \'Save Configuration\'.')
+    ImGui.PopTextWrapPos()
+end
+
 local function RightPaneWindow()
     local x,y = ImGui.GetContentRegionAvail()
     if ImGui.BeginChild("right", x, y-1, true) then
         if selectedItemType == 'settings' then
             DrawGeneralSettings()
         elseif selectedItemType == 'addnewproperty' then
-            DrawAddPropertyOptions()
+            DrawAddPropertyOptions(x)
         elseif selectedItemType == 'addnewcolumn' then
-            DrawAddColumnOptions()
+            DrawAddColumnOptions(x)
         elseif selectedItemType == 'addnewtab' then
-            DrawAddTabOptions()
+            DrawAddTabOptions(x)
         elseif selectedItemType == 'property' then
             DrawPropertySettings()
         elseif selectedItemType == 'column' then
@@ -933,6 +943,8 @@ local function RightPaneWindow()
             DrawAbout()
         elseif selectedItemType == 'savechanges' then
             DrawSaveChanges()
+        else
+            DrawInfo(x)
         end
         ImGui.EndChild()
     end
