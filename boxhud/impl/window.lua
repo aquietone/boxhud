@@ -152,7 +152,7 @@ function Window:drawTabs()
         end
 
         -- Admin tab only allows resetting observers, so only show if dannet is being used
-        if utils.IsUsingDanNet then
+        if state.IsUsingDanNet then
             if ImGui.BeginTabItem('Admin') then
                 ImGui.Text('DanNet Peer Group: ')
                 ImGui.SameLine()
@@ -162,7 +162,7 @@ function Window:drawTabs()
                 ImGui.SameLine()
                 if ImGui.Button('Reset All Observers') then
                     print_msg('Resetting observed properties for: \ay'..state.WindowStates[self.Name].Peers[adminPeerSelected+1])
-                    state.adminPeerAction = 'reset'
+                    state.AdminPeerAction = 'reset'
                     state.AdminPeerName = state.WindowStates[self.Name].Peers[adminPeerSelected+1]
                 end
                 ImGui.Text('Enter an observed property to check or drop:')
@@ -170,13 +170,13 @@ function Window:drawTabs()
                 ImGui.SameLine()
                 if ImGui.Button('Check') then
                     print_msg('Check observed property \ay'..state.AdminPeerItem..'\ax for: \ay'..state.WindowStates[self.Name].Peers[adminPeerSelected+1])
-                    state.adminPeerAction = 'check'
+                    state.AdminPeerAction = 'check'
                     state.AdminPeerName = state.WindowStates[self.Name].Peers[adminPeerSelected+1]
                 end
                 ImGui.SameLine()
                 if ImGui.Button('Drop') then
                     print_msg('Drop observed property \ay'..state.AdminPeerItem..'\ax for: \ay'..state.WindowStates[self.Name].Peers[adminPeerSelected+1])
-                    state.adminPeerAction = 'drop'
+                    state.AdminPeerAction = 'drop'
                     state.AdminPeerName = state.WindowStates[self.Name].Peers[adminPeerSelected+1]
                 end
                 ImGui.EndTabItem()

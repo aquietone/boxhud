@@ -171,7 +171,7 @@ function ConfigurationPanel:drawLeftPaneWindow()
             ImGui.TableNextRow()
             ImGui.TableNextColumn()
             self:drawTabTreeSelector()
-            if utils.PeerSource == 'dannet' then
+            if state.PeerSource == 'dannet' then
                 ImGui.TableNextRow()
                 ImGui.TableNextColumn()
                 self:drawWindowTreeSelector()
@@ -224,7 +224,7 @@ end
 function ConfigurationPanel:drawAbout()
     ImGui.TextColored(1, 0, 1, 1, 'About')
     ImGui.Separator()
-    helpers.DrawLabelAndTextValue('Version: ', utils.Version)
+    helpers.DrawLabelAndTextValue('Version: ', state.Version)
 end
 
 function ConfigurationPanel:drawInfo(width)

@@ -216,7 +216,7 @@ function Character:drawContextMenu()
         if ImGui.SmallButton("Reset Obs##"..self.Name) then
             print_msg('Resetting observed properties for: \ay'..self.Name)
             ImGui.CloseCurrentPopup()
-            state.adminPeerAction = 'reset'
+            state.AdminPeerAction = 'reset'
             state.AdminPeerName = self.Name
         end
         ImGui.Text('Send Command to '..self:getDisplayName()..': ')
@@ -350,8 +350,8 @@ function Character:updateCharacterProperties(currTime, peerGroup)
         properties['Me.Invis'] = properties['Me.Invis'] + 2
     end
     properties['lastUpdated'] = currTime
-    if properties[utils.ClassVar] and not self.ClassName then
-        self.ClassName = properties[utils.ClassVar]:lower()
+    if properties[state.ClassVar] and not self.ClassName then
+        self.ClassName = properties[state.ClassVar]:lower()
     end
     self.Properties = properties
 end

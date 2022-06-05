@@ -3,7 +3,6 @@ The Property class represents the static configuration of a property defined in 
 --]]
 local BaseClass = require 'boxhud.classes.base'
 local state = require 'boxhud.state'
-local utils = require 'boxhud.utils.utils'
 
 local Property = BaseClass(function(p,propSettings)
     p.Name = propSettings['Name']
@@ -44,7 +43,7 @@ function Property:validate()
                 print_err(message)
                 return false, message
             end
-            utils.IsUsingDanNet = true
+            state.IsUsingDanNet = true
         elseif self.Type == 'Spawn' then
             if self.FromIDProperty and not state.Settings['Properties'][self.FromIDProperty] then
                 message = string.format(
@@ -54,7 +53,7 @@ function Property:validate()
                 return false, message
             end
         elseif self.Type == 'NetBots' then
-            utils.IsUsingNetBots = true
+            state.IsUsingNetBots = true
         else
             message = string.format('[Properties %s] Property type not supported. Type=%s', self.Name, self.Type)
             print_err(message)
