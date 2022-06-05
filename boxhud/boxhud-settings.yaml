@@ -1,0 +1,153 @@
+---
+DanNetPeerGroup: zone
+Tabs:
+- Name: General
+  Columns:
+  - Name
+  - HP%
+  - MP%
+  - EP%
+  - Distance
+  - Target
+  - Spell/Disc
+- Name: Macros
+  Columns:
+  - Name
+  - Macro
+  - Paused
+  - Pause
+  - End
+- Name: XP
+  Columns:
+  - Name
+  - Exp%
+  - AA Unspent
+RefreshInterval: 250
+Properties:
+  Me.PctHPs:
+    Type: Observed
+  Me.PctExp:
+    Type: Observed
+  Macro.Name:
+    Type: Observed
+  Me.Casting.Name:
+    Type: Observed
+  Me.PctMana:
+    Type: Observed
+  Me.PctEndurance:
+    Type: Observed
+  Me.Class.ShortName:
+    Type: Observed
+  Distance3D:
+    Type: Spawn
+  Me.ActiveDisc.Name:
+    Type: Observed
+  Macro.Paused:
+    Type: Observed
+  Target.CleanName:
+    Type: Observed
+  Me.AAPoints:
+    Type: Observed
+StaleDataTimeout: 30
+SchemaVersion: 2
+PeerSource: dannet
+Columns:
+  HP%:
+    InZone: false
+    Ascending: true
+    Type: property
+    Percentage: true
+    Thresholds:
+      2: 70
+      1: 35
+    Properties:
+      all: Me.PctHPs
+  MP%:
+    InZone: false
+    Ascending: true
+    Type: property
+    Percentage: true
+    Thresholds:
+      2: 70
+      1: 35
+    Properties:
+      all: Me.PctMana
+  Paused:
+    Mappings:
+      'FALSE': ''
+      'TRUE': PAUSED
+    Type: property
+    InZone: false
+    Percentage: false
+    Properties:
+      all: Macro.Paused
+  Name:
+    Type: property
+    InZone: false
+    Percentage: false
+  Pause:
+    Type: button
+    Action: '/dex #botName# /mqp'
+  Macro:
+    Type: property
+    InZone: false
+    Percentage: false
+    Properties:
+      all: Macro.Name
+  Target:
+    Type: property
+    InZone: true
+    Percentage: false
+    Properties:
+      all: Target.CleanName
+  EP%:
+    InZone: false
+    Ascending: true
+    Type: property
+    Percentage: true
+    Thresholds:
+      2: 70
+      1: 35
+    Properties:
+      all: Me.PctEndurance
+  Spell/Disc:
+    Type: property
+    InZone: false
+    Percentage: false
+    Properties:
+      melee: Me.ActiveDisc.Name
+      all: Me.Casting.Name
+  Exp%:
+    InZone: false
+    Ascending: true
+    Type: property
+    Percentage: true
+    Thresholds:
+      2: 66
+      1: 33
+    Properties:
+      all: Me.PctExp
+  Distance:
+    InZone: true
+    Ascending: false
+    Type: property
+    Percentage: false
+    Thresholds:
+      2: 200
+      1: 100
+    Properties:
+      all: Distance3D
+  End:
+    Type: button
+    Action: '/dex #botName# /end'
+  AA Unspent:
+    InZone: false
+    Ascending: false
+    Type: property
+    Percentage: false
+    Thresholds:
+      2: 100
+      1: 50
+    Properties:
+      all: Me.AAPoints
+...

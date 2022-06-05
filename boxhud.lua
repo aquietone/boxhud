@@ -486,6 +486,32 @@ local function DrawHUDColumns(columns, tabName)
     end
 end
 
+local showAddButtonPopup = false
+local typeRadioPressed = true
+local typeRadioValue = 1
+
+-- new property fields
+local newPropertyName = ''
+local newPropertyType = ''
+local newPropertyDependsOnName = ''
+local newPropertyDependsOnValue = ''
+local newPropertyFromIDProperty = ''
+
+-- new column fields
+local newColumnName = ''
+local newColumnType = ''
+local newColumnProperties = {}
+local newColumnMappings = {}
+local newColumnThresholds = {}
+local newColumnPercentage = false
+local newColumnAscending = true
+local newColumnInZone = true
+local newColumnAction = ''
+
+-- new tab fields
+local newTabName = ''
+local newTabColumns = ''
+
 local function DrawHUDTabs()
     if ImGui.BeginTabBar('BOXHUDTABS') then
         for _, tab in pairs(SETTINGS['Tabs']) do
@@ -512,7 +538,179 @@ local function DrawHUDTabs()
                     print_msg('Resetting observed properties for: \ay'..peerTable[adminPeerSelected+1])
                     resetObserversName = peerTable[adminPeerSelected+1]
                 end
+                ImGui.EndTabItem()
             end
+        end
+
+        if ImGui.BeginTabItem('Configuration') then
+            if ImGui.BeginTabBar('BOXHUDSETTINGSTABS') then
+                if ImGui.BeginTabItem('Properties') then
+                    if ImGui.Button('Add Property') then
+                        showAddButtonPopup = true
+                        ImGui.OpenPopup('##AddPropertyPopup')
+                    end
+                    if showAddButtonPopup then
+                        if ImGui.BeginPopup('##AddPropertyPopup') then
+                            ImGui.Text("Add New Property")
+                            ImGui.Text('Type: ')
+                            ImGui.SameLine()
+                            typeRadioValue, typeRadioPressed = ImGui.RadioButton("Observed", typeRadioValue, 1)
+                            ImGui.SameLine()
+                            typeRadioValue, typeRadioPressed = ImGui.RadioButton("NetBots", typeRadioValue, 2)
+                            ImGui.SameLine()
+                            typeRadioValue, typeRadioPressed = ImGui.RadioButton("Spawn", typeRadioValue, 3)
+                            
+                            ImGui.Text('Name: ')
+                            ImGui.SameLine()
+                            newPropertyName, selected = ImGui.InputText('##newpropname', newPropertyName, 32)
+
+                            if typeRadioValue == 1 then
+                                ImGui.Text('DependsOnName: ')
+                                ImGui.SameLine()
+                                newPropertyDependsOnName, selected = ImGui.InputText('##newpropdepname', newPropertyDependsOnName, 32)
+                                ImGui.Text('DependsOnValue: ')
+                                ImGui.SameLine()
+                                newPropertyDependsOnValue, selected = ImGui.InputText('##newpropdepvalue', newPropertyDependsOnValue, 32)
+                            elseif typeRadioValue == 3 then
+                                ImGui.Text('FromIDProperty: ')
+                                ImGui.SameLine()
+                                newPropertyFromIDProperty, selected = ImGui.InputText('##newpropfromid', newPropertyFromIDProperty, 32)
+                            end
+                            if ImGui.Button('Save##newprop') then
+                                showAddButtonPopup = false
+                                ImGui.CloseCurrentPopup()
+                            end
+                            ImGui.EndPopup()
+                        end
+                    end
+                    for propName, propSettings in pairs(SETTINGS['Properties']) do
+                        if ImGui.TreeNode(propName..'##PropertyTree') then
+                            ImGui.BulletText('Type: '..propSettings['Type'])
+                            if propSettings['DependsOnName'] then
+                                ImGui.BulletText('DependsOnName: '..propSettings['DependsOnName'])
+                            end
+                            if propSettings['DependsOnValue'] then
+                                ImGui.BulletText('DependsOnValue: '..propSettings['DependsOnValue'])
+                            end
+                            if propSettings['FromIDProperty'] then
+                                ImGui.BulletText('FromIDProperty: '..propSettings['FromIDProperty'])
+                            end
+                            ImGui.TreePop()
+                        end
+                    end
+                    ImGui.EndTabItem()
+                end
+                if ImGui.BeginTabItem('Columns') then
+                    if ImGui.Button('Add Column') then
+                        showAddButtonPopup = true
+                        ImGui.OpenPopup('##AddColumnPopup')
+                    end
+                    if showAddButtonPopup then
+                        if ImGui.BeginPopup('##AddColumnPopup') then
+                            ImGui.Text("Add New Column")
+                            ImGui.Text('Type: ')
+                            ImGui.SameLine()
+                            typeRadioValue, typeRadioPressed = ImGui.RadioButton("Property", typeRadioValue, 1)
+                            ImGui.SameLine()
+                            typeRadioValue, typeRadioPressed = ImGui.RadioButton("Button", typeRadioValue, 2)
+
+                            ImGui.Text('Name: ')
+                            ImGui.SameLine()
+                            newPropertyName, selected = ImGui.InputText('##newcolumnname', newColumnName, 32)
+                            
+                            ImGui.Text('Properties: ')
+                            ImGui.SameLine()
+                            ImGui.Text('placeholder')
+                            ImGui.Text('Mappings: ')
+                            ImGui.SameLine()
+                            ImGui.Text('placeholder')
+                            ImGui.Text('Thresholds: ')
+                            ImGui.SameLine()
+                            ImGui.Text('placeholder')
+                            ImGui.Text('Percentage: ')
+                            ImGui.SameLine()
+                            ImGui.Text('placeholder')
+                            ImGui.Text('InZone: ')
+                            ImGui.SameLine()
+                            ImGui.Text('placeholder')
+                            ImGui.Text('Action: ')
+                            ImGui.SameLine()
+                            ImGui.Text('placeholder')
+                            --newPropertyDependsOnName, selected = ImGui.InputText('##newpropdepname', newPropertyDependsOnName, 32)
+                            --newPropertyDependsOnValue, selected = ImGui.InputText('##newpropdepvalue', newPropertyDependsOnValue, 32)
+                            --newPropertyFromIDProperty, selected = ImGui.InputText('##newpropfromid', newPropertyFromIDProperty, 32)
+                            if ImGui.Button('Save##newcolumn') then
+                                showAddButtonPopup = false
+                                ImGui.CloseCurrentPopup()
+                            end
+                            ImGui.EndPopup()
+                        end
+                    end
+                    for columnName, columnSettings in pairs(SETTINGS['Columns']) do
+                        if ImGui.TreeNode(columnName..'##ColumnTree') then
+                            ImGui.Text('Type: '..columnSettings['Type'])
+                            if columnSettings['Properties'] then
+                            end
+                            if columnSettings['Thresholds'] then
+                            end
+                            if columnSettings['Mappings'] then
+                            end
+                            if columnSettings['Percentage'] then
+                                ImGui.Text(string.format('Percentage: %s', columnSettings['Percentage']))
+                            end
+                            if columnSettings['Ascending'] then
+                                ImGui.Text(string.format('Ascending: %s', columnSettings['Ascending']))
+                            end
+                            if columnSettings['InZone'] then
+                                ImGui.Text(string.format('InZone: %s', columnSettings['InZone']))
+                            end
+                            if columnSettings['Action'] then
+                                ImGui.Text(string.format('Action: %s', columnSettings['Action']))
+                            end
+                            ImGui.TreePop()
+                        end
+                    end
+                    ImGui.EndTabItem()
+                end
+                if ImGui.BeginTabItem('Tabs') then
+                    if ImGui.Button('Add Tab') then
+                        showAddButtonPopup = true
+                        ImGui.OpenPopup('##AddTabPopup')
+                    end
+                    if showAddButtonPopup then
+                        if ImGui.BeginPopup('##AddTabPopup') then
+                            ImGui.Text("Add New Tab")
+
+                            ImGui.Text('Name: ')
+                            ImGui.SameLine()
+                            newTabName, selected = ImGui.InputText('##newtabname', newTabName, 32)
+                            
+                            ImGui.Text('Columns: ')
+                            ImGui.SameLine()
+                            newTabColumns, selected = ImGui.InputText('##newtabcolumns', newTabColumns, 32)
+                            
+                            if ImGui.Button('Save##newtab') then
+                                showAddButtonPopup = false
+                                ImGui.CloseCurrentPopup()
+                            end
+                            ImGui.EndPopup()
+                        end
+                    end
+                    for _, tab in pairs(SETTINGS['Tabs']) do
+                        if ImGui.TreeNode(tab['Name']..'##TabTree') then
+                            if tab['Columns'] then
+                                for columnIdx,column in pairs(tab['Columns']) do
+                                    ImGui.Text(string.format('Column %d: %s', columnIdx, column))
+                                end
+                            end
+                            ImGui.TreePop()
+                        end
+                    end
+                    ImGui.EndTabItem()
+                end
+                ImGui.EndTabBar()
+            end
+            ImGui.EndTabItem()
         end
         ImGui.EndTabBar()
     end
