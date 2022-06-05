@@ -1,4 +1,4 @@
--- boxhud/settings-converter.lua 2.0.9 -- aquietone
+-- boxhud/settings-converter.lua 2.0.10 -- aquietone
 local converter = {}
 
 function deepcopy(orig)

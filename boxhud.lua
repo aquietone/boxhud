@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.0.9 -- aquietone
+boxhud.lua 2.0.10 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -208,12 +208,10 @@ local function SetText(value, thresholds, ascending, percentage)
             end
         end
     end
-    if type(value) == 'string' then
-        if value:lower() == 'true' then
-            col = SETTINGS['Colors']['True']
-        elseif value:lower() == 'false' then
-            col = SETTINGS['Colors']['False']
-        end
+    if value:lower() == 'true' then
+        col = SETTINGS['Colors']['True']
+    elseif value:lower() == 'false' then
+        col = SETTINGS['Colors']['False']
     end
     ImGui.PushStyleColor(ImGuiCol.Text, col[1], col[2], col[3], 1)
     if tonumber(value) then
@@ -320,7 +318,7 @@ function Character:drawColumnProperty(column)
             value = self.properties[column['Properties']['all']]
         end
         local thresholds = column['Thresholds']
-        if value ~= 'NULL' then
+        if value and value ~= 'NULL' then
             if column['Mappings'] and column['Mappings'][value] then
                 value = column['Mappings'][value]
             end

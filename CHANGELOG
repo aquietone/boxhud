@@ -1,3 +1,5 @@
+2.0.10
+- Add an extra nil check setting text in tables
 2.0.9
 - Small update related to ImGui.Begin/End
 2.0.8
