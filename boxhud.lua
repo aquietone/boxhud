@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.4.1 -- aquietone
+boxhud.lua 1.4.2 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer 
@@ -26,6 +26,9 @@ Usage: /lua run boxhud [settings.lua]
        /boxhudend - end the script
 
 Changes:
+1.4.2
+- Fix gsub in button commands
+- Fix handling button commands with /noparse
 1.4.1
 - Fix for zone shortname formats
 - Fix text coloring
@@ -417,9 +420,15 @@ function DrawHUDColumns(columns)
                     end
                 elseif column['Type'] == 'button' then
                     if ImGui.SmallButton(column['Name']..'##'..botName) then
-                        -- bring left clicked toon to foreground
-                        print('Run command: '..column['Action']:gsub('#botName#', botName))
-                        mq.cmd.squelch(column['Action']:gsub('#botName#', botName))
+                        local command = column['Action']:gsub('#botName#', botName)
+                        local noparseCmd = string.match(command, '/noparse (.*)')
+                        if noparseCmd then
+                            print_msg('Run command: '..command)
+                            mq.cmd.noparse(noparseCmd)
+                        else
+                            print_msg('Run command: '..command)
+                            mq.cmd.squelch(command)
+                        end
                     end
                 end
                 ImGui.NextColumn()
