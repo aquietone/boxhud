@@ -1,10 +1,10 @@
--- boxhud/utils.lua 2.1.3 -- aquietone
+-- boxhud/utils.lua 2.1.4 -- aquietone
 --- @type mq
 local mq = require('mq')
 local converter = require('boxhud.settings-converter')
 dofile('boxhud/persistence.lua')
 
-VERSION = '2.1.3'
+VERSION = '2.1.4'
 
 SETTINGS_FILE = nil
 
@@ -517,12 +517,10 @@ local function ValidateSettings()
 end
 
 function LoadSettings(arg)
-    local lua_dir = mq.TLO.MacroQuest.Path():gsub('\\', '/') .. '/lua'
-    local boxhud_dir = lua_dir .. '/boxhud'
+    local boxhud_dir = ('%s/boxhud'):format(mq.luaDir)
     SETTINGS_FILE = arg[1] or string.format('boxhud-settings-%s.lua', string.lower(mq.TLO.Me.Name()))
     local settings_path = string.format('%s/%s', boxhud_dir, SETTINGS_FILE)
-    local yaml_settings_path = string.format('%s/boxhud-settings.yaml', boxhud_dir)
-    local old_settings_path = string.format('%s/%s', lua_dir, SETTINGS_FILE)
+    local old_settings_path = string.format('%s/%s', mq.luaDir, SETTINGS_FILE)
     local default_settings_path = string.format('%s/%s', boxhud_dir, 'boxhud-settings.lua')
 
     if FileExists(settings_path) then
@@ -549,9 +547,7 @@ function LoadSettings(arg)
 end
 
 function SaveSettings()
-    local lua_dir = mq.TLO.MacroQuest.Path():gsub('\\', '/') .. '/lua'
-    local boxhud_dir = lua_dir .. '/boxhud'
-    local settings_path = string.format('%s/%s', boxhud_dir, SETTINGS_FILE)
+    local settings_path = ('%s/boxhud/%s'):format(mq.luaDir, SETTINGS_FILE)
     persistence.store(settings_path, SETTINGS)
     return true
 end
