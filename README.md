@@ -51,8 +51,10 @@ General tab:
 Macro tab:
 - Macro Name -- the name of the currently running macro
 - Paused -- shows PAUSED if the currently running macro is paused
+- Pause macro button -- sends `/dex name /mqp` to the character
+- End macro button -- sends `/dex name /end` to the character
 XP tab:
-- Exp -- current level experience value (out of 100,000)
+- Exp% -- current level experience percentage
 - AA Unspent -- current number of unspent AAs
 
 Additionally, the character names are buttons which can be clicked to bring that character to the foreground. This is more just to play around with the capabilities we have now with an interactive window like this.
@@ -79,11 +81,15 @@ A settings filename can also be provided when starting the script like `lua run 
 Note that since the settings are another lua file, its expecting the settings file to also be in the lua folder, rather than the config folder.
 
 ## Columns
-Each column includes several settings, for example:
+Columns can have two types, `property` or `button`.
+
+### Property Columns
+Each property column includes several settings, for example:
 
 ```
         {
             Name='MP%',
+            Type='property'
             Properties={caster='Me.PctMana',melee='Me.PctEndurance'},
             Thresholds={35,70},
             Percentage=true,
@@ -92,10 +98,23 @@ Each column includes several settings, for example:
         },
 ```
 
-
 Each column lists the observed property or properties which it uses to populate its data.
 More details on each setting can be found in the provided `boxhud-settings.lua`.
 Note that the `Name` column is treated as a special case.
+
+### Button Columns
+Each button column includes several settings, for example:
+
+```
+        {
+            Name='Pause',
+            Type='button',
+            Action='/dex #botName# /mqp',
+            Width=50
+        },
+```
+
+The button `Action` supports replacement of the string `#botName#` with the name of the character in the row where the button exists.
 
 ## Tabs
 Each tab includes a name and list of columns to be included in that tab, for example:
