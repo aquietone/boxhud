@@ -545,7 +545,9 @@ local HUDGUI = function()
     if mq.TLO.Me.CleanName() == 'load' then
         return
     end
-    openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..mq.TLO.Me.CleanName(), openGUI, ImGuiWindowFlags.NoTitleBar)
+    local flags = ImGuiWindowFlags.NoTitleBar
+    if TRANSPARENCY then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
+    openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..mq.TLO.Me.CleanName(), openGUI, flags)
     if shouldDrawGUI then
         if initialRun and ImGui.GetWindowHeight() == 32 and ImGui.GetWindowWidth() == 32 then
             ImGui.SetWindowSize(460, 177)
