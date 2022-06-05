@@ -1,12 +1,46 @@
 # boxhud
 
-An MQ2Lua / ImGui boxing HUD for EverQuest
+A Lua / ImGui boxing HUD for EverQuest.
+
+# Requirements
+
+- MQNext
+- MQ2Lua
+- MQ2DanNet
+
+# Installation
+
+Add `boxhud.lua` and `boxhud-settings.lua` to the `lua` folder of your MQ directory.
+
+# Usage
+
+Run the script with:
+
+```
+/lua run boxhud
+```
+
+Stop the script with:
+```
+/boxhudend
+```
+or
+```
+lua stop boxhud
+```
+
+Toggle the window with:
+
+```
+/boxhud
+```
 
 # Overview
 
-This Lua script provides an alternative to a similar MQ2NetBots/MQ2HUD based HUD. Instead, it uses observed properties from MQ2DanNet to watch various bits of information about all your peers.
+BoxHUD provides an alternative to a similar [MQ2NetBots/MQ2HUD based HUD](MQ2HUD/README.md). Instead, it uses observed properties from MQ2DanNet to watch various bits of information about all your peers.
 
 Includes the following information by default:
+General tab:
 - Name -- in green if in same zone as the character running the script, in ( ) if invis, in red if not in same zone
 - HP% -- with % threshold based coloring, red < 35, yellow < 70, green > 70
 - Mana% -- with % threshold based coloring, red < 35, yellow < 70, green > 70.
@@ -14,13 +48,24 @@ Includes the following information by default:
 - Distance -- if character is in same zone, displays distance away from the character, green if dist < 100, yellow < 200, red > 200
 - Target -- if character is in same zone, name of their target
 - Spell/Disc -- name of spell currently being cast or current running disc
+Macro tab:
+- Macro Name -- the name of the currently running macro
+- Paused -- shows PAUSED if the currently running macro is paused
+XP tab:
+- Exp -- current level experience value (out of 100,000)
+- AA Unspent -- current number of unspent AAs
 
 Additionally, the character names are buttons which can be clicked to bring that character to the foreground. This is more just to play around with the capabilities we have now with an interactive window like this.
 
-Example: (names just replaced with numbers for screenshot)
-![](images/example.png)
+Example: (names just replaced with `xxxxxx` for screenshot)
 
-It should dynamically grow/shrink based on peers available from the DanNet All group.
+![](images/example-tab1.png)
+
+![](images/example-tab2.png)
+
+![](images/example-tab3.png)
+
+The window will dynamically grow/shrink based on peers available from the DanNet All or Zone peer group depending on how it is configured.
 The script takes a few seconds to start up as it waits for the DanNet observers to be ready before displaying the UI.
 Characters which log off or for some reason stop being available will go stale and be removed from the table after 30 seconds.
 
@@ -47,9 +92,25 @@ Each column includes several settings, for example:
         },
 ```
 
+
 Each column lists the observed property or properties which it uses to populate its data.
 More details on each setting can be found in the provided `boxhud-settings.lua`.
 Note that the `Name` column is treated as a special case.
+
+## Tabs
+Each tab includes a name and list of columns to be included in that tab, for example:
+
+```
+    {
+        Name='General',
+        Columns={
+            {
+                Name='HP%',
+                ...
+            }
+        }
+    },
+```
 
 ## ObservedProperties
 Each observed property must be in the `ObservedProperties` list.
