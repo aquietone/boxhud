@@ -1,3 +1,5 @@
+1.7.0
+- Update to use ImGui Table API
 1.6.0
 - Add sorting by columns
 - Add PeerSource to allow getting peer list from either dannet or netbots

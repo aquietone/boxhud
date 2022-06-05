@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.6.0 -- aquietone
+boxhud.lua 1.7.0 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer 
@@ -26,6 +26,10 @@ Usage: /lua run boxhud [settings.lua]
        /bhversion - Display the running version
 
 Changes:
+1.7.0
+- lua table updates
+1.6.1
+- sort by number or string - SpecialEd
 1.6.0
 - Add sorting by column
 - Add PeerSource to allow getting peer list from either dannet or netbots
@@ -86,11 +90,12 @@ Changes:
 
 --]]
 local mq = require('mq')
+require 'ImGui'
 
 local arg = {...}
 
 -- Control variables
-local VERSION = '1.6.0'
+local VERSION = '1.7.0'
 local openGUI = true
 local shouldDrawGUI = true
 local terminate = false
@@ -99,6 +104,7 @@ local settings = {}
 local peerSource = 'dannet'
 local peerGroup = 'all'
 local peerTable = nil
+local peersDirty = false
 local classVarName = 'Me.Class'
 local zoneID = nil
 -- Default observer polling interval (0.25 seconds)
@@ -109,41 +115,10 @@ local staleDataTimeout = 60
 local dataTable = {}
 -- Tracks what toons observers have been added for to avoid adding multiple times
 local observedToons = {}
-local windowWidth = 0
 -- Set to 1 to use classname instead of player names
 local anonymize = false
 local adminMode = false
 local adminPeerSelected = 0
-
-local sortAsc = function(a, b) return a < b end
-local sortDesc = function(a, b) return a > b end
-local sortBy = nil
-local sortedPeers = {}
-local sortDir = true
-local sortFuncs = {
-    [true]=sortAsc,
-    [false]=sortDesc
-}
-local getKeysSortedByValue = function(tbl, sortFunction, peerTableInverted)
-    local keys = {}
-    for key in pairs(tbl) do
-        if peerTableInverted[key] then
-            table.insert(keys, key)
-        end
-    end
-
-    table.sort(keys, function(a, b)
-        if tbl[a][sortBy] == nil then
-            return false
-        end
-        if tbl[b][sortBy] == nil then
-            return true
-        end
-        return sortFunction(tbl[a][sortBy], tbl[b][sortBy])
-    end)
-
-    return keys
-end
 
 -- Utility functions
 
@@ -238,18 +213,26 @@ local function PluginCheck()
     end
 end
 
+local function DoTablesMatch(a, b)
+    return table.concat(a) == table.concat(b)
+end
+
 -- Return list of DanNet peers from the configured peer group
 -- peers list |peer1|peer2|peer3
 local function Peers()
+    local t = {}
     if peerSource == 'dannet' then
-        return Split(mq.TLO.DanNet.Peers(peerGroup)())
+        t = Split(mq.TLO.DanNet.Peers(peerGroup)())
     else
-        local t={}
+        t={}
         for i=1,mq.TLO.NetBots.Counts() do
             table.insert(t, mq.TLO.NetBots.Client.Arg(i)())
         end
-        return t
     end
+    if peerTable and not DoTablesMatch(peerTable, t) then
+        peersDirty = true
+    end
+    return t
 end
 
 local function GetZonePeerGroup()
@@ -258,16 +241,6 @@ local function GetZonePeerGroup()
         return 'zone_'..zoneName
     else
         return 'zone_'..mq.TLO.EverQuest.Server()..'_'..zoneName
-    end
-end
-
-local function CheckRequiredSettings()
-    if not settings['Columns'] then
-        print_err('ERROR: Missing \'Columns\' from settings')
-        mq.exit()
-    elseif table.getn(settings['Columns']) == 0 then
-        print_err('ERROR: \'Columns\' contains no entries')
-        mq.exit()
     end
 end
 
@@ -315,34 +288,6 @@ local function CheckOptionalSettings()
     end
 end
 
-local function SetWindowWidth()
-    -- Calculate max tab width
-    local globalColumnWidth = 0
-    if settings['Columns'] and table.getn(settings['Columns']) > 0 then
-        for _, column in pairs(settings['Columns']) do
-            globalColumnWidth = globalColumnWidth + column['Width']
-        end
-        windowWidth = globalColumnWidth
-    end
-    if settings['Tabs'] and table.getn(settings['Tabs']) then
-        for _, tab in pairs(settings['Tabs']) do
-            local tabWidth = 0
-            if tab['Columns'] and table.getn(tab['Columns']) > 0 then
-                for _, column in pairs(tab['Columns']) do
-                    tabWidth = tabWidth + column['Width']
-                end
-                if globalColumnWidth + tabWidth > windowWidth then
-                    windowWidth = globalColumnWidth + tabWidth
-                end
-            end
-        end
-    end
-    if globalColumnWidth == 0 then
-        -- uhhh, no columns or tabs defined?
-        windowWidth = 150
-    end
-end
-
 local function CopySettingsFile(default_settings, new_settings)
     local f = io.open(default_settings, 'r')
     local defaults = f:read('*a')
@@ -361,7 +306,6 @@ local function LoadSettingsFile()
     if FileExists(settings_path) then
         print_msg('Loading settings from file: ' .. settings_file)
         settings = require(settings_file:gsub('.lua', ''))
-        CheckRequiredSettings()
         CheckOptionalSettings()
     else
         print_msg('Loading default settings from file: boxhud-settings')
@@ -370,7 +314,6 @@ local function LoadSettingsFile()
         -- Copy defaults into toon specific settings
         CopySettingsFile(default_settings_path, settings_path)
     end
-    SetWindowWidth()
 end
 
 -- Add or remove observers for the given toon
@@ -467,6 +410,11 @@ local function SetText(value, thresholds, ascending, percentage)
         ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
     end
     if percentage then value = value..'%%' end
+    if tonumber(value) then
+        -- right align number values
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetColumnWidth() - ImGui.CalcTextSize(tostring(value)) 
+            - ImGui.GetScrollX())
+    end
     ImGui.Text(value)
     ImGui.PopStyleColor(1)
 end
@@ -587,83 +535,155 @@ local function DrawColumnButton(name, columnName, columnAction)
     end
 end
 
-local function DrawHUDColumns(columns)
-    ImGui.Columns(table.getn(columns))
-    for _, column in pairs(columns) do
-        if column['Name'] == 'Name' then
-            ImGui.CollapsingHeader(column['Name']..' ('..table.getn(peerTable)..')', 256)
-            if ImGui.IsItemClicked() then
-                sortBy = nil
-            end
-        elseif column['Type'] ~= 'button' then
-            ImGui.CollapsingHeader(column['Name'], 256)
-            if ImGui.IsItemClicked() then
-                if column['Properties']['all'] then
-                    sortBy = column['Properties']['all']
-                    sortDir = not sortDir
-                end
-            end
+local current_sort_specs = nil
+local current_columns = nil
+local function CompareWithSortSpecs(a, b)
+    for n = 1, current_sort_specs.SpecsCount, 1 do
+        -- Here we identify columns using the ColumnUserID value that we ourselves passed to TableSetupColumn()
+        -- We could also choose to identify columns based on their index (sort_spec.ColumnIndex), which is simpler!
+        local sort_spec = current_sort_specs:Specs(n)
+        local delta = 0
+
+        local column = current_columns[sort_spec.ColumnUserID]
+        if not column then
+            return a < b
         end
-        ImGui.SetColumnWidth(-1, column['Width'])
-        ImGui.NextColumn()
-    end
-    for _, name in pairs(sortedPeers) do
-        local botName = name
-        local botValues = dataTable[botName]
-        if not botValues then
-            goto continue
+        local aVal = nil
+        local bVal = nil
+        if column['Name'] == 'Name' or not column['Properties'] or not column['Properties']['all'] then
+            aVal = a
+            bVal = b
+        elseif dataTable[a] and dataTable[a][column['Properties']['all']] and dataTable[b] and dataTable[b][column['Properties']['all']] then
+            aVal = dataTable[a][column['Properties']['all']]
+            bVal = dataTable[b][column['Properties']['all']]
+        else
+            aVal = a
+            bVal = b
         end
-        -- Always read these properties for the toon
-        -- as they are not specific to a column
-        local botInZone = botValues['BotInZone']
-        local botInvis = botValues['Me.Invis']
-        local botClass = botValues[classVarName]
-        if botClass then
-            botClass = botClass:lower()
+        if tonumber(aVal) ~= nil and tonumber(bVal) ~= nil then
+            if tonumber(aVal) < tonumber(bVal) then
+                delta = -1
+            elseif tonumber(bVal) < tonumber(aVal) then
+                delta = 1
+            else
+                delta = 0
+            end
+        else
+            if aVal < bVal then
+                delta = -1
+            elseif bVal < aVal then
+                delta = 1
+            else
+                delta = 0
+            end
         end
 
-        if anonymize then
-            botName = botClass
+        if delta ~= 0 then
+            if sort_spec.SortDirection == ImGuiSortDirection.Ascending then
+                return delta < 0
+            end
+            return delta > 0
         end
-        for _, column in pairs(columns) do
+    end
+
+    -- Always return a way to differentiate items.
+    -- Your own compare function may want to avoid fallback on implicit sort specs e.g. a Name compare if it wasn't already part of the sort specs.
+    return a < b
+end
+
+local function DrawHUDColumns(columns)
+    local flags = bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Reorderable, ImGuiTableFlags.Hideable, ImGuiTableFlags.MultiSortable,
+            ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY)
+    if ImGui.BeginTable('##table', table.getn(columns), flags, 0, 0, 0.0) then
+        for i, column in pairs(columns) do
             if column['Name'] == 'Name' then
-                DrawNameButton(name, botName, botInZone, botInvis)
-                ImGui.NextColumn()
+                ImGui.TableSetupColumn('Name',         bit32.bor(ImGuiTableColumnFlags.DefaultSort, ImGuiTableColumnFlags.WidthFixed),   -1.0, i)
+            elseif column['Type'] ~= 'button' then
+                ImGui.TableSetupColumn(column['Name'], ImGuiTableColumnFlags.WidthFixed,                                                 -1.0, i)
             else
-                -- Default column type is property (observed or spawn properties)
-                if not column['Type'] or column['Type'] == 'property' then
-                    DrawColumnProperty(botValues, botClass, botInZone, column)
-                elseif column['Type'] == 'button' then
-                    DrawColumnButton(name, column['Name'], column['Action'])
-                end
-                ImGui.NextColumn()
+                ImGui.TableSetupColumn(column['Name'], bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed),        -1.0, i)
             end
         end
-        ::continue::
-    end
+        ImGui.TableSetupScrollFreeze(0, 1) -- Make row always visible
+        local sort_specs = ImGui.TableGetSortSpecs()
+        if sort_specs then
+            if sort_specs.SpecsDirty or peersDirty then
+                if #peerTable > 1 then
+                    current_sort_specs = sort_specs
+                    current_columns = columns
+                    sortedPeers = peerTable
+                    table.sort(sortedPeers, CompareWithSortSpecs)
+                    current_sort_specs = nil
+                    current_columns = nil
+                end
+                sort_specs.SpecsDirty = false
+            end
+        end
+
+        -- Display data
+        ImGui.TableHeadersRow()
+
+        local clipper = ImGuiListClipper.new()
+        if sortedPeers == nil then
+            sortedPeers = peerTable
+        end
+        clipper:Begin(table.getn(sortedPeers))
+        while clipper:Step() do
+            for row_n = clipper.DisplayStart, clipper.DisplayEnd - 1, 1 do
+                local clipName = sortedPeers[row_n+1]
+                local item = dataTable[clipName]
+                if item ~= nil then
+                    local botName = clipName
+                    local botInZone = item['BotInZone']
+                    local botInvis = item['Me.Invis']
+                    local botClass = item[classVarName]
+                    if botClass then
+                        botClass = botClass:lower()
+                    end
+                    if anonymize then
+                        botName = botClass
+                    end
+                    ImGui.PushID(item)
+                    ImGui.TableNextRow()
+                    ImGui.TableNextColumn()
+                    for i,column in pairs(columns) do
+                        if column['Name'] == 'Name' then
+                            DrawNameButton(clipName, botName, botInZone, botInvis)
+                        else
+                            -- Default column type is property (observed or spawn properties)
+                            if not column['Type'] or column['Type'] == 'property' then
+                                DrawColumnProperty(item, botClass, botInZone, column)
+                            elseif column['Type'] == 'button' then
+                                DrawColumnButton(clipName, column['Name'], column['Action'])
+                            end
+                        end
+                        if i < #columns then
+                            ImGui.TableNextColumn()
+                        end
+                    end
+                    ImGui.PopID()
+                end
+            end
+        end
+
+        ImGui.EndTable()
+    end   
 end
 
 local function DrawHUDTabs()
     if ImGui.BeginTabBar('BOXHUDTABS') then
         for _, tab in pairs(settings['Tabs']) do
             if ImGui.BeginTabItem(tab['Name']) then
-                if tab['Columns'] and table.getn(tab['Columns']) > 0 then
+                if tab['Columns'] and #tab['Columns'] > 0 then
                     DrawHUDColumns(TableConcat(settings['Columns'], tab['Columns']))
                     ImGui.EndTabItem()
-                    ImGui.Columns(1)
                 else
                     ImGui.Text('No columns defined for tab')
                     ImGui.EndTabItem()
                 end
             end
         end
-        --[[
-        if ImGui.BeginTabItem('XP Tracker') then
-            ImGui.Text('Kills/hour: '..tostring(mq.TLO.XPTracker.KillsPerHour()))
-            ImGui.Text('%%XP/hour: '..tostring(mq.TLO.XPTracker.PctExpPerHour()))
-            ImGui.EndTabItem()
-        end
-        --]]
+
         -- Admin tab only allows resetting observers, so only show if dannet is being used
         if IsUsingDanNet() then
             if ImGui.BeginTabItem('Admin') then
@@ -682,14 +702,12 @@ end
 
 -- ImGui main function for rendering the UI window
 local HUDGUI = function()
-    ImGui.SetNextWindowSize(windowWidth, 0)
     openGUI, shouldDrawGUI = ImGui.Begin('BOXHUDUI', openGUI, ImGuiWindowFlags.NoTitleBar)
     if shouldDrawGUI then
-        ImGui.SetWindowFontScale(0.9)
         
-        if settings['Tabs'] and table.getn(settings['Tabs']) > 0 then
+        if settings['Tabs'] and #settings['Tabs'] > 0 then
             DrawHUDTabs()
-        elseif settings['Columns'] and table.getn(settings['Columns']) > 0 then
+        elseif settings['Columns'] and #settings['Columns'] > 0 then
             DrawHUDColumns(settings['Columns'])
         end
 
@@ -784,7 +802,7 @@ local function UpdateBotValues(botName, currTime)
             else
                 botValues[spawnProp['Name']] = botSpawnData[spawnProp['Name']]()
                 if type(botValues[spawnProp['Name']]) == 'number' then
-                    botValues[spawnProp['Name']] = math.floor(botValues[spawnProp['Name']])
+                    botValues[spawnProp['Name']] = string.format("%.2f", botValues[spawnProp['Name']])
                 end
             end
         end
@@ -803,7 +821,6 @@ local function CleanupStaleData(currTime)
         if os.difftime(currTime, botValues['lastUpdated']) > staleDataTimeout then
             print_msg('Removing stale toon data: \ay'..botName)
             dataTable[botName] = nil
-            --ManageObservers(botName, true)
         end
     end
 end
@@ -834,7 +851,6 @@ local function main()
         end
         local currTime = os.time(os.date("!*t"))
         peerTable = Peers()
-        local peerTableInverted = {}
         for botIdx, botName in pairs(peerTable) do
             -- Ensure observers are set for the toon
             if IsUsingDanNet() then
@@ -842,14 +858,7 @@ local function main()
                     AddAndVerifyObservers(botName)
                 end
             end
-
             UpdateBotValues(botName, currTime)
-            peerTableInverted[botName] = true
-        end
-        if sortBy ~= nil then
-            sortedPeers = getKeysSortedByValue(dataTable, sortFuncs[sortDir], peerTableInverted)
-        else
-            sortedPeers = peerTable
         end
         CleanupStaleData(currTime)
         mq.delay(refreshInterval)
