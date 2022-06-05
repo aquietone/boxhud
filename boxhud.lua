@@ -358,29 +358,28 @@ function DrawHUDColumns(columns)
                         -- bring left clicked toon to foreground
                         mq.cmd.dex(botName..' /foreground')
                     end
-                    ImGui.PopStyleColor(1)
-                    
-                    if ImGui.BeginPopupContextItem("popup##"..botName) then
-                        ImGui.Text('Send Command to '..botName..': ')
-                        text = ""
-                        text, selected = ImGui.InputText("##input"..botName, text, 32)
-                        if selected then
-                            print_msg('Sending command: /dex '..botName..' '..text)
-                            mq.cmd.dex(botName..' '..text)
-                            ImGui.CloseCurrentPopup()
-                        end
-                        if ImGui.Button('Close##'..botName) then
-                            ImGui.CloseCurrentPopup()
-                        end
-                        ImGui.EndPopup()
-                    end
                 else
                     ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
                     if ImGui.SmallButton(titleCase(botName)) then
                         -- bring left clicked toon to foreground
                         mq.cmd.dex(botName..' /foreground')
                     end
-                    ImGui.PopStyleColor(1)
+                end
+                ImGui.PopStyleColor(1)
+                                    
+                if ImGui.BeginPopupContextItem("popup##"..botName) then
+                    ImGui.Text('Send Command to '..botName..': ')
+                    text = ""
+                    text, selected = ImGui.InputText("##input"..botName, text, 32)
+                    if selected then
+                        print_msg('Sending command: /dex '..botName..' '..text)
+                        mq.cmd.dex(botName..' '..text)
+                        ImGui.CloseCurrentPopup()
+                    end
+                    if ImGui.Button('Close##'..botName) then
+                        ImGui.CloseCurrentPopup()
+                    end
+                    ImGui.EndPopup()
                 end
                 ImGui.NextColumn()
             else
