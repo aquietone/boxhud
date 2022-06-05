@@ -1,4 +1,4 @@
--- boxhud/configpanel.lua 2.0.10 -- aquietone
+-- boxhud/configpanel.lua 2.0.11 -- aquietone
 --- @type ImGui
 require 'ImGui'
 require('boxhud.utils')
@@ -391,8 +391,8 @@ local function LeftPaneWindow()
         DrawTabTreeSelector()
         ImGui.Indent(24)
         DrawAboutSelector()
-        ImGui.EndChild()
     end
+    ImGui.EndChild()
 end
 
 function PropertyInput:draw(width)
@@ -888,8 +888,8 @@ local function RightPaneWindow()
         else
             DrawInfo(x)
         end
-        ImGui.EndChild()
     end
+    ImGui.EndChild()
 end
 
 function ConfigurationTab()
