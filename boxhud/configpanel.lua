@@ -4,39 +4,190 @@ require('boxhud.utils')
 
 local configpanel = {}
 
-local configDirty = false
-
-local typeRadioPressed = true
-local typeRadioValue = 1
-
 -- new property fields
-local newPropertyName = ''
-local newPropertyDependsOnName = ''
-local newPropertyDependsOnValue = ''
-local newPropertyFromIDProperty = ''
+PropertyInput = {
+    Name='',
+    Type=1,
+    DependsOnName='',
+    DependsOnValue='',
+    FromIDProperty='',
+    valid=true,
+    message=nil
+}
+function PropertyInput:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    return o
+end
+
+function PropertyInput:toProperty()
+    local property = Property:new({})
+    property['Name'] = self.Name
+    property['Type'] = 'Observed'
+    if self.Type == 2 then
+        property['Type'] = 'NetBots'
+    elseif self.Type == 3 then
+        property['Type'] = 'Spawn'
+    end
+    if self.DependsOnName ~= '' then
+        property['DependsOnName'] = self.DependsOnName
+    end
+    if self.DependsOnValue ~= '' then
+        property['DependsOnValue'] = self.DependsOnValue
+    end
+    if self.FromIDProperty ~= '' then
+        property['FromIDProperty'] = self.FromIDProperty
+    end
+    return property
+end
+
+function PropertyInput:fromProperty(property)
+    local o = PropertyInput:new({})
+    o.Name = property.Name
+    if property['Type'] == 'Observed' then
+        o.Type = 1
+        o.DependsOnName = property['DependsOnName']
+        o.DependsOnValue = property['DependsOnValue']
+    elseif property['Type'] == 'Spawn' then
+        o.Type = 3
+        o.FromIDProperty = property['FromIDProperty']
+    else
+        o.Type = 2
+    end
+    return o
+end
+
+local newProperty = nil
 
 -- new column fields
-local newColumnName = ''
-local newColumnProperties = {[1]={[1]='',[2]=''}}
-local newColumnPropCount = 1
-local newColumnMappings = {}
-local newColumnMappingCount = 1
-local newColumnThresholds = {}
-local newColumnThresholdCount = 0
-local newColumnPercentage = false
-local newColumnAscending = true
-local newColumnInZone = true
-local newColumnAction = ''
+ColumnInput = {
+    Name='',
+    Type=1,
+    Properties={[1]={[1]='',[2]=''}},
+    PropertyCount=1,
+    Mappings={},
+    MappingCount=0,
+    Thresholds={},
+    ThresholdCount=0,
+    Percentage=false,
+    Ascending=true,
+    InZone=true,
+    Action='',
+    valid=true,
+    message=nil
+}
+function ColumnInput:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    return o
+end
+
+function ColumnInput:toColumn()
+    local column = Column:new({Name=self.Name,Type='property'})
+    if self.Type == 1 then
+        column['Ascending']=self.Ascending
+        column['InZone']=self.InZone
+        column['Percentage']=self.Percentage
+        column['Properties']={}
+        if self.MappingCount > 0 then
+            column['Mappings']={}
+        end
+        for i,j in ipairs(self.Properties) do
+            column['Properties'][j[1]] = j[2]
+        end
+        for i,j in ipairs(self.Mappings) do
+            column['Mappings'][j[1]] = j[2]
+        end
+        if self.ThresholdCount > 0 then
+            column['Thresholds']={}
+        end
+        for i,j in ipairs(self.Thresholds) do
+            column['Thresholds'][i] = tonumber(j)
+        end
+    elseif self.Type == 2 then
+        column['Type'] = 'button'
+        column['Action'] = self.Action
+    end
+    return column
+end
+
+function ColumnInput:fromColumn(column)
+    local o = ColumnInput:new({Name=column.Name})
+    if column['Type'] == 'property' then
+        o.Type = 1
+        o.Ascending = column['Ascending']
+        o.InZone = column['InZone']
+        o.Percentage = column['Percentage']
+        o.PropertyCount = 0
+        o.Properties = {}
+        if column['Properties'] then
+            for propKey,propValue in pairs(column['Properties']) do
+                o.PropertyCount = o.PropertyCount + 1
+                o.Properties[o.PropertyCount] = {[1]=propKey,[2]=propValue}
+            end
+        end
+        o.MappingCount = 0
+        o.Mappings = {}
+        if column['Mappings'] then
+            for mappingKey,mappingValue in pairs(column['Mappings']) do
+                o.MappingCount = o.MappingCount + 1
+                o.Mappings[o.MappingCount] = {[1]=mappingKey,[2]=mappingValue}
+            end
+        end
+        o.ThresholdCount = 0
+        o.Thresholds = {}
+        if column['Thresholds'] then
+            for thresholdIdx,thresholdValue in ipairs(column['Thresholds']) do
+                o.ThresholdCount = o.ThresholdCount + 1
+                o.Thresholds[thresholdIdx] = tostring(thresholdValue)
+            end
+        end
+    else
+        o.Type = 2
+        o.Action = column['Action']
+    end
+    return o
+end
+
+local newColumn = nil
 
 -- new tab fields
-local newTabName = ''
-local newTabColumns = {[1]='Name'}
-local newTabColumnCount = 1
+TabInput = {
+    Name='',
+    Columns={[1]='Name'},
+    ColumnCount=1,
+    valid=true,
+    message=nil
+}
+function TabInput:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    self.__index = self
+    return o
+end
+
+function TabInput:toTab()
+    local tab = Tab:new({})
+    tab['Name'] = self.Name
+    tab['Columns'] = self.Columns
+    return tab
+end
+
+function TabInput:fromTab(tab)
+    local o = TabInput:new(tab)
+    o.ColumnCount = #tab['Columns']
+    return o
+end
+
+local newTab = nil
 
 local selected = false
 local selectedItem = nil
 local selectedItemType = nil
 
+local configDirty = false
 local invalidInput = false
 local message = nil
 
@@ -61,16 +212,6 @@ local function DrawGeneralSettingsSelector()
     end
 end
 
-local function ResetPropertyOptions()
-    typeRadioValue = 1
-    newPropertyName = ''
-    newPropertyDependsOnName = ''
-    newPropertyDependsOnValue = ''
-    newPropertyFromIDProperty = ''
-    invalidInput = false
-    message = nil
-end
-
 local function DrawPropertiesTreeSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 1, 1)
     if ImGui.TreeNodeEx('Properties', ImGuiTreeNodeFlags.SpanFullWidth) then
@@ -80,7 +221,7 @@ local function DrawPropertiesTreeSelector()
         if selected then
             selectedItem = nil
             if selectedItemType ~= 'addnewproperty' then
-                ResetPropertyOptions()
+                newProperty = PropertyInput:new({})
             end
             selectedItemType = 'addnewproperty'
         end
@@ -104,23 +245,6 @@ local function DrawPropertiesTreeSelector()
     end
 end
 
-local function ResetColumnOptions()
-    newColumnName = ''
-    typeRadioValue = 1
-    newColumnAction = ''
-    newColumnAscending = false
-    newColumnInZone = true
-    newColumnPercentage = false
-    newColumnProperties = {[1]={[1]='',[2]=''}}
-    newColumnPropCount = 1
-    newColumnMappings = {}
-    newColumnMappingCount = 0
-    newColumnThresholds = {}
-    newColumnThresholdCount = 0
-    invalidInput = false
-    message = nil
-end
-
 local function DrawColumnTreeSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 1, 1)
     if ImGui.TreeNodeEx('Columns', ImGuiTreeNodeFlags.SpanFullWidth) then
@@ -130,7 +254,7 @@ local function DrawColumnTreeSelector()
         if selected then
             selectedItem = nil
             if selectedItemType ~= 'addnewcolumn' then
-                ResetColumnOptions()
+                newColumn = ColumnInput:new({})
             end
             selectedItemType = 'addnewcolumn'
         end
@@ -154,14 +278,6 @@ local function DrawColumnTreeSelector()
     end
 end
 
-local function ResetTabOptions()
-    newTabName = ''
-    newTabColumns = {[1]='Name'}
-    newTabColumnCount = 1
-    invalidInput = false
-    message = nil
-end
-
 local function DrawTabTreeSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 1, 1)
     if ImGui.TreeNodeEx('Tabs', ImGuiTreeNodeFlags.SpanFullWidth) then
@@ -171,7 +287,7 @@ local function DrawTabTreeSelector()
         if selected then
             selectedItem = nil
             if selectedItemType ~= 'addnewtab' then
-                ResetTabOptions()
+                newTab = TabInput:new({})
             end
             selectedItemType = 'addnewtab'
         end
@@ -230,89 +346,65 @@ local function LeftPaneWindow()
     end
 end
 
-local function BuildProperty()
-    local property = {}
-    property['Type'] = 'Observed'
-    if typeRadioValue == 2 then
-        property['Type'] = 'NetBots'
-    elseif typeRadioValue == 3 then
-        property['Type'] = 'Spawn'
-    end
-    if newPropertyDependsOnName ~= '' then
-        property['DependsOnName'] = newPropertyDependsOnName
-    end
-    if newPropertyDependsOnValue ~= '' then
-        property['DependsOnValue'] = newPropertyDependsOnValue
-    end
-    if newPropertyFromIDProperty ~= '' then
-        property['FromIDProperty'] = newPropertyFromIDProperty
-    end
-    return property
-end
-
 local function DrawAddPropertyOptions(x)
     ImGui.TextColored(1, 0, 1, 1, "Add New Property")
     ImGui.Separator()
     ImGui.Text('Type: ')
     ImGui.SameLine()
     HelpMarker('The source of the property value.\n\'Observed\' will get the value using MQ2DanNet.\n\'NetBots\' will get the value using MQ2NetBots.\n\'Spawn\' will get the value from the Spawn TLO.')
-    --ImGui.SameLine()
-    typeRadioValue, typeRadioPressed = ImGui.RadioButton("Observed", typeRadioValue, 1)
+    newProperty.Type,_ = ImGui.RadioButton("Observed", newProperty.Type, 1)
     ImGui.SameLine()
-    typeRadioValue, typeRadioPressed = ImGui.RadioButton("NetBots", typeRadioValue, 2)
+    newProperty.Type,_ = ImGui.RadioButton("NetBots", newProperty.Type, 2)
     ImGui.SameLine()
-    typeRadioValue, typeRadioPressed = ImGui.RadioButton("Spawn", typeRadioValue, 3)
+    newProperty.Type,_ = ImGui.RadioButton("Spawn", newProperty.Type, 3)
     
     ImGui.Text('Name(*): ')
     ImGui.SameLine()
     HelpMarker('The data member this property should display. Examples:\nObserved: \'Me.PctHPs\'\nNetBots: \'PctHPs\'\nSpawn: \'Distance3D\'\n')
-    newPropertyName, selected = ImGui.InputText('##newpropname', newPropertyName, 32)
+    newProperty.Name, selected = ImGui.InputText('##newpropname', newProperty.Name, 32)
 
-    if typeRadioValue == 1 then
+    if newProperty.Type == 1 then
         ImGui.Text('DependsOnName: ')
         ImGui.SameLine()
         HelpMarker('Optional. The name of another property which this property depends on. This property will be ignored for a character if the property it depends on doesn\'t have the desired value.')
-        newPropertyDependsOnName, selected = ImGui.InputText('##newpropdepname', newPropertyDependsOnName, 32)
+        newProperty.DependsOnName, selected = ImGui.InputText('##newpropdepname', newProperty.DependsOnName, 32)
         ImGui.Text('DependsOnValue: ')
         ImGui.SameLine()
         HelpMarker('Optional. The value of another property which this property depends on. This property will be ignored for a character if the property it depends on doesn\'t have the desired value.')
-        newPropertyDependsOnValue, selected = ImGui.InputText('##newpropdepvalue', newPropertyDependsOnValue, 32)
-    elseif typeRadioValue == 3 then
+        newProperty.DependsOnValue, selected = ImGui.InputText('##newpropdepvalue', newProperty.DependsOnValue, 32)
+    elseif newProperty.Type == 3 then
         ImGui.Text('FromIDProperty: ')
         ImGui.SameLine()
         HelpMarker('Optional. The name of another property to use as the ID in the Spawn search. The property MUST return a Spawn ID.')
-        newPropertyFromIDProperty, selected = ImGui.InputText('##newpropfromid', newPropertyFromIDProperty, 32)
+        newProperty.FromIDProperty, selected = ImGui.InputText('##newpropfromid', newProperty.FromIDProperty, 32)
     end
     ImGui.Separator()
     if ImGui.Button('Save##newprop') then
-        local property = BuildProperty()
+        local property = newProperty:toProperty()
         local ok = false
-        ok, message = ValidateProperty(newPropertyName, property, -1)
+        ok, message = property:validate()
         if ok then
-            --print(string.format('Add property: type=%d name=%s dependsonname=%s dependsonvalue=%s fromidproperty=%s',
-            --        typeRadioValue, newPropertyName, newPropertyDependsOnName, newPropertyDependsOnValue, newPropertyFromIDProperty))
-            SETTINGS['Properties'][newPropertyName] = property
-            ResetPropertyOptions()
+            SETTINGS['Properties'][newProperty.Name] = property
             selectedItemType = nil
             configDirty = true
         else
-            invalidInput = true
+            newProperty.valid = false
         end
     end
-    if invalidInput then
+    if not newProperty.valid then
         ImGui.SameLine()
         ImGui.PushTextWrapPos(x-10)
-        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', message))
+        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', newProperty.message))
         ImGui.PopTextWrapPos()
     end
 end
 
-local function PropertyReferences(propName, draw)
+function Property:references(draw)
     local refFound = false
     for columnName,column in pairs(SETTINGS['Columns']) do
         if column['Properties'] then
             for propKey,propValue in pairs(column['Properties']) do
-                if propValue == propName then
+                if propValue == self.Name then
                     refFound = true
                     if draw then
                         ImGui.TextColored(0, 1, 1, 1, 'Column: ')
@@ -328,7 +420,7 @@ local function PropertyReferences(propName, draw)
         end
     end
     for propNameIter,property in pairs(SETTINGS['Properties']) do
-        if property['DependsOnName'] == propName then
+        if property['DependsOnName'] == self.Name then
             refFound = true
             if draw then
                 ImGui.TextColored(0, 1, 1, 1, 'Property: ')
@@ -337,9 +429,9 @@ local function PropertyReferences(propName, draw)
                 ImGui.SameLine()
                 ImGui.TextColored(0, 1, 1, 1, ' DependsOnName: ')
                 ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, propName)
+                ImGui.TextColored(0, 1, 0, 1, self.Name)
             end
-        elseif property['FromIDProperty'] == propName then
+        elseif property['FromIDProperty'] == self.Name then
             refFound = true
             if draw then
                 ImGui.TextColored(0, 1, 1, 1, 'Property: ')
@@ -348,66 +440,60 @@ local function PropertyReferences(propName, draw)
                 ImGui.SameLine()
                 ImGui.TextColored(0, 1, 1, 1, ' FromIDProperty: ')
                 ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, propName)
+                ImGui.TextColored(0, 1, 0, 1, self.Name)
             end
         end
     end
     return refFound
 end
 
-local function DrawPropertySettings()
-    local propSettings = SETTINGS['Properties'][selectedItem]
-    if propSettings ~= nil then
-        ImGui.TextColored(1, 0, 1, 1, selectedItem)
-        ImGui.Separator()
-        if selectedItem ~= 'Me.Class.ShortName' then
-            if ImGui.SmallButton('Edit##'..selectedItem) then
-                newPropertyName = selectedItem
-                if propSettings['Type'] == 'Observed' then
-                    typeRadioValue = 1
-                    newPropertyDependsOnName = propSettings['DependsOnName']
-                    newPropertyDependsOnValue = propSettings['DependsOnValue']
-                elseif propSettings['Type'] == 'Spawn' then
-                    typeRadioValue = 3
-                    newPropertyFromIDProperty = propSettings['FromIDProperty']
-                else
-                    typeRadioValue = 2
-                end
-                selectedItemType = 'addnewproperty'
-            end
-            ImGui.SameLine()
-            if ImGui.SmallButton('Delete##'..selectedItem) then
-                if not PropertyReferences(selectedItem, false) then
-                    SETTINGS['Properties'][selectedItem] = nil
-                    selectedItemType = nil
-                    selectedItem = nil
-                    configDirty = true
-                end
-            end
+function Property:draw()
+    ImGui.TextColored(1, 0, 1, 1, self.Name)
+    ImGui.Separator()
+    if self.Name ~= 'Me.Class.ShortName' then
+        if ImGui.SmallButton('Edit##'..self.Name) then
+            newProperty = PropertyInput:fromProperty(self)
+            selectedItemType = 'addnewproperty'
         end
-        ImGui.Text('Type: ')
         ImGui.SameLine()
-        ImGui.TextColored(0, 1, 0, 1, propSettings['Type'])
-        if propSettings['DependsOnName'] then
-            ImGui.Text('DependsOnName: ')
-            ImGui.SameLine()
-            ImGui.TextColored(0, 1, 0, 1, propSettings['DependsOnName'])
+        if ImGui.SmallButton('Delete##'..self.Name) then
+            if not self:references(false) then
+                SETTINGS['Properties'][self.Name] = nil
+                selectedItemType = nil
+                selectedItem = nil
+                configDirty = true
+            end
         end
-        if propSettings['DependsOnValue'] then
-            ImGui.Text('DependsOnValue: ')
-            ImGui.SameLine()
-            ImGui.TextColored(0, 1, 0, 1, propSettings['DependsOnValue'])
-        end
-        if propSettings['FromIDProperty'] then
-            ImGui.Text('FromIDProperty: ')
-            ImGui.SameLine()
-            ImGui.TextColored(0, 1, 0, 1, propSettings['FromIDProperty'])
-        end
-        ImGui.Separator()
-        ImGui.Text('References:')
-        ImGui.Indent(10)
-        PropertyReferences(selectedItem, true)
-        ImGui.Indent(-10)
+    end
+    ImGui.Text('Type: ')
+    ImGui.SameLine()
+    ImGui.TextColored(0, 1, 0, 1, self.Type)
+    if self.DependsOnName then
+        ImGui.Text('DependsOnName: ')
+        ImGui.SameLine()
+        ImGui.TextColored(0, 1, 0, 1, self.DependsOnName)
+    end
+    if self.DependsOnValue then
+        ImGui.Text('DependsOnValue: ')
+        ImGui.SameLine()
+        ImGui.TextColored(0, 1, 0, 1, self.DependsOnValue)
+    end
+    if self.FromIDProperty then
+        ImGui.Text('FromIDProperty: ')
+        ImGui.SameLine()
+        ImGui.TextColored(0, 1, 0, 1, self.FromIDProperty)
+    end
+    ImGui.Separator()
+    ImGui.Text('References:')
+    ImGui.Indent(10)
+    self:references(true)
+    ImGui.Indent(-10)
+end
+
+local function DrawPropertySettings()
+    local property = Property:new(SETTINGS['Properties'][selectedItem])
+    if property then
+        property:draw()
     end
 end
 
@@ -415,65 +501,34 @@ local classes = {'all', 'melee', 'caster', 'hybrids', 'ranged', 'ber', 'brd',
         'bst', 'clr', 'dru', 'enc', 'mag', 'mnk', 'nec', 'pal', 'shd', 'rng', 
         'rog', 'shm', 'war', 'wiz'}
 
-local function BuildColumn()
-    local column = {
-        Type='property'
-    }
-    if typeRadioValue == 1 then
-        column['Ascending']=newColumnAscending
-        column['InZone']=newColumnInZone
-        column['Percentage']=newColumnPercentage
-        column['Properties']={}
-        if newColumnMappingCount > 0 then
-            column['Mappings']={}
-        end
-        for i,j in ipairs(newColumnProperties) do
-            column['Properties'][j[1]] = j[2]
-        end
-        for i,j in ipairs(newColumnMappings) do
-            column['Mappings'][j[1]] = j[2]
-        end
-        if newColumnThresholdCount > 0 then
-            column['Thresholds']={}
-        end
-        for i,j in ipairs(newColumnThresholds) do
-            column['Thresholds'][i] = tonumber(j)
-        end
-    elseif typeRadioValue == 2 then
-        column['Type'] = 'button'
-        column['Action'] = newColumnAction
-    end
-    return column
-end
-
 local function DrawAddColumnOptions(x)
     ImGui.TextColored(1, 0, 1, 1, "Add New Column")
     ImGui.Separator()
     ImGui.Text('Type: ')
     ImGui.SameLine()
     HelpMarker('Choose whether the column will display property values or buttons.')
-    typeRadioValue, typeRadioPressed = ImGui.RadioButton("Property", typeRadioValue, 1)
+    newColumn.Type,_ = ImGui.RadioButton("Property", newColumn.Type, 1)
     ImGui.SameLine()
-    typeRadioValue, typeRadioPressed = ImGui.RadioButton("Button", typeRadioValue, 2)
+    newColumn.Type,_ = ImGui.RadioButton("Button", newColumn.Type, 2)
 
     ImGui.Text('Name(*): ')
     ImGui.SameLine()
     HelpMarker('The name of the column which will appear in the table column header.')
-    newColumnName, selected = ImGui.InputText('##newcolumnname', newColumnName, 32)
+    newColumn.Name, selected = ImGui.InputText('##newcolumnname', newColumn.Name, 32)
         
-    if typeRadioValue == 1 then
+    if newColumn.Type == 1 then
         ImGui.Text('Properties(*): ')
         ImGui.SameLine()
         HelpMarker('The property values which will be displayed in this column. The column can display different properties for different classes.')
-        for propIdx, propName in ipairs(newColumnProperties) do
-            if newColumnProperties[propIdx] ~= nil then
+        for propIdx, propName in ipairs(newColumn.Properties) do
+            if newColumn.Properties[propIdx] ~= nil then
                 ImGui.PushItemWidth(80)
-                shouldDrawCombo = ImGui.BeginCombo("##colpropcombo1"..propIdx, newColumnProperties[propIdx][1])
+                shouldDrawCombo = ImGui.BeginCombo("##colpropcombo1"..propIdx, newColumn.Properties[propIdx][1])
                 if shouldDrawCombo then
                     for _,class in pairs(classes) do
-                        selected = ImGui.Selectable(class, newColumnProperties[propIdx][1] == class)
+                        selected = ImGui.Selectable(class, newColumn.Properties[propIdx][1] == class)
                         if selected then
-                            newColumnProperties[propIdx][1] = class
+                            newColumn.Properties[propIdx][1] = class
                         end
                     end
                     ImGui.EndCombo()
@@ -481,12 +536,12 @@ local function DrawAddColumnOptions(x)
                 ImGui.PopItemWidth()
                 ImGui.SameLine()
                 ImGui.PushItemWidth(160)
-                shouldDrawCombo = ImGui.BeginCombo("##colpropcombo2"..propIdx, newColumnProperties[propIdx][2])
+                shouldDrawCombo = ImGui.BeginCombo("##colpropcombo2"..propIdx, newColumn.Properties[propIdx][2])
                 if shouldDrawCombo then
                     for cpropname,_ in pairs(SETTINGS['Properties']) do
-                        selected = ImGui.Selectable(cpropname, newColumnProperties[propIdx][2] == cpropname)
+                        selected = ImGui.Selectable(cpropname, newColumn.Properties[propIdx][2] == cpropname)
                         if selected then
-                            newColumnProperties[propIdx][2] = cpropname
+                            newColumn.Properties[propIdx][2] = cpropname
                         end
                     end
                     ImGui.EndCombo()
@@ -495,132 +550,118 @@ local function DrawAddColumnOptions(x)
                 ImGui.SameLine()
                 if ImGui.Button('X##deleteRow'..propIdx) then
                     local propIter = propIdx
-                    for prop = propIdx+1, #newColumnProperties do
-                        newColumnProperties[propIter] = newColumnProperties[prop]
+                    for prop = propIdx+1, #newColumn.Properties do
+                        newColumn.Properties[propIter] = newColumn.Properties[prop]
                         propIter = propIter+1
                     end
-                    newColumnProperties[propIter] = nil
-                    newColumnPropCount = newColumnPropCount - 1
+                    newColumn.Properties[propIter] = nil
+                    newColumn.PropertyCount = newColumn.PropertyCount - 1
                 end
             end
         end
         if ImGui.Button('+##properties') then
-            newColumnPropCount = newColumnPropCount + 1
-            newColumnProperties[newColumnPropCount] = {[1]='',[2]=''}
+            newColumn.PropertyCount = newColumn.PropertyCount + 1
+            newColumn.Properties[newColumn.PropertyCount] = {[1]='',[2]=''}
         end
         
         ImGui.Text('Mappings: ')
         ImGui.SameLine()
         HelpMarker('Optional. Define mappings from raw property values to values that should be displayed.\nExample: Map \'TRUE\' to \'Paused\' for \'Macro.Paused\'.')
-        for mappingIdx, mappingName in ipairs(newColumnMappings) do
-            if newColumnMappings[mappingIdx] ~= nil then
+        for mappingIdx, mappingName in ipairs(newColumn.Mappings) do
+            if newColumn.Mappings[mappingIdx] ~= nil then
                 ImGui.PushItemWidth(100)
-                newColumnMappings[mappingIdx][1], selected = ImGui.InputText('##newcolmappings1-'..tostring(mappingIdx), newColumnMappings[mappingIdx][1], 32)
+                newColumn.Mappings[mappingIdx][1], selected = ImGui.InputText('##newcolmappings1-'..tostring(mappingIdx), newColumn.Mappings[mappingIdx][1], 32)
                 ImGui.SameLine()
-                newColumnMappings[mappingIdx][2], selected = ImGui.InputText('##newcolmappings2-'..tostring(mappingIdx), newColumnMappings[mappingIdx][2], 32)
+                newColumn.Mappings[mappingIdx][2], selected = ImGui.InputText('##newcolmappings2-'..tostring(mappingIdx), newColumn.Mappings[mappingIdx][2], 32)
                 ImGui.SameLine()
                 if ImGui.Button('X##deleteMappingRow'..mappingIdx) then
                     local mappingIter = mappingIdx
-                    for mapping = mappingIdx+1, #newColumnMappings do
-                        newColumnMappings[mappingIter] = newColumnMappings[mapping]
+                    for mapping = mappingIdx+1, #newColumn.Mappings do
+                        newColumn.Mappings[mappingIter] = newColumn.Mappings[mapping]
                         mappingIter = mappingIter+1
                     end
-                    newColumnMappings[mappingIter] = nil
-                    newColumnMappingCount = newColumnMappingCount - 1
+                    newColumn.Mappings[mappingIter] = nil
+                    newColumn.MappingCount = newColumn.MappingCount - 1
                 end
                 ImGui.PopItemWidth()
             end
         end
         if ImGui.Button('+##mappings') then
-            newColumnMappingCount = newColumnMappingCount + 1
-            newColumnMappings[newColumnMappingCount] = {[1]='',[2]=''}
+            newColumn.MappingCount = newColumn.MappingCount + 1
+            newColumn.Mappings[newColumn.MappingCount] = {[1]='',[2]=''}
         end
 
         ImGui.Text('Thresholds: ')
         ImGui.SameLine()
         HelpMarker('Optional. Set up to (2) numbers, in increasing order, for column text color thresholds.\nExample: Set Me.PctHPs thresholds to 35, 70 so that values below 35 will be red, between 35-70 will be yellow, and above 70 will be green.')
-        for thresholdIdx, thresholdValue in ipairs(newColumnThresholds) do
-            if newColumnThresholds[thresholdIdx] ~= nil then
+        for thresholdIdx, thresholdValue in ipairs(newColumn.Thresholds) do
+            if newColumn.Thresholds[thresholdIdx] ~= nil then
                 ImGui.PushItemWidth(80)
-                newColumnThresholds[thresholdIdx], selected = ImGui.InputText('##newcolthresholds'..tostring(thresholdIdx), newColumnThresholds[thresholdIdx], 32)
+                newColumn.Thresholds[thresholdIdx], selected = ImGui.InputText('##newcolthresholds'..tostring(thresholdIdx), newColumn.Thresholds[thresholdIdx], 32)
                 ImGui.PopItemWidth()
                 ImGui.SameLine()
                 if ImGui.Button('X##deleteThresholdRow'..thresholdIdx) then
                     local thresholdIter = thresholdIdx
-                    for threshold = thresholdIdx+1, #newColumnThresholds do
-                        newColumnThresholds[thresholdIter] = newColumnThresholds[threshold]
+                    for threshold = thresholdIdx+1, #newColumn.Thresholds do
+                        newColumn.Thresholds[thresholdIter] = newColumn.Thresholds[threshold]
                         thresholdIter = thresholdIter+1
                     end
-                    newColumnThresholds[thresholdIter] = nil
-                    newColumnThresholdCount = newColumnThresholdCount - 1
+                    newColumn.Thresholds[thresholdIter] = nil
+                    newColumn.ThresholdCount = newColumn.ThresholdCount - 1
                 end
             end
         end
-        if newColumnThresholdCount < 2 then
+        if newColumn.ThresholdCount < 2 then
             if ImGui.Button('+##thresholds') then
-                newColumnThresholdCount = newColumnThresholdCount + 1
-                newColumnThresholds[newColumnThresholdCount] = ''
+                newColumn.ThresholdCount = newColumn.ThresholdCount + 1
+                newColumn.Thresholds[newColumn.ThresholdCount] = ''
             end
         end
 
         ImGui.Text('Percentage: ')
         ImGui.SameLine()
         HelpMarker('Check this box if the values displayed in this column are percents.')
-        newColumnPercentage, pressed = ImGui.Checkbox('##newcolumnpercent', newColumnPercentage)
+        newColumn.Percentage, pressed = ImGui.Checkbox('##newcolumnpercent', newColumn.Percentage)
         ImGui.Text('Ascending: ')
         ImGui.SameLine()
         HelpMarker('Check this box if higher values are \'better\', i.e. 100%% HP is better than 10%%.')
-        newColumnAscending, pressed = ImGui.Checkbox('##newcolumnascending', newColumnAscending)
+        newColumn.Ascending, pressed = ImGui.Checkbox('##newcolumnascending', newColumn.Ascending)
         ImGui.Text('InZone: ')
         ImGui.SameLine()
         HelpMarker('Check this box if this column should only display values for characters in the same zone.')
-        newColumnInZone, pressed = ImGui.Checkbox('##newcolumninzone', newColumnInZone)
+        newColumn.InZone, pressed = ImGui.Checkbox('##newcolumninzone', newColumn.InZone)
     elseif typeRadioValue == 2 then
         ImGui.Text('Action(*): ')
         ImGui.SameLine()
         HelpMarker('The action to take on left click. The string \'#botName#\' will be replaced with the character name from the row of the button.\nExample: \'/dex #botName# /mqp\'')
-        newColumnAction, selected = ImGui.InputText('##newcolumnaction', newColumnAction, 32)
+        newColumn.Action, selected = ImGui.InputText('##newcolumnaction', newColumn.Action, 32)
     end
     ImGui.Separator()
     if ImGui.Button('Save##newcolumn') then
-        local column = BuildColumn()
-        ok, message = ValidateColumn(newColumnName, column)
+        local column = newColumn:toColumn()
+        ok, message = column:validate()
         if ok then
-            --[[
-            print(string.format('Add column: name=%s type=%d percentage=%s ascending=%s inzone=%s action=%s', 
-                    newColumnName, typeRadioValue, newColumnPercentage, newColumnAscending, newColumnInZone, newColumnAction))
-            for i,j in ipairs(newColumnProperties) do
-                print(string.format('Column Property %s: %s', j[1], j[2]))
-            end
-            for i,j in ipairs(newColumnMappings) do
-                print(string.format('Column Mapping %s: %s', j[1], j[2]))
-            end
-            for i,j in ipairs(newColumnThresholds) do
-                print(string.format('Column Threshold %d: %s', i, j))
-            end
-            --]]
-            SETTINGS['Columns'][newColumnName] = column
+            SETTINGS['Columns'][newColumn.Name] = column
             selectedItemType = nil
-            ResetColumnOptions()
             configDirty = true
         else
-            invalidInput = true
+            newColumn.valid = false
         end
     end
-    if invalidInput then
+    if not newColumn.valid then
         ImGui.SameLine()
         ImGui.PushTextWrapPos(x-10)
-        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', message))
+        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', newColumn.message))
         ImGui.PopTextWrapPos()
     end
 end
 
-local function ColumnReferences(columnName, draw)
+function Column:references(draw)
     local refFound = false
     for _,tab in pairs(SETTINGS['Tabs']) do
         if tab['Columns'] then
             for _,columnNameIter in pairs(tab['Columns']) do
-                if columnName == columnNameIter then
+                if self.Name == columnNameIter then
                     refFound = true
                     if draw then
                         ImGui.TextColored(0, 1, 1, 1, 'Tab: ')
@@ -635,127 +676,98 @@ local function ColumnReferences(columnName, draw)
 end
 
 local function DrawColumnSettings()
-    local columnSettings = SETTINGS['Columns'][selectedItem]
-    if columnSettings ~= nil then
-        ImGui.TextColored(1, 0, 1, 1, selectedItem)
-        ImGui.Separator()
-        if selectedItem ~= 'Name' then
-            if ImGui.SmallButton('Edit##'..selectedItem) then
-                newColumnName = selectedItem
-                if columnSettings['Type'] == 'property' then
-                    typeRadioValue = 1
-                    newColumnAscending = columnSettings['Ascending']
-                    newColumnInZone = columnSettings['InZone']
-                    newColumnPercentage = columnSettings['Percentage']
-                    newColumnPropCount = 0
-                    newColumnProperties = {}
-                    if columnSettings['Properties'] then
-                        for propKey,propValue in pairs(columnSettings['Properties']) do
-                            newColumnPropCount = newColumnPropCount + 1
-                            newColumnProperties[newColumnPropCount] = {[1]=propKey,[2]=propValue}
-                        end
-                    end
-                    newColumnMappingCount = 0
-                    newColumnMappings = {}
-                    if columnSettings['Mappings'] then
-                        for mappingKey,mappingValue in pairs(columnSettings['Mappings']) do
-                            newColumnMappingCount = newColumnMappingCount + 1
-                            newColumnMappings[newColumnMappingCount] = {[1]=mappingKey,[2]=mappingValue}
-                        end
-                    end
-                    newColumnThresholdCount = 0
-                    newColumnThresholds = {}
-                    if columnSettings['Thresholds'] then
-                        for thresholdIdx,thresholdValue in ipairs(columnSettings['Thresholds']) do
-                            newColumnThresholdCount = newColumnThresholdCount + 1
-                            newColumnThresholds[thresholdIdx] = tostring(thresholdValue)
-                        end
-                    end
-                else
-                    typeRadioValue = 2
-                    newColumnAction = columnSettings['Action']
-                end
-                selectedItemType = 'addnewcolumn'
-            end
-            ImGui.SameLine()
-            if ImGui.SmallButton('Delete##'..selectedItem) then
-                if not ColumnReferences(selectedItem, false) then
-                    SETTINGS['Columns'][selectedItem] = nil
-                    selectedItemType = nil
-                    selectedItem = nil
-                    configDirty = true
-                end
-            end
-        end
-        ImGui.Text('Type: ')
-        ImGui.SameLine()
-        ImGui.TextColored(0, 1, 0, 1, columnSettings['Type'])
-        
-        if columnSettings['Type'] == 'property' then
-            ImGui.Text('Properties: ')
-            if columnSettings['Properties'] then
-                ImGui.Indent(10)
-                for i,j in pairs(columnSettings['Properties']) do
-                    ImGui.TextColored(0, 1, 1, 1, i..': ')
-                    ImGui.SameLine()
-                    ImGui.TextColored(0, 1, 0, 1, j)
-                end
-                ImGui.Indent(-10)
-            end
-            ImGui.Text('Thresholds: ')
-            if columnSettings['Thresholds'] then
-                ImGui.Indent(10)
-                for i,j in ipairs(columnSettings['Thresholds']) do
-                    ImGui.TextColored(0, 1, 1, 1, tostring(i)..': ')
-                    ImGui.SameLine()
-                    ImGui.TextColored(0, 1, 0, 1, tostring(j))
-                end
-                ImGui.Indent(-10)
-            else
-                ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, 'None')
-            end
-            ImGui.Text('Mappings: ')
-            if columnSettings['Mappings'] then
-                ImGui.Indent(10)
-                for i,j in pairs(columnSettings['Mappings']) do
-                    ImGui.TextColored(0, 1, 1, 1, i..': ')
-                    ImGui.SameLine()
-                    ImGui.TextColored(0, 1, 0, 1, j)
-                end
-                ImGui.Indent(-10)
-            else
-                ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, 'None')
-            end
-            if columnSettings['Percentage'] then
-                ImGui.Text('Percentage: ')
-                ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, tostring(columnSettings['Percentage']))
-            end
-            if columnSettings['Ascending'] then
-                ImGui.Text('Ascending: ')
-                ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, tostring(columnSettings['Ascending']))
-            end
-            if columnSettings['InZone'] then
-                ImGui.Text('InZone: ')
-                ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, tostring(columnSettings['InZone']))
-            end
-        elseif columnSettings['Type'] == 'button' then
-            if columnSettings['Action'] then
-                ImGui.Text('Action: ')
-                ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, columnSettings['Action'])
-            end
-        end
-        ImGui.Separator()
-        ImGui.Text('References:')
-        ImGui.Indent(10)
-        ColumnReferences(selectedItem, true)
-        ImGui.Indent(-10)
+    local column = Column:new(SETTINGS['Columns'][selectedItem])
+    if column ~= nil then
+        column:draw()
     end
+end
+
+function Column:draw()
+    ImGui.TextColored(1, 0, 1, 1, self.Name)
+    ImGui.Separator()
+    if self.Name ~= 'Name' then
+        if ImGui.SmallButton('Edit##'..self.Name) then
+            newColumn = ColumnInput:fromColumn(self)
+            selectedItemType = 'addnewcolumn'
+        end
+        ImGui.SameLine()
+        if ImGui.SmallButton('Delete##'..self.Name) then
+            if not self:references(false) then
+                SETTINGS['Columns'][self.Name] = nil
+                selectedItemType = nil
+                selectedItem = nil
+                configDirty = true
+            end
+        end
+    end
+    ImGui.Text('Type: ')
+    ImGui.SameLine()
+    ImGui.TextColored(0, 1, 0, 1, self.Type)
+    
+    if self.Type == 'property' then
+        ImGui.Text('Properties: ')
+        if self.Properties then
+            ImGui.Indent(10)
+            for i,j in pairs(self.Properties) do
+                ImGui.TextColored(0, 1, 1, 1, i..': ')
+                ImGui.SameLine()
+                ImGui.TextColored(0, 1, 0, 1, j)
+            end
+            ImGui.Indent(-10)
+        end
+        ImGui.Text('Thresholds: ')
+        if self.Thresholds then
+            ImGui.Indent(10)
+            for i,j in ipairs(self.Thresholds) do
+                ImGui.TextColored(0, 1, 1, 1, tostring(i)..': ')
+                ImGui.SameLine()
+                ImGui.TextColored(0, 1, 0, 1, tostring(j))
+            end
+            ImGui.Indent(-10)
+        else
+            ImGui.SameLine()
+            ImGui.TextColored(0, 1, 0, 1, 'None')
+        end
+        ImGui.Text('Mappings: ')
+        if self.Mappings then
+            ImGui.Indent(10)
+            for i,j in pairs(self.Mappings) do
+                ImGui.TextColored(0, 1, 1, 1, i..': ')
+                ImGui.SameLine()
+                ImGui.TextColored(0, 1, 0, 1, j)
+            end
+            ImGui.Indent(-10)
+        else
+            ImGui.SameLine()
+            ImGui.TextColored(0, 1, 0, 1, 'None')
+        end
+        if self.Percentage then
+            ImGui.Text('Percentage: ')
+            ImGui.SameLine()
+            ImGui.TextColored(0, 1, 0, 1, tostring(self.Percentage))
+        end
+        if self.Ascending then
+            ImGui.Text('Ascending: ')
+            ImGui.SameLine()
+            ImGui.TextColored(0, 1, 0, 1, tostring(self.Ascending))
+        end
+        if self.InZone then
+            ImGui.Text('InZone: ')
+            ImGui.SameLine()
+            ImGui.TextColored(0, 1, 0, 1, tostring(self.InZone))
+        end
+    elseif self.Type == 'button' then
+        if self.Action then
+            ImGui.Text('Action: ')
+            ImGui.SameLine()
+            ImGui.TextColored(0, 1, 0, 1, self.Action)
+        end
+    end
+    ImGui.Separator()
+    ImGui.Text('References:')
+    ImGui.Indent(10)
+    self:references(true)
+    ImGui.Indent(-10)
 end
 
 local shouldDrawCombo = false
@@ -765,18 +777,18 @@ local function DrawAddTabOptions(x)
     ImGui.Text('Name(*): ')
     ImGui.SameLine()
     HelpMarker('The name of the tab which will be displayed in the Tab bar.')
-    newTabName, selected = ImGui.InputText('##newtabname', newTabName, 32)
+    newTab.Name, selected = ImGui.InputText('##newtabname', newTab.Name, 32)
     ImGui.Text('Columns: ')
     ImGui.SameLine()
     HelpMarker('The list of columns which will be displayed in the tab.')
-    for columnIdx, columnName in ipairs(newTabColumns) do
-        if newTabColumns[columnIdx] ~= nil then
-            shouldDrawCombo = ImGui.BeginCombo("##columncombo"..columnIdx, newTabColumns[columnIdx])
+    for columnIdx, columnName in ipairs(newTab.Columns) do
+        if newTab.Columns[columnIdx] ~= nil then
+            shouldDrawCombo = ImGui.BeginCombo("##columncombo"..columnIdx, newTab.Columns[columnIdx])
             if shouldDrawCombo then
                 for column,_ in pairs(SETTINGS['Columns']) do
-                    selected = ImGui.Selectable(column, newTabColumns[columnIdx] == column)
+                    selected = ImGui.Selectable(column, newTab.Columns[columnIdx] == column)
                     if selected then
-                        newTabColumns[columnIdx] = column
+                        newTab.Columns[columnIdx] = column
                     end
                 end
                 ImGui.EndCombo()
@@ -784,88 +796,83 @@ local function DrawAddTabOptions(x)
             ImGui.SameLine()
             if ImGui.Button('X##deleteRow'..columnIdx) then
                 local columnIter = columnIdx
-                for columns = columnIdx+1, #newTabColumns do
-                    newTabColumns[columnIter] = newTabColumns[columns]
+                for columns = columnIdx+1, #newTab.Columns do
+                    newTab.Columns[columnIter] = newTab.Columns[columns]
                     columnIter = columnIter+1
                 end
-                newTabColumns[columnIter] = nil
-                newTabColumnCount = newTabColumnCount - 1
+                newTab.Columns[columnIter] = nil
+                newTab.ColumnCount = newTab.ColumnCount - 1
             end
         end
     end
     if ImGui.Button('+') then
-        newTabColumnCount = newTabColumnCount + 1
-        newTabColumns[newTabColumnCount] = ''
+        newTab.ColumnCount = newTab.ColumnCount + 1
+        newTab.Columns[newTab.ColumnCount] = ''
     end
     ImGui.Separator()
     if ImGui.Button('Save##newtab') then
         local ok = false
-        local tab = {Name=newTabName,Columns=newTabColumns}
-        ok, message = ValidateTab(tab, #SETTINGS['Tabs']+1)
+        local tab = newTab:toTab()
+        ok, message = tab:validate()
         if ok then
-            --[[
-            print(string.format('Add tab: name=%s', newTabName))
-            for i,j in ipairs(newTabColumns) do
-                print(string.format('Column %s: %s', i, j))
-            end
-            --]]
             local foundExisting = false
             for tabIdx,existingTab in ipairs(SETTINGS['Tabs']) do
-                if existingTab['Name'] == newTabName then
+                if existingTab['Name'] == newTab.Name then
                     -- replace existing tab
-                    existingTab['Columns'] = newTabColumns
+                    existingTab['Columns'] = newTab.Columns
                     foundExisting = true
                 end
             end
             if not foundExisting then
                 table.insert(SETTINGS['Tabs'], tab)
             end
-            ResetTabOptions()
             selectedItemType = nil
             configDirty = true
         else
-            invalidInput = true
+            newTab.valid = false
         end
     end
-    if invalidInput then
+    if not newTab.valid then
         ImGui.SameLine()
         ImGui.PushTextWrapPos(x-10)
-        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', message))
+        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', newTab.message))
         ImGui.PopTextWrapPos()
     end
 end
 
 local function DrawTabSettings()
-    local tab = SETTINGS['Tabs'][selectedItem]
+    local tab = Tab:new(SETTINGS['Tabs'][selectedItem])
     if tab then
-        ImGui.TextColored(1, 0, 1, 1, tab['Name'])
-        ImGui.Separator()
-        if ImGui.SmallButton('Edit##'..tab['Name']) then
-            newTabName = tab['Name']
-            newTabColumns = tab['Columns']
-            newTabColumnCount = #tab['Columns']
-            selectedItemType = 'addnewtab'
+        tab:draw()
+    end
+end
+
+function Tab:draw()
+    ImGui.TextColored(1, 0, 1, 1, self.Name)
+    ImGui.Separator()
+    if ImGui.SmallButton('Edit##'..self.Name) then
+        newTab = TabInput:fromTab(self)
+        selectedItemType = 'addnewtab'
+    end
+    ImGui.SameLine()
+    if ImGui.SmallButton('Delete##'..self.Name) then
+        local i = 1
+        local tabIter = selectedItem
+        for tabIdx = tabIter+1, #SETTINGS['Tabs'] do
+            SETTINGS['Tabs'][tabIter] = SETTINGS['Tabs'][tabIdx]
+            tabIter = tabIter+1
         end
-        ImGui.SameLine()
-        if ImGui.SmallButton('Delete##'..tab['Name']) then
-            local i = 1
-            local tabIter = selectedItem
-            for tabIdx = tabIter+1, #SETTINGS['Tabs'] do
-                SETTINGS['Tabs'][tabIter] = SETTINGS['Tabs'][tabIdx]
-                tabIter = tabIter+1
-            end
-            SETTINGS['Tabs'][tabIter] = nil
-            selectedItemType = nil
-            selectedItem = nil
-            configDirty = true
-        end
-        ImGui.Text('Columns:')
-        if tab['Columns'] then
-            for columnIdx,column in ipairs(tab['Columns']) do
-                ImGui.Text(string.format('%d: ', columnIdx))
-                ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, column)
-            end
+        SETTINGS['Tabs'][tabIter] = nil
+        selectedItemType = nil
+        selectedItem = nil
+        configDirty = true
+    end
+    ImGui.Text('Columns:')
+    if self.Columns then
+        for columnIdx,column in ipairs(self.Columns) do
+            ImGui.Text(string.format('%d: ', columnIdx))
+            ImGui.SameLine()
+            ImGui.TextColored(0, 1, 0, 1, column)
         end
     end
 end
