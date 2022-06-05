@@ -1,4 +1,4 @@
--- boxhud/configpanel.lua 2.1.2 -- aquietone
+-- boxhud/configpanel.lua 2.1.3 -- aquietone
 --- @type ImGui
 require 'ImGui'
 require('boxhud.utils')
@@ -803,7 +803,8 @@ local function DrawGeneralSettings()
     DrawLabelAndTextValue('Refresh Interval: ', SETTINGS['RefreshInterval'])
     DrawLabelAndTextValue('Stale Data Timeout: ', SETTINGS['StaleDataTimeout'])
     ImGui.Separator()
-    TRANSPARENCY = DrawCheckBox('Transparent Window: ', '##transparency', TRANSPARENCY, 'Check this box to toggle transparency of the window.')
+    SETTINGS['Transparency'] = DrawCheckBox('Transparent Window: ', '##transparency', SETTINGS['Transparency'], 'Check this box to toggle transparency of the window.')
+    SETTINGS['TitleBar'] = DrawCheckBox('Show Title Bar: ', '##titlebar', SETTINGS['TitleBar'], 'Check this box to toggle showing the title bar.')
     ImGui.Separator()
     ImGui.Text('Column Text Colors:')
     SETTINGS['Colors']['Default'] = DrawColorEditor("Default Color", SETTINGS['Colors']['Default'])

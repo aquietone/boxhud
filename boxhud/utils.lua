@@ -1,15 +1,14 @@
--- boxhud/utils.lua 2.1.2 -- aquietone
+-- boxhud/utils.lua 2.1.3 -- aquietone
 --- @type mq
 local mq = require('mq')
 local converter = require('boxhud.settings-converter')
 dofile('boxhud/persistence.lua')
 
-VERSION = '2.1.2'
+VERSION = '2.1.3'
 
 SETTINGS_FILE = nil
 
 SETTINGS = {}
-TRANSPARENCY = false
 PEER_SOURCE = 'dannet'
 -- Default DanNet peer group to use
 PEER_GROUP = 'all'
@@ -469,6 +468,8 @@ local function ValidateOptionalSettings()
     SETTINGS['Colors']['IVU'] = SETTINGS['Colors']['IVU'] or {0.95, 0.98, 0.26}
     SETTINGS['Colors']['DoubleInvis'] = SETTINGS['Colors']['DoubleInvis'] or {0.68, 0.98, 0.98}
     SETTINGS['Colors']['NotInZone'] = SETTINGS['Colors']['NotInZone'] or {1,0,0}
+    SETTINGS['Transparency'] = SETTINGS['Transparency'] or false
+    SETTINGS['TitleBar'] = SETTINGS['TitleBar'] or false
     return true
 end
 
