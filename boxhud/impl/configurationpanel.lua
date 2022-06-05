@@ -6,6 +6,7 @@ local WindowInput = require 'boxhud.classes.inputs.windowinput'
 local ConfigurationPanel = require 'boxhud.classes.config.configurationpanel'
 local state = require 'boxhud.state'
 local settings = require 'boxhud.settings.settings'
+local library = require 'boxhud.library'
 
 function ConfigurationPanel:drawDisplaySettingsSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
@@ -28,6 +29,15 @@ function ConfigurationPanel:drawPropertiesTreeSelector()
                 self.NewProperty = PropertyInput()
             end
             self:selectItem(nil, 'addnewproperty')
+        end
+        self.Selected = ImGui.Selectable('Add from library...##property', self.SelectedItemType == 'addpfromlibrary')
+        if self.Selected then
+            if self.SelectedItemType ~= 'addpfromlibrary' then
+                self:selectItem(nil, 'addpfromlibrary')
+            else
+                self:selectItem(self.SelectedItem, 'addpfromlibrary')
+            end
+            
         end
         for propName, _ in pairs(state.Settings['Properties']) do
             ImGui.TableNextRow()
@@ -60,6 +70,14 @@ function ConfigurationPanel:drawColumnTreeSelector()
                 self.NewColumn = ColumnInput()
             end
             self:selectItem(nil, 'addnewcolumn')
+        end
+        self.Selected = ImGui.Selectable('Add from library...##column', self.SelectedItemType == 'addcfromlibrary')
+        if self.Selected then
+            if self.SelectedItemType ~= 'addcfromlibrary' then
+                self:selectItem(nil, 'addcfromlibrary')
+            else
+                self:selectItem(self.SelectedItem, 'addcfromlibrary')
+            end
         end
         for columnName, _ in pairs(state.Settings['Columns']) do
             ImGui.TableNextRow()
@@ -220,6 +238,50 @@ function ConfigurationPanel:drawDisplaySettings()
     end
 end
 
+function ConfigurationPanel:drawPropertyLibrary()
+    ImGui.Text('Property Library:')
+    ImGui.SameLine()
+    if ImGui.Button('Add Selected Property') and self.SelectedItem then
+        self.NewProperty = PropertyInput:fromProperty(library.Properties[self.SelectedItem])
+        self:selectItem(nil, 'addnewproperty')
+        return
+    end
+    local flags = bit32.bor(ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY)
+    if ImGui.BeginTable('##proplibrary'..self.Name, 1, flags, 0, 0, 0.0) then
+        for idx,property in ipairs(library.Properties) do
+            ImGui.TableNextRow()
+            ImGui.TableNextColumn()
+            self.Selected = ImGui.Selectable(property.Name, self.SelectedItem == idx)
+            if self.Selected then
+                self:selectItem(idx, 'addpfromlibrary')
+            end
+        end
+        ImGui.EndTable()
+    end
+end
+
+function ConfigurationPanel:drawColumnLibrary()
+    ImGui.Text('Column Library:')
+    ImGui.SameLine()
+    if ImGui.Button('Add Selected Column') and self.SelectedItem then
+        self.NewColumn = ColumnInput:fromColumn(library.Columns[self.SelectedItem])
+        self:selectItem(nil, 'addnewcolumn')
+        return
+    end
+    local flags = bit32.bor(ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY)
+    if ImGui.BeginTable('##columnlibrary'..self.Name, 1, flags, 0, 0, 0.0) then
+        for idx,column in ipairs(library.Columns) do
+            ImGui.TableNextRow()
+            ImGui.TableNextColumn()
+            self.Selected = ImGui.Selectable(column.Name, self.SelectedItem == idx)
+            if self.Selected then
+                self:selectItem(idx, 'addcfromlibrary')
+            end
+        end
+        ImGui.EndTable()
+    end
+end
+
 function ConfigurationPanel:drawAbout()
     ImGui.TextColored(1, 0, 1, 1, 'About')
     ImGui.Separator()
@@ -243,8 +305,12 @@ function ConfigurationPanel:drawRightPaneWindow()
             self:drawDisplaySettings()
         elseif self.SelectedItemType == 'addnewproperty' then
             self.NewProperty:draw(x, self)
+        elseif self.SelectedItemType == 'addpfromlibrary' then
+            self:drawPropertyLibrary()
         elseif self.SelectedItemType == 'addnewcolumn' then
             self.NewColumn:draw(x, self)
+        elseif self.SelectedItemType == 'addcfromlibrary' then
+            self:drawColumnLibrary()
         elseif self.SelectedItemType == 'addnewtab' then
             self.NewTab:draw(x, self)
         elseif self.SelectedItemType == 'addnewwindow' then
