@@ -4,6 +4,8 @@ require('boxhud.utils')
 
 local configpanel = {}
 
+local configDirty = false
+
 local typeRadioPressed = true
 local typeRadioValue = 1
 
@@ -192,6 +194,16 @@ local function DrawAboutSelector()
     end
 end
 
+local function DrawSaveChangesSelector()
+    ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 1, 1)
+    selected = ImGui.Selectable('Save Configuration', selectedItemType == 'savechanges')
+    ImGui.PopStyleColor(1)
+    if selected then
+        selectedItem = nil
+        selectedItemType = 'savechanges'
+    end
+end
+
 local function LeftPaneWindow()
     local x,y = ImGui.GetContentRegionAvail()
     if ImGui.BeginChild("left", 200, y-1, true) then
@@ -202,6 +214,7 @@ local function LeftPaneWindow()
         DrawTabTreeSelector()
         ImGui.Indent(24)
         DrawAboutSelector()
+        DrawSaveChangesSelector()
         ImGui.EndChild()
     end
 end
@@ -264,6 +277,7 @@ local function DrawAddPropertyOptions()
             SETTINGS['Properties'][newPropertyName] = property
             ResetPropertyOptions()
             selectedItemType = nil
+            configDirty = true
         else
             invalidInput = true
         end
@@ -519,6 +533,7 @@ local function DrawAddColumnOptions()
             SETTINGS['Columns'][newColumnName] = column
             selectedItemType = nil
             ResetColumnOptions()
+            configDirty = true
         else
             invalidInput = true
         end
@@ -671,6 +686,7 @@ local function DrawAddTabOptions()
             table.insert(SETTINGS['Tabs'], tab)
             ResetTabOptions()
             selectedItemType = nil
+            configDirty = true
         else
             invalidInput = true
         end
@@ -738,6 +754,18 @@ local function DrawAbout()
     ImGui.TextColored(0, 1, 0, 1, VERSION)
 end
 
+local function DrawSaveChanges()
+    if configDirty then
+        ImGui.TextColored(1, 0, 0, 1, 'Are you sure you wish to save your changes?')
+        if ImGui.Button('Yes') then
+            print_msg('Saving configuration')
+            local saved = SaveSettings()
+        end
+    else
+        ImGui.Text('No pending changes.')
+    end
+end
+
 local function RightPaneWindow()
     local x,y = ImGui.GetContentRegionAvail()
     if ImGui.BeginChild("right", x, y-1, true) then
@@ -757,6 +785,8 @@ local function RightPaneWindow()
             DrawTabSettings()
         elseif selectedItemType == 'about' then
             DrawAbout()
+        elseif selectedItemType == 'savechanges' then
+            DrawSaveChanges()
         end
         ImGui.EndChild()
     end
