@@ -464,7 +464,6 @@ function LoadSettings(arg)
 end
 
 function SaveSettings()
-    print(SETTINGS_FILE)
     local lua_dir = mq.TLO.MacroQuest.Path():gsub('\\', '/') .. '/lua'
     local boxhud_dir = lua_dir .. '/boxhud'
     local settings_path = string.format('%s/%s', boxhud_dir, SETTINGS_FILE)
