@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.0.4 -- aquietone
+boxhud.lua 2.0.5 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -42,7 +42,7 @@ local terminate = false
 local peerTable = nil
 local peersDirty = false
 -- Stores all live observed toon information that will be displayed
-local dataTable = {}
+local characters = {}
 -- Set to 1 to use classname instead of player names
 local anonymize = false
 local adminMode = false
@@ -50,6 +50,9 @@ local adminPeerSelected = 0
 local initialRun = true
 math.randomseed(os.time())
 local tableRandom = math.random(1,100)
+
+local resetObserversName = nil
+local storedCommand = nil
 
 -- lists of classes to check against for things like displaying mana % versus endurance %
 local casters = Set { 'cleric', 'clr', 'druid', 'dru', 'shaman', 'shm', 'enchanter',
@@ -63,25 +66,13 @@ local hybrids = Set { 'bard', 'brd', 'ranger', 'rng', 'beastlord', 'bst', 'shado
                       'shd', 'paladin', 'pal' }
 local ranged = Set { 'ranger', 'rng' }
 
--- Return list of DanNet peers from the configured peer group
--- peers list |peer1|peer2|peer3
-local function Peers()
-    local t = {}
-    if PEER_SOURCE == 'dannet' then
-        t = Split(mq.TLO.DanNet.Peers(PEER_GROUP)())
-    else
-        t={}
-        for i=1,mq.TLO.NetBots.Counts() do
-            table.insert(t, mq.TLO.NetBots.Client.Arg(i)())
-        end
-    end
-    if peerTable and not DoTablesMatch(peerTable, t) then
-        peersDirty = true
-    end
-    return t
-end
+Character = class(function(b, name, className)
+    b.name = name
+    b.className = className
+    b.properties = nil
+end)
 
-local function ShouldObserveProperty(botName, propSettings)
+function Character:shouldObserveProperty(propSettings)
     if not propSettings['DependsOnName'] then
         -- Does not depend on another property being observed
         return true
@@ -89,7 +80,7 @@ local function ShouldObserveProperty(botName, propSettings)
         -- Does not care what the value is of the property, just that it is observed
         return true
     elseif propSettings['DependsOnValue'] then
-        local dependentValue = mq.TLO.DanNet(botName).Observe(string.format('"%s"', propSettings['DependsOnName']))()
+        local dependentValue = mq.TLO.DanNet(self.name).Observe(string.format('"%s"', propSettings['DependsOnName']))()
         if dependentValue and string.lower(propSettings['DependsOnValue']):find(string.lower(dependentValue)) ~= nil then
             -- The value of the dependent property matches
             return true
@@ -100,18 +91,18 @@ local function ShouldObserveProperty(botName, propSettings)
 end
 
 -- Return whether or not a property is observed for a toon
-local function IsObserverSet(botName, propName, propSettings)
-    if mq.TLO.DanNet(botName).ObserveSet('"'..propName..'"')() then
+function Character:isObserverSet(propName, propSettings)
+    if not mq.TLO.DanNet(self.name)() or mq.TLO.DanNet(self.name).ObserveSet('"'..propName..'"')() then
         return true
     end
     return false
 end
 
 -- Return whether or not all expected observers are set for a toon 
-local function VerifyObservers(botName)
+function Character:verifyObservers()
     for propName, propSettings in pairs(SETTINGS['Properties']) do
-        if propSettings['Type'] == 'Observed' and ShouldObserveProperty(botName, propSettings) then
-            if not IsObserverSet(botName, propName, propSettings) then
+        if propSettings['Type'] == 'Observed' and self:shouldObserveProperty(propSettings) then
+            if not self:isObserverSet(propName, propSettings) then
                 return false
             end
         end
@@ -119,24 +110,24 @@ local function VerifyObservers(botName)
     return true
 end
 
-local function AddObserver(botName, propName, propSettings)
+function Character:addObserver(propName, propSettings)
     if propSettings['DependsOnName'] then
         for depPropName,depPropSettings in pairs(SETTINGS['Properties']) do
             if depPropName == propSettings['DependsOnName'] then
-                AddObserver(botName, depPropName, depPropSettings)
+                self:addObserver(depPropName, depPropSettings)
             end
         end
     end
-    if ShouldObserveProperty(botName, propSettings) then
+    if self:shouldObserveProperty(propSettings) then
         -- Add the observation if it is not set
-        if not mq.TLO.DanNet(botName).ObserveSet(string.format('"%s"', propName))() then
-            mq.cmdf('/dobserve %s -q "%s"', botName, propName)
+        if not mq.TLO.DanNet(self.name).ObserveSet(string.format('"%s"', propName))() then
+            mq.cmdf('/dobserve %s -q "%s"', self.name, propName)
         end
         local verifyStartTime = os.time(os.date("!*t"))
-        while not IsObserverSet(botName, propName, propSettings) do
+        while not self:isObserverSet(propName, propSettings) do
             mq.delay(25)
             if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 20 then
-                print_err('Timed out waiting for observer to be added for \ay'..botName)
+                print_err('Timed out waiting for observer to be added for \ay'..self.name)
                 print_err('Exiting the script.')
                 mq.exit()
             end
@@ -144,16 +135,16 @@ local function AddObserver(botName, propName, propSettings)
     end
 end
 
-local function RemoveObserver(botName, propName, propSettings)
+function Character:removeObserver(propName, propSettings)
     -- Drop the observation if it is set
-    if mq.TLO.DanNet(botName).ObserveSet(string.format('"%s"', propName))() then
-        mq.cmdf('/dobserve %s -q "%s" -drop', botName, propName)
+    if mq.TLO.DanNet(self.name).ObserveSet(string.format('"%s"', propName))() then
+        mq.cmdf('/dobserve %s -q "%s" -drop', self.name, propName)
     end
     local verifyStartTime = os.time(os.date("!*t"))
-    while IsObserverSet(botName, propName, propSettings) do
+    while self:isObserverSet(propName, propSettings) do
         mq.delay(25)
         if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 20 then
-            print_err('Timed out waiting for observer to be removed for \ay'..botName)
+            print_err('Timed out waiting for observer to be removed for \ay'..self.name)
             print_err('Exiting the script.')
             mq.exit()
         end
@@ -161,21 +152,21 @@ local function RemoveObserver(botName, propName, propSettings)
 end
 
 -- Add or remove observers for the given toon
-local function ManageObservers(botName, drop)
+function Character:manageObservers(drop)
     if drop then
         for propName, propSettings in pairs(SETTINGS['Properties']) do
             if propSettings['Type'] == 'Observed' then
-                RemoveObserver(botName, propName, propSettings)
+                self:removeObserver(propName, propSettings)
             end
         end
-        print_msg('Removed observed properties for: \ay'..botName)
+        print_msg('Removed observed properties for: \ay'..self.name)
     else
         for propName, propSettings in pairs(SETTINGS['Properties']) do
             if propSettings['Type'] == 'Observed' then
-                AddObserver(botName, propName, propSettings)
+                self:addObserver(propName, propSettings)
             end
         end
-        print_msg('Added observed properties for: \ay'..botName)
+        print_msg('Added observed properties for: \ay'..self.name)
     end
 end
 
@@ -231,101 +222,88 @@ local function SetText(value, thresholds, ascending, percentage)
     ImGui.PopStyleColor(1)
 end
 
-local resetObserversName = nil
-local function DrawContextMenu(name, botName)
-    if ImGui.BeginPopupContextItem("##popup"..name) then
-        if ImGui.SmallButton("Target##"..name) then
-            ImGui.CloseCurrentPopup()
-            mq.cmdf('/target %s', name)
-        end
+function Character:drawCmdButton(label, action)
+    if ImGui.SmallButton(label) then
+        ImGui.CloseCurrentPopup()
+        mq.cmdf(action, self.name)
+    end
+end
+
+function Character:getDisplayName()
+    if anonymize then return string.upper(self.className) else return TitleCase(self.name) end
+end
+
+function Character:drawContextMenu()
+    if ImGui.BeginPopupContextItem("##popup"..self.name) then
+        self:drawCmdButton('Target##'..self.name, '/target %s')
         ImGui.SameLine()
-        if ImGui.SmallButton("Nav To##"..name) then
-            ImGui.CloseCurrentPopup()
-            mq.cmdf('/nav spawn %s', name)
-        end
+        self:drawCmdButton('Nav To##'..self.name, '/nav spawn %s')
         ImGui.SameLine()
-        if ImGui.SmallButton("Come To Me##"..name) then
-            ImGui.CloseCurrentPopup()
-            mq.cmdf('/dex %s /nav id ${Me.ID} log=critical', name)
-        end
-        if ImGui.SmallButton("G Inv##"..name) then
-            ImGui.CloseCurrentPopup()
-            mq.cmdf('/invite %s', name)
-        end
+        self:drawCmdButton('Come To Me##'..self.name, '/dex %s /nav id ${Me.ID}')
+        
+        self:drawCmdButton('G Inv##'..self.name, '/invite %s')
         ImGui.SameLine()
-        if ImGui.SmallButton("R Inv##"..name) then
-            ImGui.CloseCurrentPopup()
-            mq.cmdf('/raidinvite %s', name)
-        end
+        self:drawCmdButton('R Inv##'..self.name, '/raidinvite %s')
         ImGui.SameLine()
-        if ImGui.SmallButton("DZAdd##"..name) then
-            ImGui.CloseCurrentPopup()
-            mq.cmdf('/dzadd %s', name)
-        end
+        self:drawCmdButton('DZAdd##'..self.name, '/dzadd %s')
         ImGui.SameLine()
-        if ImGui.SmallButton("TAdd##"..name) then
+        self:drawCmdButton('TAdd##'..self.name, '/taskadd %s')
+        
+        if ImGui.SmallButton("Reset Obs##"..self.name) then
+            print_msg('Resetting observed properties for: \ay'..self.name)
             ImGui.CloseCurrentPopup()
-            mq.cmdf('/taskadd %s', name)
+            resetObserversName = self.name
         end
-        if ImGui.SmallButton("Reset Obs##"..name) then
-            print_msg('Resetting observed properties for: \ay'..name)
-            ImGui.CloseCurrentPopup()
-            resetObserversName = name
-        end
-        ImGui.Text('Send Command to '..botName..': ')
+        ImGui.Text('Send Command to '..self:getDisplayName()..': ')
         local textInput = ""
-        textInput, selected = ImGui.InputText("##input"..name, textInput, 32)
+        textInput, selected = ImGui.InputText("##input"..self.name, textInput, 32)
         if selected then
-            print_msg('Sending command: \ag/dex '..botName..' '..textInput)
+            print_msg('Sending command: \ag/dex '..self:getDisplayName()..' '..textInput)
             ImGui.CloseCurrentPopup()
-            mq.cmdf('/dex %s %s', name, textInput)
+            mq.cmdf('/dex %s %s', self.name, textInput)
         end
         ImGui.EndPopup()
     end
 end
 
-local storedCommand = nil
-local function DrawNameButton(name, botName, botInZone, botInvis)
-    -- Treat Name column special
-    -- Fill name column
-    local buttonText = TitleCase(botName)
+function Character:drawNameButton()
+    local buttonText = self:getDisplayName()
     local col = nil
-    if botInZone then
-        if not botInvis then
+    if self.properties['BotInZone'] then
+        if not self.properties['Me.Invis'] then
             col = SETTINGS['Colors']['InZone'] or {0,1,0}
         else
             col = SETTINGS['Colors']['Invis'] or {0.26, 0.98, 0.98}
-            buttonText = '('..TitleCase(botName)..')'
+            buttonText = '('..self:getDisplayName()..')'
         end
     else
         col = SETTINGS['Colors']['NotInZone'] or {1,0,0}
     end
     ImGui.PushStyleColor(ImGuiCol.Text, col[1], col[2], col[3], 1)
 
-    if ImGui.SmallButton(buttonText..'##'..name) then
-        storedCommand = string.format('/squelch /dex %s /foreground', name)
+    if ImGui.SmallButton(buttonText..'##'..self.name) then
+        storedCommand = string.format('/squelch /dex %s /foreground', self.name)
     end
     ImGui.PopStyleColor(1)
-    -- Context menu not working when using table API
-    DrawContextMenu(name, botName)
+    self:drawContextMenu()
 end
 
-local function DrawColumnProperty(botValues, botClass, botInZone, column)
-    if not column['InZone'] or (column['InZone'] and botInZone) then
+function Character:drawColumnProperty(column)
+    if not column['InZone'] or (column['InZone'] and self.properties['BotInZone']) then
         local value = 'NULL'
-        if column['Properties'][botClass] then
-            value = botValues[column['Properties'][botClass]]
-        elseif column['Properties']['ranged'] and ranged[botClass] then
-            value = botValues[column['Properties']['ranged']]
-        elseif column['Properties']['hybrids'] and hybrids[botClass] then
-            value = botValues[column['Properties']['hybrids']]
-        elseif column['Properties']['caster'] and casters[botClass] then
-            value = botValues[column['Properties']['caster']]
-        elseif column['Properties']['melee'] and melee[botClass] then
-            value = botValues[column['Properties']['melee']]
+        if column['Properties'][self.className] then
+            value = self.properties[column['Properties'][self.className]]
+        elseif column['Properties']['ranged'] and ranged[self.className] then
+            value = self.properties[column['Properties']['ranged']]
+        elseif column['Properties']['hybrids'] and hybrids[self.className] then
+            value = self.properties[column['Properties']['hybrids']]
+        elseif column['Properties']['caster'] and casters[self.className] then
+            value = self.properties[column['Properties']['caster']]
+        elseif column['Properties']['melee'] and melee[self.className] then
+            value = self.properties[column['Properties']['melee']]
         end
         if (value == 'NULL' or value == '') and column['Properties']['all'] then
-            value = botValues[column['Properties']['all']]
+            value = self.properties[column['Properties']['all']]
         end
         local thresholds = column['Thresholds']
         if value ~= 'NULL' then
@@ -337,11 +315,54 @@ local function DrawColumnProperty(botValues, botClass, botInZone, column)
     end
 end
 
-local function DrawColumnButton(name, columnName, columnAction)
-    if ImGui.SmallButton(columnName..'##'..name) then
-        storedCommand = columnAction:gsub('#botName#', name)
+function Character:drawColumnButton(columnName, columnAction)
+    if ImGui.SmallButton(columnName..'##'..self.name) then
+        storedCommand = columnAction:gsub('#botName#', self.name)
         print_msg('Run command: \ag'..storedCommand)
     end
+end
+
+function Character:updateCharacterProperties(currTime)
+    local properties = {}
+    local charSpawnData = mq.TLO.Spawn('='..self.name)
+    properties['Me.ID'] = charSpawnData.ID()
+    properties['Me.Invis'] = charSpawnData.Invis()
+
+    -- Fill in data from this toons observed properties
+    for propName, propSettings in pairs(SETTINGS['Properties']) do
+        if propSettings['Type'] == 'Observed' then
+            if self:shouldObserveProperty(propSettings) then
+                properties[propName] = mq.TLO.DanNet(self.name).Observe('"'..propName..'"')()
+            else
+                properties[propName] = ''
+            end
+        elseif propSettings['Type'] == 'NetBots' then
+            -- tostring instead of ending with () because class returned a number instead of class string
+            if propName:find('Class') then
+                properties[propName] = tostring(mq.TLO.NetBots(TitleCase(self.name))[propName])
+            else
+                properties[propName] = mq.TLO.NetBots(TitleCase(self.name))[propName]()
+            end
+        elseif propSettings['Type'] == 'Spawn' then
+            if propSettings['FromIDProperty'] then
+                properties[propName] = mq.TLO.Spawn('id '..properties[propSettings['FromIDProperty']])[propName]()
+            else
+                properties[propName] = charSpawnData[propName]()
+                if type(properties[propName]) == 'number' then
+                    properties[propName] = string.format("%.2f", properties[propName])
+                end
+            end
+        end
+    end
+
+    if SETTINGS['DanNetPeerGroup'] ~= 'zone' then
+        properties['BotInZone'] = properties['Me.ID'] ~= 0
+    else
+        properties['BotInZone'] = true
+    end
+    properties['lastUpdated'] = currTime
+    self.className = properties[CLASS_VAR]
+    self.properties = properties
 end
 
 local current_sort_specs = nil
@@ -363,9 +384,9 @@ local function CompareWithSortSpecs(a, b)
         if column['Name'] == 'Name' or not column['Properties'] or not column['Properties']['all'] then
             aVal = a
             bVal = b
-        elseif dataTable[a] and dataTable[b] then
-            aVal = dataTable[a][column['Properties']['all']] or -1
-            bVal = dataTable[b][column['Properties']['all']] or -1
+        elseif characters[a].properties and characters[b].properties then
+            aVal = characters[a].properties[column['Properties']['all']] or -1
+            bVal = characters[b].properties[column['Properties']['all']] or -1
         else
             aVal = a
             bVal = b
@@ -401,7 +422,7 @@ local function CompareWithSortSpecs(a, b)
     return a < b
 end
 
-local function DrawHUDColumns(columns, tabName)
+local function DrawTableTab(columns, tabName)
     local flags = bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Reorderable, ImGuiTableFlags.Hideable, ImGuiTableFlags.MultiSortable,
             ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY, ImGuiTableFlags.NoSavedSettings)
     if ImGui.BeginTable('##bhtable'..tabName..tostring(tableRandom), #columns, flags, 0, 0, 0.0) then
@@ -419,7 +440,7 @@ local function DrawHUDColumns(columns, tabName)
         local sort_specs = ImGui.TableGetSortSpecs()
         if sort_specs then
             if sort_specs.SpecsDirty or peersDirty then
-                if #peerTable > 1 then
+                if #peerTable > 0 then
                     current_sort_specs = sort_specs
                     current_columns = columns
                     sortedPeers = TableClone(peerTable)
@@ -428,6 +449,7 @@ local function DrawHUDColumns(columns, tabName)
                     current_columns = nil
                 end
                 sort_specs.SpecsDirty = false
+                peersDirty = false
             end
         end
 
@@ -441,31 +463,21 @@ local function DrawHUDColumns(columns, tabName)
         while clipper:Step() do
             for row_n = clipper.DisplayStart, clipper.DisplayEnd - 1, 1 do
                 local clipName = sortedPeers[row_n+1]
-                local item = dataTable[clipName]
-                if item ~= nil then
-                    local botName = clipName
-                    local botInZone = item['BotInZone']
-                    local botInvis = item['Me.Invis']
-                    local botClass = item[CLASS_VAR]
-                    if botClass then
-                        botClass = botClass:lower()
-                    end
-                    if anonymize then
-                        botName = botClass
-                    end
+                local char = characters[clipName]
+                if char and char.properties then
                     ImGui.PushID(clipName)
                     ImGui.TableNextRow()
                     ImGui.TableNextColumn()
                     for i,columnName in ipairs(columns) do
                         local column = SETTINGS['Columns'][columnName]
                         if columnName == 'Name' then
-                            DrawNameButton(clipName, botName, botInZone, botInvis)
+                            char:drawNameButton()
                         else
                             -- Default column type is property (observed or spawn properties)
                             if not column['Type'] or column['Type'] == 'property' then
-                                DrawColumnProperty(item, botClass, botInZone, column)
+                                char:drawColumnProperty(column)
                             elseif column['Type'] == 'button' then
-                                DrawColumnButton(clipName, columnName, column['Action'])
+                                char:drawColumnButton(columnName, column['Action'])
                             end
                         end
                         if i < #columns then
@@ -487,7 +499,7 @@ local function DrawHUDTabs()
             ImGui.PushID(tab['Name'])
             if ImGui.BeginTabItem(tab['Name']) then
                 if tab['Columns'] and #tab['Columns'] > 0 then
-                    DrawHUDColumns(tab['Columns'], tab['Name'])
+                    DrawTableTab(tab['Columns'], tab['Name'])
                     ImGui.EndTabItem()
                 else
                     ImGui.Text('No columns defined for tab')
@@ -498,7 +510,6 @@ local function DrawHUDTabs()
         end
 
         -- Admin tab only allows resetting observers, so only show if dannet is being used
-        
         if IsUsingDanNet() then
             if ImGui.BeginTabItem('Admin') then
                 ImGui.Text('DanNet Peer Group: ')
@@ -515,10 +526,11 @@ local function DrawHUDTabs()
             end
         end
 
-
         if ImGui.BeginTabItem('Configuration') then
             ConfigurationTab()
+            ImGui.EndTabItem()
         end
+
         ImGui.EndTabBar()
     end
 end
@@ -534,11 +546,8 @@ local HUDGUI = function()
             ImGui.SetWindowSize(460, 177)
             initialRun = false
         end
-        --if SETTINGS['Tabs'] and #SETTINGS['Tabs'] > 0 then
-            DrawHUDTabs()
-        --elseif SETTINGS['Columns'] and #SETTINGS['Columns'] > 0 then
-        --    DrawHUDColumns(SETTINGS['Columns'], 'notabs')
-        --end
+
+        DrawHUDTabs()
 
         ImGui.End()
     end
@@ -558,14 +567,14 @@ local Admin = function(action, name)
         end
         if name == nil then
             print_msg('Resetting observed properties for: \ayALL')
-            for _, botName in pairs(peerTable) do
-                ManageObservers(botName, true)
-                ManageObservers(botName, false)
+            for _,char in pairs(characters) do
+                char:manageObservers(true)
+                char:manageObservers(false)
             end
         else
             print_msg('Resetting observed properties for: \ay'..name)
-            ManageObservers(name, true)
-            ManageObservers(name, false)
+            characters[name]:manageObservers(true)
+            characters[name]:manageObservers(false)
         end
     end
 end
@@ -604,53 +613,11 @@ local function SetupBindings()
     mq.bind('/bhadmin', Admin)
 end
 
-local function UpdateBotValues(botName, currTime)
-    local botValues = {}
-    local botSpawnData = mq.TLO.Spawn('='..botName)
-    botValues['Me.ID'] = botSpawnData.ID()
-    botValues['Me.Invis'] = botSpawnData.Invis()
-
-    -- Fill in data from this toons observed properties
-    for propName, propSettings in pairs(SETTINGS['Properties']) do
-        if propSettings['Type'] == 'Observed' then
-            if ShouldObserveProperty(botName, propSettings) then
-                botValues[propName] = mq.TLO.DanNet(botName).Observe('"'..propName..'"')()
-            else
-                botValues[propName] = ''
-            end
-        elseif propSettings['Type'] == 'NetBots' then
-            -- tostring instead of ending with () because class returned a number instead of class string
-            if propName:find('Class') then
-                botValues[propName] = tostring(mq.TLO.NetBots(TitleCase(botName))[propName])
-            else
-                botValues[propName] = mq.TLO.NetBots(TitleCase(botName))[propName]()
-            end
-        elseif propSettings['Type'] == 'Spawn' then
-            if propSettings['FromIDProperty'] then
-                botValues[propName] = mq.TLO.Spawn('id '..botValues[propSettings['FromIDProperty']])[propName]()
-            else
-                botValues[propName] = botSpawnData[propName]()
-                if type(botValues[propName]) == 'number' then
-                    botValues[propName] = string.format("%.2f", botValues[propName])
-                end
-            end
-        end
-    end
-
-    if SETTINGS['DanNetPeerGroup'] ~= 'zone' then
-        botValues['BotInZone'] = botValues['Me.ID'] ~= 0
-    else
-        botValues['BotInZone'] = true
-    end
-    botValues['lastUpdated'] = currTime
-    dataTable[botName] = botValues
-end
-
 local function CleanupStaleData(currTime)
-    for botName, botValues in pairs(dataTable) do
-        if os.difftime(currTime, botValues['lastUpdated']) > STALE_DATA_TIMEOUT then
-            print_msg('Removing stale toon data: \ay'..botName)
-            dataTable[botName] = nil
+    for name, char in pairs(characters) do
+        if os.difftime(currTime, char.properties['lastUpdated']) > STALE_DATA_TIMEOUT then
+            print_msg('Removing stale toon data: \ay'..name)
+            characters[name] = nil
         end
     end
 end
@@ -658,6 +625,27 @@ end
 local function SendCommand()
     mq.cmd(storedCommand)
     storedCommand = nil
+end
+
+local function RefreshPeers()
+    local t = {}
+    if PEER_SOURCE == 'dannet' then
+        t = Split(mq.TLO.DanNet.Peers(PEER_GROUP)())
+    else
+        t={}
+        for i=1,mq.TLO.NetBots.Counts() do
+            table.insert(t, mq.TLO.NetBots.Client.Arg(i)())
+        end
+    end
+    if not peerTable or not DoTablesMatch(peerTable, t) then
+        peersDirty = true
+        peerTable = t
+    end
+    for i,peerName in ipairs(peerTable) do
+        if not characters[peerName] then
+            characters[peerName] = Character(peerName,nil)
+        end
+    end
 end
 
 local function CheckGameState()
@@ -676,14 +664,14 @@ local function main()
     SetupBindings()
 
     -- Initialize peer list before the UI, since UI iterates over peer list
-    peerTable = Peers()
+    RefreshPeers()
 
     mq.imgui.init('BOXHUDUI', HUDGUI)
 
     -- Initial setup of observers
     if IsUsingDanNet() then
-        for _, botName in pairs(peerTable) do
-            ManageObservers(botName, false)
+        for _, char in pairs(characters) do
+            char:manageObservers(false)
         end
     end
 
@@ -696,19 +684,20 @@ local function main()
         -- Update PEER_GROUP if we've zoned and using the zone peer group
         ZoneCheck()
         local currTime = os.time(os.date("!*t"))
-        peerTable = Peers()
-        for botIdx, botName in pairs(peerTable) do
+        RefreshPeers()
+        for _, charName in pairs(peerTable) do
+            local char = characters[charName]
             -- Ensure observers are set for the toon
             if IsUsingDanNet() then
-                if resetObserversName == botName then
+                if resetObserversName == char.name then
                     resetObserversName = nil
-                    ManageObservers(botName, true)
-                    ManageObservers(botName, false)
-                elseif not VerifyObservers(botName) then
-                    ManageObservers(botName, false)
+                    char:manageObservers(true)
+                    char:manageObservers(false)
+                elseif not char:verifyObservers() then
+                    char:manageObservers(false)
                 end
             end
-            UpdateBotValues(botName, currTime)
+            char:updateCharacterProperties(currTime)
         end
         CleanupStaleData(currTime)
         mq.delay(REFRESH_INTERVAL)
