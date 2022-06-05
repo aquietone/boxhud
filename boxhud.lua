@@ -282,17 +282,20 @@ function Character:drawNameButton()
     local buttonText = self:getDisplayName()
     local col = nil
     if self.properties['BotInZone'] then
-        if self.properties['Me.Invis'] == 1 then
-            col = {0.26, 0.98, 0.98}
+        if self.properties['Me.Invis'] == true then -- Me.Invis* isn't observed, just getting ANY invis from spawn data
+            col = SETTINGS['Colors']['Invis'] or {0.26, 0.98, 0.98}
             buttonText = '('..self:getDisplayName()..')'
-        elseif self.properties['Me.Invis'] == 2 then
-            col = {0.95, 0.98, 0.26}
+        elseif self.properties['Me.Invis'] == 1 then -- Me.Invis[1] is observed and toon has regular invis
+            col = SETTINGS['Colors']['Invis'] or {0.26, 0.98, 0.98}
             buttonText = '('..self:getDisplayName()..')'
-        elseif self.properties['Me.Invis'] == 3 then
-            col = {0.68, 0.98, 0.98}
+        elseif self.properties['Me.Invis'] == 2 then -- Me.Invis[2] is observed and toon  has ivu
+            col = SETTINGS['Colors']['IVU'] or {0.95, 0.98, 0.26}
             buttonText = '('..self:getDisplayName()..')'
-        else
-            col = {0,1,0}
+        elseif self.properties['Me.Invis'] == 3 then -- Me.Invis[1,2] is observed and toon has double invis
+            col = SETTINGS['Colors']['DoubleInvis'] or {0.68, 0.98, 0.98}
+            buttonText = '('..self:getDisplayName()..')'
+        else -- toon has no invis
+            col = SETTINGS['Colors']['InZone'] or {0,1,0}
         end
     else
         col = SETTINGS['Colors']['NotInZone'] or {1,0,0}
@@ -348,13 +351,7 @@ function Character:updateCharacterProperties(currTime)
     local properties = {}
     local charSpawnData = mq.TLO.Spawn('='..self.name)
     properties['Me.ID'] = charSpawnData.ID()
-    properties['Me.Invis'] = 0
-    if charSpawnData.Invis(1)() then
-        properties['Me.Invis'] = properties['Me.Invis'] + 1
-    end
-    if charSpawnData.Invis(2)() then
-        properties['Me.Invis'] = properties['Me.Invis'] + 2
-    end
+    properties['Me.Invis'] = charSpawnData.Invis()
 
     -- Fill in data from this toons observed properties
     for propName, propSettings in pairs(SETTINGS['Properties']) do
@@ -387,6 +384,14 @@ function Character:updateCharacterProperties(currTime)
         properties['BotInZone'] = properties['Me.ID'] ~= 0
     else
         properties['BotInZone'] = true
+    end
+    if properties['Me.Invis[1]'] == 'TRUE' then
+        if type(properties['Me.Invis']) ~= 'number' then properties['Me.Invis'] = 0 end
+        properties['Me.Invis'] = properties['Me.Invis'] + 1
+    end
+    if properties['Me.Invis[2]'] == 'TRUE' then
+        if type(properties['Me.Invis']) ~= 'number' then properties['Me.Invis'] = 0 end
+        properties['Me.Invis'] = properties['Me.Invis'] + 2
     end
     properties['lastUpdated'] = currTime
     if properties[CLASS_VAR] and not self.className then
