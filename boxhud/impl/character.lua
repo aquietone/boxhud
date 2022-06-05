@@ -299,7 +299,7 @@ function Character:drawColumnProperty(column)
             if column['Mappings'] and column['Mappings'][value] then
                 value = column['Mappings'][value]
             end
-            SetText(value, thresholds, column['Ascending'], column['Percentage'])
+            SetText(tostring(value), thresholds, column['Ascending'], column['Percentage'])
         end
     end
 end
@@ -307,11 +307,11 @@ end
 function Character:drawColumnButton(columnName, columnAction)
     if ImGui.SmallButton(columnName..'##'..self.Name) then
         if self.Name == mq.TLO.Me.Name():lower() and columnAction:find('/dex #botName# ') ~= -1 then
-            storedCommand = columnAction:gsub('/dex #botName# ', '')
+            state.StoredCommand = columnAction:gsub('/dex #botName# ', '')
         else
-            storedCommand = columnAction:gsub('#botName#', self.Name)
+            state.StoredCommand = columnAction:gsub('#botName#', self.Name)
         end
-        print_msg('Run command: \ag'..storedCommand)
+        print_msg('Run command: \ag'..state.StoredCommand)
     end
 end
 
