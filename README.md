@@ -115,7 +115,7 @@ The script takes a few seconds to start up as it waits for the DanNet observers 
 Characters which log off or for some reason stop being available will go stale and be removed from the table after 30 seconds.
 
 # Configuration
-The configuration is stored in a separate Lua file, which is then included with `settings = require('boxhud.boxhud-settings')`.
+The configuration is stored in a separate Lua file, which is then included with `settings = require 'boxhud.settings.boxhud-settings'`.
 
 By default, `boxhud-settings.lua` is included with the script. Upon startup, it will be copied to a character specific file `boxhud-settings-charactername.lua`.
 An existing `boxhud-settings-charactername.lua` will always take precedence over `boxhud-settings.lua`.

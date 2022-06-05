@@ -1,0 +1,136 @@
+local Tab = require 'boxhud.classes.config.tab'
+local TabInput = require 'boxhud.classes.inputs.tabinput'
+local helpers = require 'boxhud.utils.uihelpers'
+local state = require 'boxhud.state'
+local settings = require 'boxhud.settings.settings'
+require 'ImGui'
+
+function TabInput:toTab()
+    local tab = Tab({})
+    tab.Name = self.Name
+    tab.Columns = {}
+    for idx,column in ipairs(self.Columns) do
+        tab.Columns[idx] = column
+    end
+    return tab
+end
+
+function TabInput:fromTab(tab)
+    local o = TabInput()
+    o.Name = tab['Name']
+    o.Columns = {}
+    for idx,column in ipairs(tab.Columns) do
+        o.Columns[idx] = column
+    end
+    o.ColumnCount = #tab['Columns']
+    return o
+end
+
+function TabInput:draw(width, configPanel)
+    ImGui.TextColored(1, 0, 1, 1, "Add New Tab")
+    ImGui.Separator()
+    self.Name = helpers.DrawLabelAndTextInput('Name(*): ', '##newtabname', self.Name, 'The name of the tab which will be displayed in the Tab bar.')
+    ImGui.Text('Columns: ')
+    ImGui.SameLine()
+    helpers.HelpMarker('The list of columns which will be displayed in the tab.')
+    for columnIdx, columnName in ipairs(self.Columns) do
+        if self.Columns[columnIdx] ~= nil then
+            self.Columns[columnIdx] = helpers.DrawComboBox("##columncombo"..columnIdx, self.Columns[columnIdx], state.settings['Columns'], true)
+            ImGui.SameLine()
+            if ImGui.Button('X##deleteRow'..columnIdx) then
+                local columnIter = columnIdx
+                for columns = columnIdx+1, #self.Columns do
+                    self.Columns[columnIter] = self.Columns[columns]
+                    columnIter = columnIter+1
+                end
+                self.Columns[columnIter] = nil
+                self.ColumnCount = self.ColumnCount - 1
+            end
+        end
+    end
+    if ImGui.Button('+') then
+        self.ColumnCount = self.ColumnCount + 1
+        self.Columns[self.ColumnCount] = ''
+    end
+    ImGui.Separator()
+    if ImGui.Button('Save##newtab'..configPanel.name) then
+        local ok = false
+        local tab = self:toTab()
+        ok, self.message = tab:validate()
+        if ok then
+            local foundExisting = false
+            for tabIdx,existingTab in ipairs(state.settings['Tabs']) do
+                if existingTab['Name'] == self.Name then
+                    -- replace existing tab
+                    existingTab['Columns'] = self.Columns
+                    foundExisting = true
+                end
+            end
+            if not foundExisting then
+                table.insert(state.settings['Tabs'], tab)
+            end
+            settings.SaveSettings()
+            configPanel:clearSelection()
+        else
+            self.valid = false
+        end
+    end
+    if not self.valid then
+        ImGui.SameLine()
+        ImGui.PushTextWrapPos(width-10)
+        ImGui.TextColored(1, 0, 0, 1, string.format('Invalid input! %s', self.message))
+        ImGui.PopTextWrapPos()
+    end
+end
+
+function Tab:references(draw)
+    local refFound = false
+    for _,window in pairs(state.settings['Windows']) do
+        if window['Tabs'] then
+            for _,tabNameIter in pairs(window['Tabs']) do
+                if self.Name == tabNameIter then
+                    refFound = true
+                    if draw then
+                        helpers.DrawReferenceText('Window: ', window['Name'], nil, nil)
+                    end
+                end
+            end
+        end
+    end
+    return refFound
+end
+
+function Tab:draw(configPanel)
+    ImGui.TextColored(1, 0, 1, 1, self.Name)
+    ImGui.Separator()
+    if ImGui.SmallButton('Edit##'..self.Name) then
+        configPanel.newTab = TabInput:fromTab(self)
+        configPanel:selectItem(nil, 'addnewtab')
+    end
+    ImGui.SameLine()
+    if ImGui.SmallButton('Delete##'..self.Name) then
+        if not self:references(false) then
+            local tabIter = configPanel.selectedItem
+            for tabIdx = tabIter+1, #state.settings['Tabs'] do
+                state.settings['Tabs'][tabIter] = state.settings['Tabs'][tabIdx]
+                tabIter = tabIter+1
+            end
+            state.settings['Tabs'][tabIter] = nil
+            settings.SaveSettings()
+            configPanel:clearSelection()
+        end
+    end
+    ImGui.Text('Columns:')
+    if self.Columns then
+        for columnIdx,column in ipairs(self.Columns) do
+            ImGui.Text(string.format('%d: ', columnIdx))
+            ImGui.SameLine()
+            ImGui.TextColored(0, 1, 0, 1, column)
+        end
+    end
+    ImGui.Separator()
+    ImGui.Text('References:')
+    ImGui.Indent(10)
+    self:references(true)
+    ImGui.Indent(-10)
+end
