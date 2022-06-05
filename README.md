@@ -7,7 +7,7 @@ A Lua / ImGui boxing HUD for EverQuest.
 - MQNext
 - MQ2Lua
 - Either or both of:
-  - MQ2DanNet (to use using DanNet peers/observers)
+  - MQ2DanNet (to use DanNet peers/observers)
   - MQ2EQBC+MQ2NetBots (to use netbots data)
 
 # Installation
@@ -64,9 +64,9 @@ XP tab:
 
 Additionally, the character names are buttons with the following function:
 - Left click -- Brings the character to the foreground with `/dex toonname /foreground`.
-- Right click -- Opens a `Send Command` text input which will do `/dex toonname <text input>`
+- Right click -- Opens a context menu with some helpful buttons specific to the selected toon. Also includes a `Send Command` text input which will do `/dex toonname <text input>`
 
-These button actions are more just to play around with the capabilities we have now with an interactive window like this.
+These button actions are more just to play around with the capabilities we have now with an interactive window like this. 
 
 Example:
 
@@ -78,8 +78,7 @@ Example:
 
 ![](images/example-popup.png)
 
-The window will dynamically grow/shrink based on peers available from the DanNet All or Zone peer group depending on how it is configured.
-The script takes a few seconds to start up as it waits for the DanNet observers to be ready before displaying the UI.
+The script takes a few seconds to start up as it waits for the DanNet observers to be ready.
 Characters which log off or for some reason stop being available will go stale and be removed from the table after 30 seconds.
 
 # Configuration
@@ -146,7 +145,7 @@ Each tab includes a name and list of columns to be included in that tab, for exa
 ## ObservedProperties
 Each observed property must be in the `ObservedProperties` list.
 The following properties are observed for the Name column, which is handled separately from the rest:
-- *Me.Class*
+- *Me.Class.ShortName*
 
 ## SpawnProperties
 Columns may refer to spawn data, defined in `SpawnProperties`. Spawn data will be based on `${Spawn[observed character id].PropertyName}`
