@@ -27,14 +27,16 @@ Usage: /lua run boxhud [settings.lua]
 --]]
 --- @type mq
 local mq = require('mq')
+local DanNet = mq.TLO.DanNet
+local NetBots = mq.TLO.NetBots
 --- @type ImGui
 require 'ImGui'
-require('boxhud.utils')
-require('boxhud.configpanel')
+local bh = require('boxhud.utils')
+local ConfigurationPanel = require('boxhud.configpanel')
 
 local arg = {...}
 
--- Control variables
+-- GUI Control variables
 local openGUI = true
 local shouldDrawGUI = true
 local terminate = false
@@ -48,23 +50,45 @@ local adminMode = false
 local adminPeerSelected = 0
 math.randomseed(os.time())
 local tableRandom = math.random(1,100)
+local windowStates = {}
 
 local resetObserversName = nil
 local storedCommand = nil
 
 -- lists of classes to check against for things like displaying mana % versus endurance %
-local casters = Set { 'cleric', 'clr', 'druid', 'dru', 'shaman', 'shm', 'enchanter',
+local casters = bh.Set { 'cleric', 'clr', 'druid', 'dru', 'shaman', 'shm', 'enchanter',
                       'enc', 'magician', 'mag', 'necromancer', 'nec', 'wizard', 'wiz' }
 -- melee, hybrid, ranged overlap for compatibility.
 -- hybrids is checked before melee as it is a more specific subset of classes
-local melee = Set { 'rogue', 'rog', 'monk', 'mnk', 'berserker', 'ber', 'warrior', 'war',
+local melee = bh.Set { 'rogue', 'rog', 'monk', 'mnk', 'berserker', 'ber', 'warrior', 'war',
                     'bard', 'brd', 'ranger', 'rng', 'beastlord', 'bst', 'shadow knight',
                     'shd', 'paladin', 'pal' }
-local hybrids = Set { 'bard', 'brd', 'ranger', 'rng', 'beastlord', 'bst', 'shadow knight',
+local hybrids = bh.Set { 'bard', 'brd', 'ranger', 'rng', 'beastlord', 'bst', 'shadow knight',
                       'shd', 'paladin', 'pal' }
-local ranged = Set { 'ranger', 'rng' }
+local ranged = bh.Set { 'ranger', 'rng' }
 
-Character = class(function(b, name, className)
+--[[
+Internal runtime settings of a boxhud window, separate from the
+static window settings stored in boxhud-settings.lua
+--]]
+local WindowState = bh.class(function(w, name, peerGroup)
+    w.name = name
+    if peerGroup == 'zone' then
+        w.peerGroup = bh.GetZonePeerGroup()
+    else
+        w.peerGroup = peerGroup
+    end
+    w.peers = nil
+    w.peersDirty = false
+    w.sortedPeers = nil
+    w.configPanel = ConfigurationPanel(name)
+end)
+
+--[[
+Stores all information about a given character to be displayed
+in a boxhud window.
+--]]
+local Character = bh.class(function(b, name, className)
     b.name = name
     b.className = className
     b.properties = nil
@@ -78,7 +102,7 @@ function Character:shouldObserveProperty(propSettings)
         -- Does not care what the value is of the property, just that it is observed
         return true
     elseif propSettings['DependsOnValue'] then
-        local dependentValue = mq.TLO.DanNet(self.name).Observe(string.format('"%s"', propSettings['DependsOnName']))()
+        local dependentValue = DanNet(self.name).Observe(string.format('"%s"', propSettings['DependsOnName']))()
         if dependentValue and string.lower(propSettings['DependsOnValue']):find(string.lower(dependentValue)) ~= nil then
             -- The value of the dependent property matches
             return true
@@ -90,7 +114,7 @@ end
 
 -- Return whether or not a property is observed for a toon
 function Character:isObserverSet(propName, propSettings)
-    if not mq.TLO.DanNet(self.name)() or mq.TLO.DanNet(self.name).ObserveSet('"'..propName..'"')() then
+    if not DanNet(self.name)() or DanNet(self.name).ObserveSet('"'..propName..'"')() then
         return true
     end
     return false
@@ -98,7 +122,7 @@ end
 
 -- Return whether or not all expected observers are set for a toon 
 function Character:verifyObservers()
-    for propName, propSettings in pairs(SETTINGS['Properties']) do
+    for propName, propSettings in pairs(bh.settings['Properties']) do
         if propSettings['Type'] == 'Observed' and self:shouldObserveProperty(propSettings) then
             if not self:isObserverSet(propName, propSettings) then
                 return false
@@ -110,7 +134,7 @@ end
 
 function Character:addObserver(propName, propSettings)
     if propSettings['DependsOnName'] then
-        for depPropName,depPropSettings in pairs(SETTINGS['Properties']) do
+        for depPropName,depPropSettings in pairs(bh.settings['Properties']) do
             if depPropName == propSettings['DependsOnName'] then
                 self:addObserver(depPropName, depPropSettings)
             end
@@ -118,15 +142,15 @@ function Character:addObserver(propName, propSettings)
     end
     if self:shouldObserveProperty(propSettings) then
         -- Add the observation if it is not set
-        if not mq.TLO.DanNet(self.name).ObserveSet(string.format('"%s"', propName))() then
+        if not DanNet(self.name).ObserveSet(string.format('"%s"', propName))() then
             mq.cmdf('/dobserve %s -q "%s"', self.name, propName)
         end
         local verifyStartTime = os.time(os.date("!*t"))
         while not self:isObserverSet(propName, propSettings) do
             mq.delay(25)
             if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 20 then
-                print_err('Timed out waiting for observer to be added for \ay'..self.name)
-                print_err('Exiting the script.')
+                bh.print_err('Timed out waiting for observer to be added for \ay'..self.name)
+                bh.print_err('Exiting the script.')
                 mq.exit()
             end
         end
@@ -135,15 +159,15 @@ end
 
 function Character:removeObserver(propName, propSettings)
     -- Drop the observation if it is set
-    if mq.TLO.DanNet(self.name).ObserveSet(string.format('"%s"', propName))() then
+    if DanNet(self.name).ObserveSet(string.format('"%s"', propName))() then
         mq.cmdf('/dobserve %s -q "%s" -drop', self.name, propName)
     end
     local verifyStartTime = os.time(os.date("!*t"))
     while self:isObserverSet(propName, propSettings) do
         mq.delay(25)
         if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 20 then
-            print_err('Timed out waiting for observer to be removed for \ay'..self.name)
-            print_err('Exiting the script.')
+            bh.print_err('Timed out waiting for observer to be removed for \ay'..self.name)
+            bh.print_err('Exiting the script.')
             mq.exit()
         end
     end
@@ -152,24 +176,24 @@ end
 -- Add or remove observers for the given toon
 function Character:manageObservers(drop)
     if drop then
-        for propName, propSettings in pairs(SETTINGS['Properties']) do
+        for propName, propSettings in pairs(bh.settings['Properties']) do
             if propSettings['Type'] == 'Observed' then
                 self:removeObserver(propName, propSettings)
             end
         end
-        print_msg('Removed observed properties for: \ay'..self.name)
+        bh.print_msg('Removed observed properties for: \ay'..self.name)
     else
-        for propName, propSettings in pairs(SETTINGS['Properties']) do
+        for propName, propSettings in pairs(bh.settings['Properties']) do
             if propSettings['Type'] == 'Observed' then
                 self:addObserver(propName, propSettings)
             end
         end
-        print_msg('Added observed properties for: \ay'..self.name)
+        bh.print_msg('Added observed properties for: \ay'..self.name)
     end
 end
 
 local function SetText(value, thresholds, ascending, percentage)
-    local col = SETTINGS['Colors']['Default']
+    local col = bh.settings['Colors']['Default']
     if thresholds ~= nil then
         local valueNum = tonumber(value)
         if valueNum == nil then
@@ -178,31 +202,31 @@ local function SetText(value, thresholds, ascending, percentage)
         if #thresholds == 1 then
             if valueNum >= thresholds[1] then
                 if ascending then
-                    col = SETTINGS['Colors']['High']
+                    col = bh.settings['Colors']['High']
                 else -- red if above
-                    col = SETTINGS['Colors']['Low']
+                    col = bh.settings['Colors']['Low']
                 end
             else
                 if ascending then
-                    col = SETTINGS['Colors']['Low']
+                    col = bh.settings['Colors']['Low']
                 else -- green if below
-                    col = SETTINGS['Colors']['High']
+                    col = bh.settings['Colors']['High']
                 end
             end
         elseif #thresholds == 2 then
             if valueNum >= thresholds[2] then
                 if ascending then
-                    col = SETTINGS['Colors']['High']
+                    col = bh.settings['Colors']['High']
                 else
-                    col = SETTINGS['Colors']['Low']
+                    col = bh.settings['Colors']['Low']
                 end
             elseif valueNum >= thresholds[1] and valueNum < thresholds[2] then
-                col = SETTINGS['Colors']['Medium']
+                col = bh.settings['Colors']['Medium']
             else
                 if ascending then
-                    col = SETTINGS['Colors']['Low']
+                    col = bh.settings['Colors']['Low']
                 else
-                    col = SETTINGS['Colors']['High']
+                    col = bh.settings['Colors']['High']
                 end
             end
         end
@@ -240,7 +264,7 @@ function Character:getDisplayName()
             return 'UNKNOWN'
         end
     else
-        return TitleCase(self.name)
+        return bh.TitleCase(self.name)
     end
 end
 
@@ -261,7 +285,7 @@ function Character:drawContextMenu()
         self:drawCmdButton('TAdd##'..self.name, '/taskadd %s')
         
         if ImGui.SmallButton("Reset Obs##"..self.name) then
-            print_msg('Resetting observed properties for: \ay'..self.name)
+            bh.print_msg('Resetting observed properties for: \ay'..self.name)
             ImGui.CloseCurrentPopup()
             resetObserversName = self.name
         end
@@ -269,7 +293,7 @@ function Character:drawContextMenu()
         local textInput = ""
         textInput, selected = ImGui.InputText("##input"..self.name, textInput, ImGuiInputTextFlags.EnterReturnsTrue)
         if selected then
-            print_msg('Sending command: \ag/dex '..self:getDisplayName()..' '..textInput)
+            bh.print_msg('Sending command: \ag/dex '..self:getDisplayName()..' '..textInput)
             ImGui.CloseCurrentPopup()
             mq.cmdf('/dex %s %s', self.name, textInput)
         end
@@ -282,22 +306,22 @@ function Character:drawNameButton()
     local col = nil
     if self.properties['BotInZone'] then
         if self.properties['Me.Invis'] == true then -- Me.Invis* isn't observed, just getting ANY invis from spawn data
-            col = SETTINGS['Colors']['Invis'] or {0.26, 0.98, 0.98}
+            col = bh.settings['Colors']['Invis'] or {0.26, 0.98, 0.98}
             buttonText = '('..self:getDisplayName()..')'
         elseif self.properties['Me.Invis'] == 1 then -- Me.Invis[1] is observed and toon has regular invis
-            col = SETTINGS['Colors']['Invis'] or {0.26, 0.98, 0.98}
+            col = bh.settings['Colors']['Invis'] or {0.26, 0.98, 0.98}
             buttonText = '('..self:getDisplayName()..')'
         elseif self.properties['Me.Invis'] == 2 then -- Me.Invis[2] is observed and toon  has ivu
-            col = SETTINGS['Colors']['IVU'] or {0.95, 0.98, 0.26}
+            col = bh.settings['Colors']['IVU'] or {0.95, 0.98, 0.26}
             buttonText = '('..self:getDisplayName()..')'
         elseif self.properties['Me.Invis'] == 3 then -- Me.Invis[1,2] is observed and toon has double invis
-            col = SETTINGS['Colors']['DoubleInvis'] or {0.68, 0.98, 0.98}
+            col = bh.settings['Colors']['DoubleInvis'] or {0.68, 0.98, 0.98}
             buttonText = '('..self:getDisplayName()..')'
         else -- toon has no invis
-            col = SETTINGS['Colors']['InZone'] or {0,1,0}
+            col = bh.settings['Colors']['InZone'] or {0,1,0}
         end
     else
-        col = SETTINGS['Colors']['NotInZone'] or {1,0,0}
+        col = bh.settings['Colors']['NotInZone'] or {1,0,0}
     end
     ImGui.PushStyleColor(ImGuiCol.Text, col[1], col[2], col[3], 1)
 
@@ -342,7 +366,7 @@ function Character:drawColumnButton(columnName, columnAction)
         else
             storedCommand = columnAction:gsub('#botName#', self.name)
         end
-        print_msg('Run command: \ag'..storedCommand)
+        bh.print_msg('Run command: \ag'..storedCommand)
     end
 end
 
@@ -353,24 +377,24 @@ function Character:updateCharacterProperties(currTime, peerGroup)
     properties['Me.Invis'] = charSpawnData.Invis()
 
     -- Fill in data from this toons observed properties
-    for propName, propSettings in pairs(SETTINGS['Properties']) do
+    for propName, propSettings in pairs(bh.settings['Properties']) do
         if propSettings['Type'] == 'Observed' then
             if self:shouldObserveProperty(propSettings) then
-                properties[propName] = mq.TLO.DanNet(self.name).Observe('"'..propName..'"')()
+                properties[propName] = DanNet(self.name).Observe('"'..propName..'"')()
             else
                 properties[propName] = ''
             end
         elseif propSettings['Type'] == 'NetBots' then
             -- tostring instead of ending with () because class returned a number instead of class string
             if propName:find('Class') then
-                properties[propName] = tostring(mq.TLO.NetBots(TitleCase(self.name))[propName])
+                properties[propName] = tostring(NetBots(bh.TitleCase(self.name))[propName])
             else
-                properties[propName] = mq.TLO.NetBots(TitleCase(self.name))[propName]()
+                properties[propName] = NetBots(bh.TitleCase(self.name))[propName]()
             end
         elseif propSettings['Type'] == 'Spawn' then
             if propSettings['FromIDProperty'] then
-                if SETTINGS['Properties'][propSettings.FromIDProperty]['Type'] == 'NetBots' then
-                    properties[propSettings.FromIDProperty] = mq.TLO.NetBots(TitleCase(self.name))[propSettings.FromIDProperty]()
+                if bh.settings['Properties'][propSettings.FromIDProperty]['Type'] == 'NetBots' then
+                    properties[propSettings.FromIDProperty] = NetBots(bh.TitleCase(self.name))[propSettings.FromIDProperty]()
                 end
                 properties[propName] = mq.TLO.Spawn(string.format('id %s', properties[propSettings['FromIDProperty']]))[propName]()
             else
@@ -396,8 +420,8 @@ function Character:updateCharacterProperties(currTime, peerGroup)
         properties['Me.Invis'] = properties['Me.Invis'] + 2
     end
     properties['lastUpdated'] = currTime
-    if properties[CLASS_VAR] and not self.className then
-        self.className = properties[CLASS_VAR]:lower()
+    if properties[bh.class_var] and not self.className then
+        self.className = properties[bh.class_var]:lower()
     end
     self.properties = properties
 end
@@ -412,7 +436,7 @@ local function CompareWithSortSpecs(a, b)
         local delta = 0
 
         local columnName = current_columns[sort_spec.ColumnUserID]
-        local column = SETTINGS['Columns'][columnName]
+        local column = bh.settings['Columns'][columnName]
         if not column then
             return a < b
         end
@@ -458,12 +482,12 @@ local function CompareWithSortSpecs(a, b)
     return a < b
 end
 
-local function DrawTableTab(columns, tabName, window)
+function bh.Window:drawTableTab(columns, tabName)
     local flags = bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Reorderable, ImGuiTableFlags.Hideable, ImGuiTableFlags.Sortable, ImGuiTableFlags.MultiSortable,
             ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY, ImGuiTableFlags.NoSavedSettings)
     if ImGui.BeginTable('##bhtable'..tabName..tostring(tableRandom), #columns, flags, 0, 0, 0.0) then
         for i, columnName in ipairs(columns) do
-            local column = SETTINGS['Columns'][columnName]
+            local column = bh.settings['Columns'][columnName]
             if columnName == 'Name' then
                 ImGui.TableSetupColumn('Name',     bit32.bor(ImGuiTableColumnFlags.DefaultSort, ImGuiTableColumnFlags.WidthFixed),   -1.0, i)
             elseif column['Type'] ~= 'button' then
@@ -475,37 +499,37 @@ local function DrawTableTab(columns, tabName, window)
         ImGui.TableSetupScrollFreeze(0, 1) -- Make row always visible
         local sort_specs = ImGui.TableGetSortSpecs()
         if sort_specs then
-            if sort_specs.SpecsDirty or peerTable[window['Name']]['PeersDirty'] then
-                if #peerTable[window['Name']]['Peers'] > 0 then
-                    current_sort_specs[window['Name']] = sort_specs
-                    current_columns[window['Name']] = columns
-                    sortedPeers[window['Name']] = TableClone(peerTable[window['Name']]['Peers'])
-                    table.sort(sortedPeers, CompareWithSortSpecs)
-                    current_sort_specs[window['Name']] = nil
-                    current_columns[window['Name']] = nil
+            if sort_specs.SpecsDirty or windowStates[self.Name].peersDirty then
+                if #windowStates[self.Name].peers > 0 then
+                    current_sort_specs = sort_specs
+                    current_columns = columns
+                    windowStates[self.Name].sortedPeers = bh.TableClone(windowStates[self.Name].peers)
+                    table.sort(windowStates[self.Name].sortedPeers, CompareWithSortSpecs)
+                    current_sort_specs = nil
+                    current_columns = nil
                 end
                 sort_specs.SpecsDirty = false
-                peerTable[window['Name']]['PeersDirty'] = false
+                windowStates[self.Name].peersDirty = false
             end
         end
 
         -- Display data
         ImGui.TableHeadersRow()
         local clipper = ImGuiListClipper.new()
-        if sortedPeers[window['Name']] == nil then
-            sortedPeers[window['Name']] = TableClone(peerTable[window['Name']]['Peers'])
+        if windowStates[self.Name].sortedPeers == nil then
+            windowStates[self.Name].sortedPeers = bh.TableClone(windowStates[self.Name].peers)
         end
-        clipper:Begin(#sortedPeers[window['Name']])
+        clipper:Begin(#windowStates[self.Name].sortedPeers)
         while clipper:Step() do
             for row_n = clipper.DisplayStart, clipper.DisplayEnd - 1, 1 do
-                local clipName = sortedPeers[window['Name']][row_n+1]
+                local clipName = windowStates[self.Name].sortedPeers[row_n+1]
                 local char = characters[clipName]
                 if char and char.properties then
                     ImGui.PushID(clipName)
                     ImGui.TableNextRow()
                     ImGui.TableNextColumn()
                     for i,columnName in ipairs(columns) do
-                        local column = SETTINGS['Columns'][columnName]
+                        local column = bh.settings['Columns'][columnName]
                         if columnName == 'Name' then
                             char:drawNameButton()
                         else
@@ -530,7 +554,7 @@ local function DrawTableTab(columns, tabName, window)
 end
 
 local function GetTabByName(tabName)
-    for _,tab in ipairs(SETTINGS['Tabs']) do
+    for _,tab in ipairs(bh.settings['Tabs']) do
         if tab['Name'] == tabName then
             return tab
         end
@@ -538,46 +562,42 @@ local function GetTabByName(tabName)
     return nil
 end
 
-local function DrawHUDTabs(window)
-    if ImGui.BeginTabBar('BOXHUDTABS') then
-        --for _, tab in ipairs(SETTINGS['Tabs']) do
-        for _,tabName in ipairs(window['Tabs']) do
+function bh.Window:drawTabs()
+    if ImGui.BeginTabBar('BOXHUDTABS##'..self.Name) then
+        for _,tabName in ipairs(self.Tabs) do
             local tab = GetTabByName(tabName)
-            ImGui.PushID(tab['Name'])
             if ImGui.BeginTabItem(tab['Name']) then
                 if tab['Columns'] and #tab['Columns'] > 0 then
-                    DrawTableTab(tab['Columns'], tab['Name'], window)
+                    self:drawTableTab(tab['Columns'], tab['Name'])
                     ImGui.EndTabItem()
                 else
                     ImGui.Text('No columns defined for tab')
                     ImGui.EndTabItem()
                 end
             end
-            ImGui.PopID()
         end
 
         -- Admin tab only allows resetting observers, so only show if dannet is being used
-        if IsUsingDanNet() then
+        if bh.IsUsingDanNet() then
             if ImGui.BeginTabItem('Admin') then
                 ImGui.Text('DanNet Peer Group: ')
                 ImGui.SameLine()
-                ImGui.TextColored(0, 1, 0, 1, PEER_GROUPS[window['Name']])
+                ImGui.TextColored(0, 1, 0, 1, windowStates[self.Name].peerGroup)
                 ImGui.Text('Reset Observers for:')
-                adminPeerSelected, clicked = ImGui.Combo("##combo", adminPeerSelected, peerTable[window['Name']]['Peers'], #peerTable[window['Name']]['Peers'], 5)
+                adminPeerSelected, clicked = ImGui.Combo("##combo", adminPeerSelected, windowStates[self.Name].peers, #windowStates[self.Name].peers, 5)
                 ImGui.SameLine()
                 if ImGui.Button('Reset') then
-                    print_msg('Resetting observed properties for: \ay'..peerTable[window['Name']]['Peers'][adminPeerSelected+1])
-                    resetObserversName = peerTable[window['Name']]['Peers'][adminPeerSelected+1]
+                    bh.print_msg('Resetting observed properties for: \ay'..windowStates[self.Name].peers[adminPeerSelected+1])
+                    resetObserversName = windowStates[self.Name].peers[adminPeerSelected+1]
                 end
                 ImGui.EndTabItem()
             end
         end
 
-        if ImGui.BeginTabItem('Configuration') then
-            ConfigurationTab()
+        if ImGui.BeginTabItem('Configuration##'..self.Name) then
+            windowStates[self.Name].configPanel:draw()
             ImGui.EndTabItem()
         end
-
         ImGui.EndTabBar()
     end
 end
@@ -587,43 +607,43 @@ local HUDGUI = function()
     local myname = mq.TLO.Me.CleanName()
     if not myname or myname == 'load' then return end
     if not openGUI then return end
-    local flags = 0
-    if not SETTINGS['TitleBar'] then flags = bit32.bor(flags, ImGuiWindowFlags.NoTitleBar) end
-    if SETTINGS['Transparency'] then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
-    for windowName,window in pairs(SETTINGS['Windows']) do
-        if peerTable[windowName] then
-            openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..myname..windowName, openGUI, flags)
+    for _,window in pairs(bh.settings['Windows']) do
+        local flags = 0
+        if not window['TitleBar'] then flags = bit32.bor(flags, ImGuiWindowFlags.NoTitleBar) end
+        if window['Transparency'] then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
+        if windowStates[window.Name] and windowStates[window.Name].peers then
+            openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..myname..window.Name, openGUI, flags)
             if shouldDrawGUI then
                 if ImGui.GetWindowHeight() == 32 and ImGui.GetWindowWidth() == 32 then
                     ImGui.SetWindowSize(460, 177)
                 end
-                DrawHUDTabs(window)
+                window:drawTabs()
             end
+            ImGui.End()
         end
     end
-    ImGui.End()
 end
 
 local Admin = function(action, name)
     if action == nil then
         adminMode = not adminMode
         openGUI = not adminMode
-        print_msg('Setting \ayadminMode\ax = \ay'..tostring(adminMode))
+        bh.print_msg('Setting \ayadminMode\ax = \ay'..tostring(adminMode))
     elseif action == 'anon' then
         anonymize = not anonymize
     elseif action  == 'reset' then
         if not adminMode then
-            print_err('\ayadminMode\ax must be enabled')
+            bh.print_err('\ayadminMode\ax must be enabled')
             return
         end
         if name == nil then
-            print_msg('Resetting observed properties for: \ayALL')
+            bh.print_msg('Resetting observed properties for: \ayALL')
             for _,char in pairs(characters) do
                 char:manageObservers(true)
                 char:manageObservers(false)
             end
         else
-            print_msg('Resetting observed properties for: \ay'..name)
+            bh.print_msg('Resetting observed properties for: \ay'..name)
             characters[name]:manageObservers(true)
             characters[name]:manageObservers(false)
         end
@@ -631,7 +651,7 @@ local Admin = function(action, name)
 end
 
 local Help = function()
-    print_msg('Available commands:')
+    bh.print_msg('Available commands:')
     print('\ao    /bhhelp\a-w -- Displays this help output')
     print('\ao    /bhversion\a-w -- Displays the version')
     print('\ao    /boxhud\a-w -- Toggle the display')
@@ -643,7 +663,7 @@ local Help = function()
 end
 
 local ShowVersion = function()
-    print_msg('Version '..VERSION)
+    bh.print_msg('Version '..bh.version)
 end
 
 local function SetupBindings()
@@ -662,8 +682,8 @@ end
 
 local function CleanupStaleData(currTime)
     for name, char in pairs(characters) do
-        if os.difftime(currTime, char.properties['lastUpdated']) > STALE_DATA_TIMEOUT then
-            print_msg('Removing stale toon data: \ay'..name)
+        if os.difftime(currTime, char.properties['lastUpdated']) > bh.stale_data_timeout then
+            bh.print_msg('Removing stale toon data: \ay'..name)
             characters[name] = nil
         end
     end
@@ -674,31 +694,43 @@ local function SendCommand()
     storedCommand = nil
 end
 
-local function RefreshPeers()
-    for windowName,window in pairs(SETTINGS['Windows']) do
-        local t = {}
-        if PEER_SOURCE == 'dannet' then
-            t = Split(mq.TLO.DanNet.Peers(PEER_GROUPS[windowName])())
-        else
-            for i=1,mq.TLO.NetBots.Counts() do
-                table.insert(t, mq.TLO.NetBots.Client.Arg(i)())
-            end
+function WindowState:refreshPeers()
+    local windowSettings = bh.settings.Windows[self.name]
+    if windowSettings.PeerGroup ~= 'zone' and self.peerGroup ~= windowSettings.PeerGroup then
+        self.peerGroup = windowSettings.PeerGroup
+    elseif windowSettings.PeerGroup == 'zone' then
+        self.peerGroup = bh.GetZonePeerGroup()
+    end
+    local t = {}
+    if bh.peer_source == 'dannet' then
+        t = bh.Split(DanNet.Peers(self.peerGroup)())
+    else
+        for i=1,NetBots.Counts() do
+            table.insert(t, NetBots.Client.Arg(i)())
         end
+    end
 
-        if not peerTable[windowName] or not DoTablesMatch(peerTable[windowName]['Peers'], t) then
-            peerTable[windowName] = {['Peers'] = t, ['PeersDirty'] = true}
+    if not self.peers or not bh.DoTablesMatch(self.peers, t) then
+        self.peers = t
+        self.peersDirty = true
+    end
+    for i,peerName in ipairs(self.peers) do
+        if not characters[peerName] then
+            characters[peerName] = Character(peerName,nil)
         end
-        for i,peerName in ipairs(peerTable[windowName]['Peers']) do
-            if not characters[peerName] then
-                characters[peerName] = Character(peerName,nil)
-            end
-        end
+    end
+end
+
+local function SetupWindowStates()
+    for _,window in pairs(bh.settings['Windows']) do
+        windowStates[window.Name] = WindowState(window.Name, window.PeerGroup or 'zone')
+        windowStates[window.Name]:refreshPeers()
     end
 end
 
 local function CheckGameState()
     if mq.TLO.MacroQuest.GameState() ~= 'INGAME' then
-        print_err('\arNot in game, stopping boxhud.\ax')
+        bh.print_err('\arNot in game, stopping boxhud.\ax')
         openGUI = false
         shouldDrawGUI = false
         mq.imgui.destroy('BOXHUDUI')
@@ -707,15 +739,14 @@ local function CheckGameState()
 end
 
 local function main()
-    LoadSettings(arg)
-    PluginCheck()
+    bh.LoadSettings(arg)
+    bh.PluginCheck()
     SetupBindings()
-    -- Initialize peer list before the UI, since UI iterates over peer list
-    RefreshPeers()
+    SetupWindowStates()
     mq.imgui.init('BOXHUDUI', HUDGUI)
 
     -- Initial setup of observers
-    if IsUsingDanNet() then
+    if bh.IsUsingDanNet() then
         for _, char in pairs(characters) do
             char:manageObservers(false)
         end
@@ -727,28 +758,31 @@ local function main()
         if storedCommand then
             SendCommand()
         end
-        -- Update PEER_GROUP if we've zoned and using the zone peer group
-        ZoneCheck()
         local currTime = os.time(os.date("!*t"))
-        RefreshPeers()
-        for windowName,window in pairs(SETTINGS['Windows']) do
-            for _, charName in pairs(peerTable[windowName]['Peers']) do
-                local char = characters[charName]
-                -- Ensure observers are set for the toon
-                if IsUsingDanNet() then
-                    if resetObserversName == char.name then
-                        resetObserversName = nil
-                        char:manageObservers(true)
-                        char:manageObservers(false)
-                    elseif not char:verifyObservers() then
-                        char:manageObservers(false)
+        for windowName,window in pairs(bh.settings['Windows']) do
+            if not windowStates[windowName] then
+                windowStates[windowName] = WindowState(windowName, window.PeerGroup or 'zone')
+            end
+            windowStates[windowName]:refreshPeers()
+            if windowStates[windowName].peers then
+                for _, charName in pairs(windowStates[windowName].peers) do
+                    local char = characters[charName]
+                    -- Ensure observers are set for the toon
+                    if bh.IsUsingDanNet() then
+                        if resetObserversName == char.name then
+                            resetObserversName = nil
+                            char:manageObservers(true)
+                            char:manageObservers(false)
+                        elseif not char:verifyObservers() then
+                            char:manageObservers(false)
+                        end
                     end
+                    char:updateCharacterProperties(currTime, window['PeerGroup'])
                 end
-                char:updateCharacterProperties(currTime, window['PeerGroup'])
             end
         end
         CleanupStaleData(currTime)
-        mq.delay(REFRESH_INTERVAL)
+        mq.delay(bh.refresh_interval)
     end
 end
 
