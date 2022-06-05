@@ -55,15 +55,6 @@ return {
         },
         { 
             Name='MP%', 
-            Properties={caster='Me.PctMana',melee='Me.PctEndurance'}, 
-            Thresholds={35,70}, 
-            Percentage=true, 
-            InZone=false, 
-            Width=40 
-        },
-        --[[
-        { 
-            Name='MP%', 
             Properties={all='Me.PctMana'}, 
             Thresholds={35,70}, 
             Percentage=true, 
@@ -78,7 +69,6 @@ return {
             InZone=false, 
             Width=40 
         },
-        --]]
         { 
             Name='Distance', 
             Properties={all='Distance3D'}, 
@@ -121,11 +111,8 @@ return {
     },
 
     ObservedProperties = {
-        -- Mandatory
-        {Name='Zone.ID'},
-        {Name='Me.ID'},
+        -- Mandatory if using class archtype based columns
         {Name='Me.Class'},
-        {Name='Me.Invis'},
         -- Column specific
         {Name='Me.PctHPs'},
         {Name='Me.PctMana'},
