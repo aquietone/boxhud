@@ -36,12 +36,17 @@ Settings file for boxhud.lua script.
                           - Thresholds: (array)   1 threshold value for red/green coloring, or
                                                   2 threshold values for red/yellow/green coloring
                           - Percentage: (boolean) Is the property value a percentage
+                          - Ascending: (boolean)  Set to true if higher value is better (green)
+                                                  For example, PctHPs Ascending=true so 100% hp is green
                           - Inzone: (boolean)     Only use this property when BotInZone == true
                           - Width: (number)       Column width
 
 - ObservedProperties:   List of properties to create observations for
 
 - SpawnProperties:      List of Spawn properties which are based on spawn data of the observed Me.ID
+
+- NetBotsProperties:    List of NetBots properties to grab
+                        Incase ya still want to use some info from MQ2NetBots instead of DanNet
 
 --]]
 
@@ -238,11 +243,51 @@ return {
             }
         }
         --]]
+        --[[
+        {
+            Name='NetBotsExamples',
+            Columns = {
+                { 
+                    Name='InZone', 
+                    Type='property',
+                    Properties={
+                        all='InZone'
+                    }, 
+                    Thresholds=nil, 
+                    Percentage=false, 
+                    InZone=false, 
+                    Width=50 
+                },
+                { 
+                    Name='Casting', 
+                    Type='property',
+                    Properties={
+                        all='Casting'
+                    }, 
+                    Thresholds=nil, 
+                    Percentage=false, 
+                    InZone=false, 
+                    Width=125
+                },
+                { 
+                    Name='Invis', 
+                    Type='property',
+                    Properties={
+                        all='Invis'
+                    }, 
+                    Thresholds=nil, 
+                    Percentage=false, 
+                    InZone=false, 
+                    Width=50
+                }
+            }
+        }
+        --]]
     },
 
     ObservedProperties = {
         -- Mandatory
-        {Name='Me.Class'},
+        {Name='Me.Class.ShortName'},
         -- Column specific
         {Name='Me.PctHPs'},
         {Name='Me.PctMana'},
@@ -262,5 +307,13 @@ return {
 
     SpawnProperties = {
         {Name='Distance3D'}
+    },
+
+    NetBotsProperties = {
+        -- Example netbots properties
+        --{Name='TargetID'},
+        --{Name='InZone'},
+        --{Name='Casting'},
+        --{Name='Invis'}
     }
 }

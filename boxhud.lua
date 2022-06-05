@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 1.3.1 -- aquietone
+boxhud.lua 1.4 -- aquietone
 https://www.redguides.com/community/resources/boxhud-lua-requires-mqnext-and-mq2lua.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer 
@@ -26,6 +26,10 @@ Usage: /lua run boxhud [settings.lua]
        /boxhudend - end the script
 
 Changes:
+1.4
+- Add in option to use NetBots properties incase people want them
+- Changes to text threshold based coloring, can now define ascending/descending
+  to say whether values should be red to green or green to red
 1.3.1
 - Small fixes
 - Properly escape some values for observed properties with [ ], etc.
@@ -89,8 +93,8 @@ function Set(list)
 end
 
 -- list of classes to check against for things like displaying mana % versus endurance %
-local casters = Set { 'Cleric', 'Druid', 'Shaman', 'Enchanter', 'Magician', 'Necromancer', 'Wizard' }
-local melee = Set { 'Bard', 'Rogue', 'Monk', 'Berserker', 'Ranger', 'Beastlord', 'Warrior', 'Shadow Knight', 'Paladin'}
+local casters = Set { 'CLR', 'DRU', 'SHM', 'ENC', 'MAG', 'NEC', 'WIZ' }
+local melee = Set { 'BRD', 'ROG', 'MNK', 'BER', 'RNG', 'BST', 'WAR', 'SHD', 'PAL'}
 
 -- Split a string using the provided separator, | by default
 function Split(input, sep)
@@ -180,6 +184,11 @@ function LoadSettings()
         staleDataTimeout = settings['StaleDataTimeout']
     end
 
+    -- turn off fullname mode in DanNet
+    if tostring(mq.TLO.DanNet.FullNames) == 'TRUE' then
+        mq.cmd.dnet('fullnames off')
+    end
+
     -- Calculate max tab width
     local globalColumnWidth = 0
     if settings['Columns'] and table.getn(settings['Columns']) > 0 then
@@ -242,71 +251,56 @@ function VerifyObservers(botName)
     return true
 end
 
--- Evaluates threshold as:
---   lower == better (green)
---   higher == worse (red)
--- e.g. Distance: close == green, far away == red
-function SetColoredText(thresholds, value)
-    -- Fill HP% column
+function SetText(value, thresholds, ascending, percentage)
     if thresholds ~= nil then
         if table.getn(thresholds) == 1 then
             if tonumber(value) ~= nil and tonumber(value) >= thresholds[1] then
-                -- red if above threshold
-                ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
+                if ascending then
+                    -- green if above threshold
+                    ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
+                else
+                    -- red if above threshold
+                    ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
+                end
             else
-                -- green otherwise
-                ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
+                if ascending then
+                    -- red otherwise
+                    ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
+                else
+                    -- green otherwise
+                    ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
+                end
             end
         elseif table.getn(thresholds) == 2 then
             if tonumber(value) ~= nil and tonumber(value) >= thresholds[2] then
-                -- red if above threshold
-                ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
+                if ascending then
+                    -- green if above threshold
+                    ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
+                else
+                    -- red if above threshold
+                    ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
+                end
             elseif tonumber(value) ~= nil and tonumber(value) > thresholds[1] and tonumber(value) <= thresholds[2] then
                 -- yellow if between high and low
                 ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
             else
-                -- red otherwise
-                ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
+                if ascending then
+                    -- green if above threshold
+                    ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
+                else
+                    -- red if above threshold
+                    ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
+                end
             end
         end
     else
         ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
     end
-    ImGui.Text(value)
-    ImGui.PopStyleColor(1)
-end
-
--- Evaluates thresholds as percentage:
---   lower == worse (red)
---   higher == better (green)
--- e.g. PctHPs: low == red, high == green
-function SetColoredTextPct(thresholds, value)
-    -- Fill HP% column
-    if thresholds ~= nil then
-        if table.getn(thresholds) == 1 then
-            if tonumber(value) ~= nil and tonumber(value) >= thresholds[1] then
-                -- green if above threshold
-                ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
-            else
-                -- red otherwise
-                ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
-            end
-        elseif table.getn(thresholds) == 2 then
-            if tonumber(value) ~= nil and tonumber(value) >= thresholds[2] then
-                -- green if above threshold
-                ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
-            elseif tonumber(value) ~= nil and tonumber(value) > thresholds[1] and tonumber(value) <= thresholds[2] then
-                -- yellow if nearby
-                ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 0, 1)
-            else
-                -- red otherwise
-                ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
-            end
-        end
+    if percentage then
+        ImGui.Text(value..'%%')
     else
-        ImGui.PushStyleColor(ImGuiCol.Text, 0, 1, 0, 1)
+        ImGui.Text(value)
     end
-    ImGui.Text(value..'%%')
     ImGui.PopStyleColor(1)
 end
 
@@ -343,7 +337,7 @@ function DrawHUDColumns(columns)
         botInZone = botValues['BotInZone']
         botInvis = botValues['Me.Invis']
         botID = botValues['Me.ID']
-        botClass = botValues['Me.Class']
+        botClass = botValues['Me.Class.ShortName']
 
         for _, column in pairs(columns) do
             if column['Name'] == 'Name' then
@@ -361,18 +355,38 @@ function DrawHUDColumns(columns)
                         -- bring left clicked toon to foreground
                         mq.cmd.dex(botName..' /foreground')
                     end
+                    ImGui.PopStyleColor(1)
+                    
+                    if ImGui.BeginPopupContextItem("popup##"..botName) then
+                        ImGui.Text('Send Command: ')
+                        text = ""
+                        text, selected = ImGui.InputText("##input"..botName, text, 32)
+                        if selected then
+                            print('/dex '..botName..' '..text)
+                            mq.cmd.dex(botName..' '..text)
+                            ImGui.CloseCurrentPopup()
+                        end
+                        if ImGui.Button('Close##'..botName) then
+                            ImGui.CloseCurrentPopup()
+                        end
+                        ImGui.EndPopup()
+                    end
+                    
+                    --[[
                     if ImGui.IsItemHovered() and ImGui.IsMouseReleased(ImGuiMouseButton.ImGuiMouseButton_Right) then
                         -- target the toon on right click
-                        mq.cmd.target('id '..botID)
+                        --mq.cmd.target('id '..botID)
+                        ImGui.OpenPopup()
                     end
+                    --]]
                 else
                     ImGui.PushStyleColor(ImGuiCol.Text, 1, 0, 0, 1)
                     if ImGui.SmallButton(titleCase(botName)) then
                         -- bring left clicked toon to foreground
                         mq.cmd.dex(botName..' /foreground')
                     end
+                    ImGui.PopStyleColor(1)
                 end
-                ImGui.PopStyleColor(1)
                 ImGui.NextColumn()
             else
                 -- Default column type is property (observed or spawn properties)
@@ -383,22 +397,21 @@ function DrawHUDColumns(columns)
                             value = botValues[column['Properties']['all']]
                         end
                         if value == 'NULL' then
-                            if column['Properties']['caster'] and casters['botClass'] then
+                            if column['Properties'][botClass] then
+                                value = botValues[column['Properties'][botClass]]
+                            elseif column['Properties']['caster'] and casters[botClass] then
                                 value = botValues[column['Properties']['caster']]
-                            elseif column['Properties']['melee'] and not casters['botClass'] then
+                            elseif column['Properties']['melee'] and melee[botClass] then
                                 value = botValues[column['Properties']['melee']]
                             end
                         end
+                        -- value, thresholds, ascending, percentage
                         thresholds = column['Thresholds']
                         if value ~= 'NULL' then
-                            if column['Percentage'] then
-                                SetColoredTextPct(thresholds, value)
-                            else
-                                if column['Mappings'] and column['Mappings'][value] then
-                                    value = column['Mappings'][value]
-                                end
-                                SetColoredText(thresholds, value)
+                            if column['Mappings'] and column['Mappings'][value] then
+                                value = column['Mappings'][value]
                             end
+                            SetText(value, thresholds, column['Ascending'], column['Percentage'])
                         end
                     end
                 elseif column['Type'] == 'button' then
@@ -526,11 +539,20 @@ while not terminate do
         botValues['Me.ID'] = tostring(botSpawnData.ID)
         botValues['Me.Invis'] = tostring(botSpawnData.Invis)
         -- Fill in data from this toons observed properties
-        for _, obsProp in pairs(settings['ObservedProperties']) do
-            botValues[obsProp['Name']] = tostring(mq.TLO.DanNet(botName).Observe('"'..obsProp['Name']..'"'))
+        if settings['ObservedProperties'] then
+            for _, obsProp in pairs(settings['ObservedProperties']) do
+                botValues[obsProp['Name']] = tostring(mq.TLO.DanNet(botName).Observe('"'..obsProp['Name']..'"'))
+            end
         end
-        for _, spawnProp in pairs(settings['SpawnProperties']) do
-            botValues[spawnProp['Name']] = tostring(mq.TLO.Spawn('='..botName)[spawnProp['Name']])
+        if settings['NetBotsProperties'] then
+            for _, netbotsProp in pairs(settings['NetBotsProperties']) do
+                botValues[netbotsProp['Name']] = tostring(mq.TLO.NetBots(titleCase(botName))[netbotsProp['Name']])
+            end
+        end
+        if settings['SpawnProperties'] then
+            for _, spawnProp in pairs(settings['SpawnProperties']) do
+                botValues[spawnProp['Name']] = tostring(mq.TLO.Spawn('='..botName)[spawnProp['Name']])
+            end
         end
         if peerGroup == 'all' then
             botValues['BotInZone'] = (botValues['Me.ID'] ~= 'null')
