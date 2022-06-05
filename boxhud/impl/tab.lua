@@ -3,7 +3,6 @@ local TabInput = require 'boxhud.classes.inputs.tabinput'
 local helpers = require 'boxhud.utils.uihelpers'
 local state = require 'boxhud.state'
 local settings = require 'boxhud.settings.settings'
-require 'ImGui'
 
 function TabInput:toTab()
     local tab = Tab({})

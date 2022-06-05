@@ -30,9 +30,14 @@ local mq = require 'mq'
 --- @type ImGui
 require 'ImGui'
 local WindowState = require 'boxhud.classes.hud.windowstate'
+local ConfigurationPanel = require 'boxhud.classes.config.configurationpanel'
 require 'boxhud.impl.window'
 require 'boxhud.impl.windowstate'
 require 'boxhud.impl.character'
+require 'boxhud.impl.property'
+require 'boxhud.impl.column'
+require 'boxhud.impl.tab'
+require 'boxhud.impl.configurationpanel'
 
 local utils = require 'boxhud.utils.utils'
 local settings = require 'boxhud.settings.settings'
@@ -142,7 +147,7 @@ end
 
 local function SetupWindowStates()
     for _,window in pairs(state.settings['Windows']) do
-        state.windowStates[window.Name] = WindowState(window.Name, window.PeerGroup or 'zone')
+        state.windowStates[window.Name] = WindowState(window.Name, window.PeerGroup or utils.GetZonePeerGroup(), ConfigurationPanel(window.Name))
         state.windowStates[window.Name]:refreshPeers()
     end
 end
@@ -180,7 +185,7 @@ local function main()
         local currTime = os.time(os.date("!*t"))
         for windowName,window in pairs(state.settings['Windows']) do
             if not state.windowStates[windowName] then
-                state.windowStates[windowName] = WindowState(windowName, window.PeerGroup or 'zone')
+                state.windowStates[windowName] = WindowState(windowName, window.PeerGroup or utils.GetZonePeerGroup(), ConfigurationPanel(windowName))
             end
             state.windowStates[windowName]:refreshPeers()
             if state.windowStates[windowName].peers then

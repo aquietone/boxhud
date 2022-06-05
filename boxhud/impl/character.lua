@@ -6,8 +6,6 @@ local state = require 'boxhud.state'
 local mq = require 'mq'
 local DanNet = mq.TLO.DanNet
 local NetBots = mq.TLO.NetBots
---- @type ImGui
-require 'ImGui'
 
 function Character:shouldObserveProperty(propSettings)
     if not propSettings['DependsOnName'] then

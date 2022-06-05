@@ -1,6 +1,3 @@
---- @type ImGui
-require 'ImGui'
-
 local uihelpers = {}
 
 uihelpers.HelpMarker = function(desc)

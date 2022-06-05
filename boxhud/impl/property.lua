@@ -3,7 +3,6 @@ local PropertyInput = require 'boxhud.classes.inputs.propertyinput'
 local helpers = require 'boxhud.utils.uihelpers'
 local state = require 'boxhud.state'
 local settings = require 'boxhud.settings.settings'
-require 'ImGui'
 
 function PropertyInput:toProperty()
     local property = Property({})

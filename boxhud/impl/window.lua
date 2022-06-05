@@ -1,11 +1,9 @@
 local Window = require 'boxhud.classes.config.window'
 local WindowInput = require 'boxhud.classes.inputs.windowinput'
-require 'boxhud.impl.windowstate'
 local helpers = require 'boxhud.utils.uihelpers'
 local utils = require 'boxhud.utils.utils'
 local state = require 'boxhud.state'
 local settings = require 'boxhud.settings.settings'
-require 'ImGui'
 
 local adminPeerSelected = 0
 math.randomseed(os.time())
