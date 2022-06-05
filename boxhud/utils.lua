@@ -439,6 +439,17 @@ local function ValidateOptionalSettings()
     if SETTINGS['StaleDataTimeout'] and type(SETTINGS['StaleDataTimeout']) == 'number' then
         STALE_DATA_TIMEOUT = SETTINGS['StaleDataTimeout']
     end
+    if not SETTINGS['Colors'] then
+        SETTINGS['Colors'] = {
+            ['Default'] = {1,1,1},
+            ['Low'] = {1,0,0},
+            ['Medium'] = {1,1,0},
+            ['High'] = {0,1,0},
+            ['InZone'] = {0,1,0},
+            ['Invis'] = {0.26, 0.98, 0.98},
+            ['NotInZone'] = {1,0,0}
+        }
+    end
     return true
 end
 
