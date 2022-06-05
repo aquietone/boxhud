@@ -80,6 +80,7 @@ return {
                     Properties={all='Me.PctHPs'}, 
                     Thresholds={35,70}, 
                     Percentage=true, 
+                    Ascending=true,
                     InZone=false, 
                     Width=40 
                 },
@@ -89,6 +90,7 @@ return {
                     Properties={all='Me.PctMana'}, 
                     Thresholds={35,70}, 
                     Percentage=true, 
+                    Ascending=true,
                     InZone=false, 
                     Width=40 
                 },
@@ -97,7 +99,8 @@ return {
                     Type='property',
                     Properties={all='Me.PctEndurance'}, 
                     Thresholds={35,70}, 
-                    Percentage=true, 
+                    Percentage=true,
+                    Ascending=true,
                     InZone=false, 
                     Width=40 
                 },
@@ -107,6 +110,7 @@ return {
                     Properties={all='Distance3D'}, 
                     Thresholds={100,200}, 
                     Percentage=false, 
+                    Ascending=false,
                     InZone=true, 
                     Width=60 
                 },
@@ -185,10 +189,11 @@ return {
                     Properties={
                         all='Me.PctExp'
                     },
-                    Thresholds=nil,
-                    Percentage=false,
+                    Thresholds={33,66},
+                    Percentage=true,
+                    Ascending=true,
                     InZone=false,
-                    Width=120
+                    Width=50
                 },
                 {
                     Name='AA Unspent',
@@ -196,8 +201,9 @@ return {
                     Properties={
                         all='Me.AAPoints'
                     },
-                    Thresholds=nil,
+                    Thresholds={50,100},
                     Percentage=false,
+                    Ascending=false,
                     InZone=false,
                     Width=80
                 }
