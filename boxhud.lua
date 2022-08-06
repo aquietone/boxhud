@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.5.2 -- aquietone
+boxhud.lua 2.5.3 -- aquietone
 https://www.redguides.com/community/resources/boxhud.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -29,6 +29,29 @@ Usage:  /lua run boxhud [settings.lua]
 local mq = require 'mq'
 --- @type ImGui
 require 'ImGui'
+
+-- LFS must be downloaded from the luarocks server before anything can work
+-- so do that first. This will open a dialog prompting to download lfs.dll
+-- if not already present.
+-- Include helper function so we can give user friendly messages
+function Include(...)
+    local status, lib = pcall(require, ...)
+    if(status) then
+        return lib
+    end
+    return nil
+end
+local lfs = Include('lfs')
+if not lfs then
+    local PackageMan = Include('mq.PackageMan')
+    lfs = PackageMan.InstallAndLoad('luafilesystem', 'lfs')
+end
+
+if not lfs then
+    print('\arError loading LuaFileSystem dependency, ending script\ax')
+    mq.exit()
+end
+
 local WindowState = require 'boxhud.classes.hud.windowstate'
 local ConfigurationPanel = require 'boxhud.classes.config.configurationpanel'
 require 'boxhud.impl.window'
@@ -56,10 +79,10 @@ local adminMode = false
 -- ImGui main function for rendering the UI window
 local HUDGUI = function()
     if not openGUI then return end
-    for _,window in pairs(state.Settings['Windows']) do
+    for _,window in pairs(state.Settings.Windows) do
         local flags = 0
-        if not window['TitleBar'] then flags = ImGuiWindowFlags.NoTitleBar end
-        if window['Transparency'] then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
+        if not window.TitleBar then flags = ImGuiWindowFlags.NoTitleBar end
+        if window.Transparency then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
         if state.WindowStates[window.Name] and state.WindowStates[window.Name].Peers then
             openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..state.MyName..window.Name, openGUI, flags)
             if shouldDrawGUI then
@@ -131,7 +154,7 @@ end
 
 local function CleanupStaleData(currTime)
     for name, char in pairs(state.Characters) do
-        if os.difftime(currTime, char.Properties['lastUpdated']) > state.StaleDataTimeout then
+        if os.difftime(currTime, char.Properties.lastUpdated) > state.StaleDataTimeout then
             print_msg('Removing stale toon data: \ay'..name)
             state.Characters[name] = nil
         end
@@ -144,7 +167,7 @@ local function SendCommand()
 end
 
 local function SetupWindowStates()
-    for _,window in pairs(state.Settings['Windows']) do
+    for _,window in pairs(state.Settings.Windows) do
         state.WindowStates[window.Name] = WindowState(window.Name, window.PeerGroup or utils.GetZonePeerGroup(), ConfigurationPanel(window.Name))
         state.WindowStates[window.Name]:refreshPeers()
     end
@@ -181,7 +204,7 @@ local function main()
             SendCommand()
         end
         local currTime = os.time(os.date("!*t"))
-        for windowName,window in pairs(state.Settings['Windows']) do
+        for windowName,window in pairs(state.Settings.Windows) do
             if not state.WindowStates[windowName] then
                 state.WindowStates[windowName] = WindowState(windowName, window.PeerGroup or utils.GetZonePeerGroup(), ConfigurationPanel(windowName))
             end
@@ -197,7 +220,7 @@ local function main()
                             char:manageObservers(false)
                         end
                     end
-                    char:updateCharacterProperties(currTime, window['PeerGroup'])
+                    char:updateCharacterProperties(currTime, window.PeerGroup)
                 end
             end
         end

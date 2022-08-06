@@ -6,19 +6,19 @@ local state = require 'boxhud.state'
 local mq = require 'mq'
 
 function Character:shouldObserveProperty(propSettings)
-    if not propSettings['DependsOnName'] then
+    if not propSettings.DependsOnName then
         -- Does not depend on another property being observed
         return true
-    elseif not propSettings['DependsOnValue'] or propSettings['DependsOnValue'] == '' then
+    elseif not propSettings.DependsOnValue or propSettings.DependsOnValue == '' then
         -- Does not care what the value is of the property, just that it is observed
         return true
-    elseif propSettings['DependsOnValue'] then
-        local dependentValue = mq.TLO.DanNet(self.Name).Observe(string.format('"%s"', propSettings['DependsOnName']))()
+    elseif propSettings.DependsOnValue then
+        local dependentValue = mq.TLO.DanNet(self.Name).Observe('"'..propSettings.DependsOnName..'"')()
         if dependentValue then
-            if not propSettings['Inverse'] and string.lower(propSettings['DependsOnValue']):find(string.lower(dependentValue)) ~= nil then
+            if not propSettings.Inverse and propSettings.DependsOnValue:lower():find(dependentValue:lower()) then
                 -- The value of the dependent property matches
                 return true
-            elseif propSettings['Inverse'] and string.lower(propSettings['DependsOnValue']):find(string.lower(dependentValue)) == nil then
+            elseif propSettings.Inverse and propSettings.DependsOnValue:lower():find(dependentValue:lower()) then
                 return true
             end
         end
@@ -29,18 +29,15 @@ end
 
 -- Return whether or not a property is observed for a toon
 function Character:isObserverSet(propName)
-    if not mq.TLO.DanNet(self.Name)() or mq.TLO.DanNet(self.Name).ObserveSet('"'..propName..'"')() then
-        return true
-    end
-    return false
+    return not mq.TLO.DanNet(self.Name)() or mq.TLO.DanNet(self.Name).ObserveSet('"'..propName..'"')()
 end
 
 -- Return whether or not all expected observers are set for a toon 
 function Character:verifyObservers()
-    for propName, propSettings in pairs(state.Settings['Properties']) do
-        if propSettings['Type'] == 'Observed' and self:shouldObserveProperty(propSettings) then
+    for propName, propSettings in pairs(state.Settings.Properties) do
+        if propSettings.Type == 'Observed' and self:shouldObserveProperty(propSettings) then
             --if not self:isObserverSet(propName) then
-            if not self.Observers[propName] then
+            if not self.Observers[propName] or self.Observers[propName] == 'ERR' then
                 return false
             end
         end
@@ -49,63 +46,64 @@ function Character:verifyObservers()
 end
 
 function Character:addObserver(propName, propSettings)
-    if propSettings['DependsOnName'] then
-        for depPropName,depPropSettings in pairs(state.Settings['Properties']) do
-            if depPropName == propSettings['DependsOnName'] then
+    if propSettings.DependsOnName then
+        for depPropName,depPropSettings in pairs(state.Settings.Properties) do
+            if depPropName == propSettings.DependsOnName then
                 self:addObserver(depPropName, depPropSettings)
             end
         end
     end
     if self:shouldObserveProperty(propSettings) then
         -- Add the observation if it is not set
-        -- then
-        if not self.Observers[propName] then
-            if mq.TLO.DanNet(self.Name).ObserveSet(string.format('"%s"', propName))() then
-                -- remove potentially stale observer and re-add it
-                self:removeObserver(propName, true)
-            end
-            if not mq.TLO.DanNet(self.Name).ObserveSet(string.format('"%s"', propName))() then
+        if not self.Observers[propName] or self.Observers[propName] == 'ERR' then
+            self.Observers[propName] = nil
+            --if mq.TLO.DanNet(self.Name).ObserveSet('"'..propName..'"')() then
+            --    -- remove potentially stale observer and re-add it
+            --    self:removeObserver(propName, true)
+            --end
+            if not mq.TLO.DanNet(self.Name).ObserveSet('"'..propName..'"')() then
                 mq.cmdf('/dobserve %s -q "%s"', self.Name, propName)
                 local verifyStartTime = os.time(os.date("!*t"))
                 while not self:isObserverSet(propName) do
                     mq.delay(100)
-                    if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 30 then
+                    if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 5 then
                         print_err('Timed out waiting for observer to be added for \ay'..self.Name)
-                        print_err('Exiting the script.')
-                        mq.exit()
+                        self.Observers[propName] = 'ERR'
                     end
                 end
             end
-            self.Observers[propName] = 1
+            if self.Observers[propName] ~= 'ERR' then
+                self.Observers[propName] = true
+            end
         end
     end
 end
 
 function Character:removeObserver(propName, force)
     -- Drop the observation if it is set
-    --
     if self.Observers[propName] or force then
-        if force or mq.TLO.DanNet(self.Name).ObserveSet(string.format('"%s"', propName))() then
+        if force or mq.TLO.DanNet(self.Name).ObserveSet('"'..propName..'"')() then
             mq.cmdf('/dobserve %s -q "%s" -drop', self.Name, propName)
             local verifyStartTime = os.time(os.date("!*t"))
             while self:isObserverSet(propName) do
                 mq.delay(100)
-                if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 30 then
+                if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 10 then
                     print_err('Timed out waiting for observer to be removed for \ay'..self.Name)
-                    print_err('Exiting the script.')
-                    mq.exit()
+                    self.Observers[propName] = 'ERR'
                 end
             end
         end
-        self.Observers[propName] = nil
+        if self.Observers[propName] ~= 'ERR' then
+            self.Observers[propName] = nil
+        end
     end
 end
 
 -- Add or remove observers for the given toon
 function Character:manageObservers(drop)
     if drop then
-        for propName, propSettings in pairs(state.Settings['Properties']) do
-            if propSettings['Type'] == 'Observed' then
+        for propName, propSettings in pairs(state.Settings.Properties) do
+            if propSettings.Type == 'Observed' then
                 self:removeObserver(propName)
             end
         end
@@ -114,8 +112,8 @@ function Character:manageObservers(drop)
         end
         print_msg('Removed observed properties for: \ay'..self.Name)
     else
-        for propName, propSettings in pairs(state.Settings['Properties']) do
-            if propSettings['Type'] == 'Observed' then
+        for propName, propSettings in pairs(state.Settings.Properties) do
+            if propSettings.Type == 'Observed' then
                 self:addObserver(propName, propSettings)
             end
         end
@@ -163,7 +161,7 @@ local function format_int(number)
 end
 
 local function SetText(value, thresholds, ascending, percentage, colColor, prettify)
-    local col = state.Settings['Colors']['Default']
+    local col = state.Settings.Colors.Default
     if not colColor then
         if thresholds ~= nil then
             local valueNum = tonumber(value)
@@ -173,39 +171,40 @@ local function SetText(value, thresholds, ascending, percentage, colColor, prett
             if #thresholds == 1 then
                 if valueNum >= thresholds[1] then
                     if ascending then
-                        col = state.Settings['Colors']['High']
+                        col = state.Settings.Colors.High
                     else -- red if above
-                        col = state.Settings['Colors']['Low']
+                        col = state.Settings.Colors.Low
                     end
                 else
                     if ascending then
-                        col = state.Settings['Colors']['Low']
+                        col = state.Settings.Colors.Low
                     else -- green if below
-                        col = state.Settings['Colors']['High']
+                        col = state.Settings.Colors.High
                     end
                 end
             elseif #thresholds == 2 then
                 if valueNum >= thresholds[2] then
                     if ascending then
-                        col = state.Settings['Colors']['High']
+                        col = state.Settings.Colors.High
                     else
-                        col = state.Settings['Colors']['Low']
+                        col = state.Settings.Colors.Low
                     end
                 elseif valueNum >= thresholds[1] and valueNum < thresholds[2] then
-                    col = state.Settings['Colors']['Medium']
+                    col = state.Settings.Colors.Medium
                 else
                     if ascending then
-                        col = state.Settings['Colors']['Low']
+                        col = state.Settings.Colors.Low
                     else
-                        col = state.Settings['Colors']['High']
+                        col = state.Settings.Colors.High
                     end
                 end
             end
         end
-        if value:lower() == 'true' then
-            col = state.Settings['Colors']['True']
-        elseif value:lower() == 'false' then
-            col = state.Settings['Colors']['False']
+        local lowerValue = value:lower()
+        if lowerValue == 'true' then
+            col = state.Settings.Colors.True
+        elseif lowerValue == 'false' then
+            col = state.Settings.Colors.False
         end
     else
         col = colColor
@@ -280,27 +279,27 @@ end
 function Character:drawNameButton()
     local buttonText = self:getDisplayName()
     local col = nil
-    if self.Properties['BotInZone'] then
+    if self.Properties.BotInZone then
         if self.Properties['Me.Invis'] == true then -- Me.Invis* isn't observed, just getting ANY invis from spawn data
-            col = state.Settings['Colors']['Invis'] or {0.26, 0.98, 0.98}
+            col = state.Settings.Colors.Invis or {0.26, 0.98, 0.98}
             buttonText = '('..self:getDisplayName()..')'
         elseif self.Properties['Me.Invis'] == 1 then -- Me.Invis[1] is observed and toon has regular invis
-            col = state.Settings['Colors']['Invis'] or {0.26, 0.98, 0.98}
+            col = state.Settings.Colors.Invis or {0.26, 0.98, 0.98}
             buttonText = '('..self:getDisplayName()..')'
         elseif self.Properties['Me.Invis'] == 2 then -- Me.Invis[2] is observed and toon  has ivu
-            col = state.Settings['Colors']['IVU'] or {0.95, 0.98, 0.26}
+            col = state.Settings.Colors.IVU or {0.95, 0.98, 0.26}
             buttonText = '('..self:getDisplayName()..')'
         elseif self.Properties['Me.Invis'] == 3 then -- Me.Invis[1,2] is observed and toon has double invis
-            col = state.Settings['Colors']['DoubleInvis'] or {0.68, 0.98, 0.98}
+            col = state.Settings.Colors.DoubleInvis or {0.68, 0.98, 0.98}
             buttonText = '('..self:getDisplayName()..')'
         else -- toon has no invis
-            col = state.Settings['Colors']['InZone'] or {0,1,0}
+            col = state.Settings.Colors.InZone or {0,1,0}
         end
     else
-        col = state.Settings['Colors']['NotInZone'] or {1,0,0}
+        col = state.Settings.Colors.NotInZone or {1,0,0}
     end
     ImGui.PushStyleColor(ImGuiCol.Text, col[1], col[2], col[3], 1)
-    if state.Settings['Columns']['Name']['IncludeLevel'] then
+    if state.Settings.Columns.Name.IncludeLevel then
         buttonText = buttonText .. ' (' .. self.Properties['Me.Level'] .. ')'
     end
 
@@ -312,28 +311,28 @@ function Character:drawNameButton()
 end
 
 function Character:drawColumnProperty(column)
-    if not column['InZone'] or (column['InZone'] and self.Properties['BotInZone']) then
+    if not column.InZone or self.Properties.BotInZone then
         local value = 'NULL'
-        if column['Properties'][self.ClassName] then
-            value = self.Properties[column['Properties'][self.ClassName]]
-        elseif column['Properties']['ranged'] and ranged[self.ClassName] then
-            value = self.Properties[column['Properties']['ranged']]
-        elseif column['Properties']['hybrids'] and hybrids[self.ClassName] then
-            value = self.Properties[column['Properties']['hybrids']]
-        elseif column['Properties']['caster'] and casters[self.ClassName] then
-            value = self.Properties[column['Properties']['caster']]
-        elseif column['Properties']['melee'] and melee[self.ClassName] then
-            value = self.Properties[column['Properties']['melee']]
+        if column.Properties[self.ClassName] then
+            value = self.Properties[column.Properties[self.ClassName]]
+        elseif column.Properties.ranged and ranged[self.ClassName] then
+            value = self.Properties[column.Properties['ranged']]
+        elseif column.Properties.hybrids and hybrids[self.ClassName] then
+            value = self.Properties[column.Properties['hybrids']]
+        elseif column.Properties.caster and casters[self.ClassName] then
+            value = self.Properties[column.Properties['caster']]
+        elseif column.Properties.melee and melee[self.ClassName] then
+            value = self.Properties[column.Properties['melee']]
         end
-        if (value == 'NULL' or value == '') and column['Properties']['all'] then
-            value = self.Properties[column['Properties']['all']]
+        if (value == 'NULL' or value == '') and column.Properties['all'] then
+            value = self.Properties[column.Properties['all']]
         end
-        local thresholds = column['Thresholds']
+        local thresholds = column.Thresholds
         if value and value ~= 'NULL' then
-            if column['Mappings'] and column['Mappings'][value] then
-                value = column['Mappings'][value]
+            if column.Mappings and column.Mappings[value] then
+                value = column.Mappings[value]
             end
-            SetText(tostring(value), thresholds, column['Ascending'], column['Percentage'], column['Color'], column['Prettify'])
+            SetText(tostring(value), thresholds, column.Ascending, column.Percentage, column.Color, column.Prettify)
         end
     end
 end
@@ -341,6 +340,7 @@ end
 function Character:drawColumnButton(columnName, columnAction)
     if ImGui.SmallButton(columnName..'##'..self.Name) then
         if self.Name == mq.TLO.Me.Name():lower() and columnAction:find('/dex #botName# ') ~= -1 then
+            -- don't noparse or dex if the command would just be sent to ourself
             state.StoredCommand = columnAction:gsub('/dex #botName# ', ''):gsub('/noparse ', '')
         else
             state.StoredCommand = columnAction:gsub('#botName#', self.Name)
@@ -355,27 +355,30 @@ function Character:updateCharacterProperties(currTime, peerGroup)
     properties['Me.ID'] = charSpawnData.ID()
     properties['Me.Invis'] = charSpawnData.Invis()
 
+    local nameTitleCase = utils.TitleCase(self.Name)
     -- Fill in data from this toons observed properties
-    for propName, propSettings in pairs(state.Settings['Properties']) do
-        if propSettings['Type'] == 'Observed' then
-            if self:shouldObserveProperty(propSettings) then
+    for propName, propSettings in pairs(state.Settings.Properties) do
+        if propSettings.Type == 'Observed' then
+            if self:shouldObserveProperty(propSettings) and self.Observers[propName] ~= 'ERR' then
                 properties[propName] = mq.TLO.DanNet(self.Name).Observe('"'..propName..'"')() or ''
+            elseif self.Observers[propName] == 'ERR' then
+                properties[propName] = 'ERR'
             else
                 properties[propName] = ''
             end
-        elseif propSettings['Type'] == 'NetBots' then
+        elseif propSettings.Type == 'NetBots' then
             -- tostring instead of ending with () because class returned a number instead of class string
             if propName:find('Class') then
-                properties[propName] = tostring(mq.TLO.NetBots(utils.TitleCase(self.Name))[propName])
+                properties[propName] = tostring(mq.TLO.NetBots(nameTitleCase)[propName])
             else
-                properties[propName] = mq.TLO.NetBots(utils.TitleCase(self.Name))[propName]()
+                properties[propName] = mq.TLO.NetBots(nameTitleCase)[propName]()
             end
-        elseif propSettings['Type'] == 'Spawn' then
-            if propSettings['FromIDProperty'] then
-                if state.Settings['Properties'][propSettings.FromIDProperty]['Type'] == 'NetBots' then
-                    properties[propSettings.FromIDProperty] = mq.TLO.NetBots(utils.TitleCase(self.Name))[propSettings.FromIDProperty]()
+        elseif propSettings.Type == 'Spawn' then
+            if propSettings.FromIDProperty then
+                if state.Settings.Properties[propSettings.FromIDProperty].Type == 'NetBots' then
+                    properties[propSettings.FromIDProperty] = mq.TLO.NetBots(nameTitleCase)[propSettings.FromIDProperty]()
                 end
-                properties[propName] = mq.TLO.Spawn(string.format('id %s', properties[propSettings['FromIDProperty']]))[propName]()
+                properties[propName] = mq.TLO.Spawn(string.format('id %s', properties[propSettings.FromIDProperty]))[propName]()
             else
                 properties[propName] = charSpawnData[propName]()
                 if type(properties[propName]) == 'number' then
@@ -386,9 +389,9 @@ function Character:updateCharacterProperties(currTime, peerGroup)
     end
 
     if peerGroup ~= 'zone' then
-        properties['BotInZone'] = properties['Me.ID'] ~= 0
+        properties.BotInZone = properties['Me.ID'] ~= 0
     else
-        properties['BotInZone'] = true
+        properties.BotInZone = true
     end
     if properties['Me.Invis[1]'] == 'TRUE' then
         if type(properties['Me.Invis']) ~= 'number' then properties['Me.Invis'] = 0 end
@@ -398,7 +401,7 @@ function Character:updateCharacterProperties(currTime, peerGroup)
         if type(properties['Me.Invis']) ~= 'number' then properties['Me.Invis'] = 0 end
         properties['Me.Invis'] = properties['Me.Invis'] + 2
     end
-    properties['lastUpdated'] = currTime
+    properties.lastUpdated = currTime
     if properties[state.ClassVar] and not self.ClassName then
         self.ClassName = properties[state.ClassVar]:lower()
     end

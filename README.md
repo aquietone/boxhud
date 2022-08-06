@@ -4,7 +4,7 @@ A Lua / ImGui boxing HUD for EverQuest.
 
 # Requirements
 
-- MQNext
+- MQ
 - MQ2Lua
 - Either or both of:
   - MQ2DanNet (to use DanNet peers/observers)
@@ -13,6 +13,7 @@ A Lua / ImGui boxing HUD for EverQuest.
 # Installation
 
 Add `boxhud.lua` and the `boxhud` folder to the `lua` folder of your MQ directory.
+On first start, you will be prompted to download `lfs.dll` from the MQ luarocks server if it is not already present.
 
 # Usage
 
