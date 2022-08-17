@@ -1,3 +1,6 @@
+2.5.3
+- Use new mq.PackageMan to load lfs.dll from MQ luarocks server if its not present
+- No longer exit the script when an observer fails to be added.. hopefully it will just display ERR instead. Try reset observers from right click or admin tab if some observer fails, or it might retry on its own.
 2.5.2
 - Remove /noparse in addition to the /dex name when sending a command to the local character
 2.5.1
