@@ -12,7 +12,7 @@ A Lua / ImGui boxing HUD for EverQuest.
 
 # Installation
 
-Add `boxhud.lua` and the `boxhud` folder to the `lua` folder of your MQ directory.
+Add the `boxhud` folder to the `lua` folder of your MQ directory, or wherever your configured lua path may be.
 On first start, you will be prompted to download `lfs.dll` from the MQ luarocks server if it is not already present.
 
 # Usage
