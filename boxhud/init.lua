@@ -76,6 +76,10 @@ local terminate = false
 -- Stores all live observed toon information that will be displayed
 local adminMode = false
 
+if utils.FileExists(mq.luaDir..'/boxhud.lua') then
+    os.remove(mq.luaDir..'/boxhud.lua')
+end
+
 -- ImGui main function for rendering the UI window
 local HUDGUI = function()
     if not openGUI then return end
