@@ -1,3 +1,5 @@
+2.5.5
+- Fix reset observers for peer off by 1
 2.5.4
 - Move `boxhud.lua` to `boxhud/init.lua`
 2.5.3

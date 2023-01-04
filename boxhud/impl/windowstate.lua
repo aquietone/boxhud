@@ -26,9 +26,7 @@ function WindowState:refreshPeers()
     if state.PeerSource == 'dannet' then
         t = utils.Split(mq.TLO.DanNet.Peers(self.PeerGroup)())
     else
-        for i=1,mq.TLO.NetBots.Counts() do
-            table.insert(t, mq.TLO.NetBots.Client.Arg(i)())
-        end
+        t = utils.Split(mq.TLO.NetBots.Client(), ' ')
     end
 
     if not self.Peers or not utils.DoTablesMatch(self.Peers, t) then

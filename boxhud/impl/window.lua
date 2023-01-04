@@ -139,6 +139,10 @@ function Window:drawTableTab(columns, tabName)
     end
 end
 
+function Window:getPeerNameForIndex(index)
+    return state.WindowStates[self.Name].Peers[adminPeerSelected]
+end
+
 function Window:drawTabs()
     if ImGui.BeginTabBar('BOXHUDTABS##'..self.Name, ImGuiTabBarFlags.Reorderable) then
         for _,tabName in ipairs(self.Tabs) do
@@ -164,23 +168,23 @@ function Window:drawTabs()
                 adminPeerSelected, _ = ImGui.Combo("##combo", adminPeerSelected, state.WindowStates[self.Name].Peers, #state.WindowStates[self.Name].Peers, 5)
                 ImGui.SameLine()
                 if ImGui.Button('Reset All Observers') then
-                    print_msg('Resetting observed properties for: \ay'..state.WindowStates[self.Name].Peers[adminPeerSelected+1])
                     state.AdminPeerAction = 'reset'
-                    state.AdminPeerName = state.WindowStates[self.Name].Peers[adminPeerSelected+1]
+                    state.AdminPeerName = self:getPeerNameForIndex(adminPeerSelected)
+                    print_msg('Resetting observed properties for: \ay'..state.AdminPeerName)
                 end
                 ImGui.Text('Enter an observed property to check or drop:')
                 state.AdminPeerItem = ImGui.InputText('##checkobs', state.AdminPeerItem)
                 ImGui.SameLine()
                 if ImGui.Button('Check') then
-                    print_msg('Check observed property \ay'..state.AdminPeerItem..'\ax for: \ay'..state.WindowStates[self.Name].Peers[adminPeerSelected+1])
                     state.AdminPeerAction = 'check'
-                    state.AdminPeerName = state.WindowStates[self.Name].Peers[adminPeerSelected+1]
+                    state.AdminPeerName = self:getPeerNameForIndex(adminPeerSelected)
+                    print_msg('Check observed property \ay'..state.AdminPeerItem..'\ax for: \ay'..state.AdminPeerName)
                 end
                 ImGui.SameLine()
                 if ImGui.Button('Drop') then
-                    print_msg('Drop observed property \ay'..state.AdminPeerItem..'\ax for: \ay'..state.WindowStates[self.Name].Peers[adminPeerSelected+1])
                     state.AdminPeerAction = 'drop'
-                    state.AdminPeerName = state.WindowStates[self.Name].Peers[adminPeerSelected+1]
+                    state.AdminPeerName = self:getPeerNameForIndex(adminPeerSelected)
+                    print_msg('Drop observed property \ay'..state.AdminPeerItem..'\ax for: \ay'..state.AdminPeerName)
                 end
                 ImGui.Separator()
                 ImGui.TextColored(1, 0, 0, 1, 'BEWARE!')
