@@ -1,8 +1,8 @@
 --[[
 The Window class represents the static configuration of a window defined in boxhud-settings
 --]]
-local BaseClass = require 'boxhud.classes.base'
-local state = require 'boxhud.state'
+local BaseClass = require 'classes.base'
+local state = require 'state'
 
 local Window = BaseClass(function(w,windowSettings)
     w.Name = windowSettings['Name']

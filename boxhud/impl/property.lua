@@ -1,9 +1,10 @@
+--- @type Mq
 local mq = require 'mq'
-local Property = require 'boxhud.classes.config.property'
-local PropertyInput = require 'boxhud.classes.inputs.propertyinput'
-local helpers = require 'boxhud.utils.uihelpers'
-local state = require 'boxhud.state'
-local settings = require 'boxhud.settings.settings'
+local Property = require 'classes.config.property'
+local PropertyInput = require 'classes.inputs.propertyinput'
+local helpers = require 'utils.uihelpers'
+local state = require 'state'
+local settings = require 'settings.settings'
 
 function PropertyInput:toProperty()
     local property = Property({})

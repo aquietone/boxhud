@@ -1,8 +1,8 @@
-local Character = require 'boxhud.classes.hud.character'
-local utils = require 'boxhud.utils.utils'
-local state = require 'boxhud.state'
+local Character = require 'classes.hud.character'
+local utils = require 'utils.utils'
+local state = require 'state'
 
---- @type mq
+--- @type Mq
 local mq = require 'mq'
 
 function Character:shouldObserveProperty(propSettings)
@@ -61,16 +61,16 @@ function Character:addObserver(propName, propSettings)
             --    -- remove potentially stale observer and re-add it
             --    self:removeObserver(propName, true)
             --end
-            if not mq.TLO.DanNet(self.Name).ObserveSet('"'..propName..'"')() then
+            if not mq.TLO.DanNet(self.Name).ObserveSet(propName)() then
                 mq.cmdf('/dobserve %s -q "%s"', self.Name, propName)
-                local verifyStartTime = os.time(os.date("!*t"))
+                --[[local verifyStartTime = os.time(os.date("!*t"))
                 while not self:isObserverSet(propName) do
                     mq.delay(100)
                     if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 5 then
                         print_err('Timed out waiting for observer to be added for \ay'..self.Name)
                         self.Observers[propName] = 'ERR'
                     end
-                end
+                end]]
             end
             if self.Observers[propName] ~= 'ERR' then
                 self.Observers[propName] = true
@@ -350,7 +350,8 @@ function Character:drawColumnButton(columnName, columnAction)
 end
 
 function Character:updateCharacterProperties(currTime, peerGroup)
-    local properties = {}
+    if not self.Properties then self.Properties = {} end
+    local properties = self.Properties
     local charSpawnData = mq.TLO.Spawn('='..self.Name)
     properties['Me.ID'] = charSpawnData.ID()
     properties['Me.Invis'] = charSpawnData.Invis()
@@ -359,8 +360,9 @@ function Character:updateCharacterProperties(currTime, peerGroup)
     -- Fill in data from this toons observed properties
     for propName, propSettings in pairs(state.Settings.Properties) do
         if propSettings.Type == 'Observed' then
-            if self:shouldObserveProperty(propSettings) and self.Observers[propName] ~= 'ERR' then
-                properties[propName] = mq.TLO.DanNet(self.Name).Observe('"'..propName..'"')() or ''
+            if self:shouldObserveProperty(propSettings) and self.Observers[propName] == true then
+                local obsValue = mq.TLO.DanNet(self.Name).Observe(propName)()
+                properties[propName] = obsValue or ''
             elseif self.Observers[propName] == 'ERR' then
                 properties[propName] = 'ERR'
             else
@@ -405,5 +407,5 @@ function Character:updateCharacterProperties(currTime, peerGroup)
     if properties[state.ClassVar] and not self.ClassName then
         self.ClassName = properties[state.ClassVar]:lower()
     end
-    self.Properties = properties
+    --self.Properties = properties
 end

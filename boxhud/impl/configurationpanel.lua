@@ -1,14 +1,15 @@
+--- @type Mq
 local mq = require 'mq'
-local helpers = require 'boxhud.utils.uihelpers'
-local PropertyInput = require 'boxhud.classes.inputs.propertyinput'
-local ColumnInput = require 'boxhud.classes.inputs.columninput'
+local helpers = require 'utils.uihelpers'
+local PropertyInput = require 'classes.inputs.propertyinput'
+local ColumnInput = require 'classes.inputs.columninput'
 local TabInput = require  'boxhud.classes.inputs.tabinput'
-local WindowInput = require 'boxhud.classes.inputs.windowinput'
-local ConfigurationPanel = require 'boxhud.classes.config.configurationpanel'
-local state = require 'boxhud.state'
-local settings = require 'boxhud.settings.settings'
-local library = require 'boxhud.library'
-local filedialog = require 'boxhud.utils.imguifiledialog'
+local WindowInput = require 'classes.inputs.windowinput'
+local ConfigurationPanel = require 'classes.config.configurationpanel'
+local state = require 'state'
+local settings = require 'settings.settings'
+local library = require 'library'
+local filedialog = require 'utils.imguifiledialog'
 
 function ConfigurationPanel:drawDisplaySettingsSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)

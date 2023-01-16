@@ -1,3 +1,6 @@
+2.6.0
+- Removes some delays that may or may not have been necessary on observer setup
+- Mark sorting dirty when switching between tabs
 2.5.5
 - Fix reset observers for peer off by 1
 2.5.4

@@ -1,14 +1,14 @@
-local Property = require 'boxhud.classes.config.property'
-local Column = require 'boxhud.classes.config.column'
-local Tab = require 'boxhud.classes.config.tab'
-local Window = require 'boxhud.classes.config.window'
-local utils = require 'boxhud.utils.utils'
-local state = require 'boxhud.state'
+local Property = require 'classes.config.property'
+local Column = require 'classes.config.column'
+local Tab = require 'classes.config.tab'
+local Window = require 'classes.config.window'
+local utils = require 'utils.utils'
+local state = require 'state'
 local lfs = require 'lfs'
 
---- @type mq
+--- @type Mq
 local mq = require 'mq'
-dofile('boxhud/utils/persistence.lua')
+require('boxhud.utils.persistence')
 
 local s = {}
 

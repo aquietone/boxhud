@@ -1,9 +1,9 @@
-local Character = require 'boxhud.classes.hud.character'
-local WindowState = require 'boxhud.classes.hud.windowstate'
-local utils = require 'boxhud.utils.utils'
-local state = require 'boxhud.state'
+local Character = require 'classes.hud.character'
+local WindowState = require 'classes.hud.windowstate'
+local utils = require 'utils.utils'
+local state = require 'state'
 
---- @type mq
+--- @type Mq
 local mq = require 'mq'
 
 function WindowState:refreshPeers()

@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.5.5 -- aquietone
+boxhud.lua 2.6.0 -- aquietone
 https://www.redguides.com/community/resources/boxhud.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -25,7 +25,7 @@ Usage:  /lua run boxhud [settings.lua]
         /bhhelp    - Display help output
         /bhversion - Display the running version
 --]]
---- @type mq
+--- @type Mq
 local mq = require 'mq'
 --- @type ImGui
 require 'ImGui'
@@ -52,19 +52,19 @@ if not lfs then
     mq.exit()
 end
 
-local WindowState = require 'boxhud.classes.hud.windowstate'
-local ConfigurationPanel = require 'boxhud.classes.config.configurationpanel'
-require 'boxhud.impl.window'
-require 'boxhud.impl.windowstate'
-require 'boxhud.impl.character'
-require 'boxhud.impl.property'
-require 'boxhud.impl.column'
-require 'boxhud.impl.tab'
-require 'boxhud.impl.configurationpanel'
+local WindowState = require 'classes.hud.windowstate'
+local ConfigurationPanel = require 'classes.config.configurationpanel'
+require 'impl.window'
+require 'impl.windowstate'
+require 'impl.character'
+require 'impl.property'
+require 'impl.column'
+require 'impl.tab'
+require 'impl.configurationpanel'
 
-local utils = require 'boxhud.utils.utils'
-local settings = require 'boxhud.settings.settings'
-local state = require 'boxhud.state'
+local utils = require 'utils.utils'
+local settings = require 'settings.settings'
+local state = require 'state'
 
 local arg = {...}
 

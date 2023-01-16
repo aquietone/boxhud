@@ -1,11 +1,11 @@
---- @type mq
+--- @type Mq
 local mq = require 'mq'
-local Window = require 'boxhud.classes.config.window'
-local WindowInput = require 'boxhud.classes.inputs.windowinput'
-local helpers = require 'boxhud.utils.uihelpers'
-local utils = require 'boxhud.utils.utils'
-local state = require 'boxhud.state'
-local settings = require 'boxhud.settings.settings'
+local Window = require 'classes.config.window'
+local WindowInput = require 'classes.inputs.windowinput'
+local helpers = require 'utils.uihelpers'
+local utils = require 'utils.utils'
+local state = require 'state'
+local settings = require 'settings.settings'
 
 local adminPeerSelected = 0
 math.randomseed(os.time())
@@ -85,7 +85,7 @@ function Window:drawTableTab(columns, tabName)
         ImGui.TableSetupScrollFreeze(0, 1) -- Make row always visible
         local sort_specs = ImGui.TableGetSortSpecs()
         if sort_specs then
-            if sort_specs.SpecsDirty or state.WindowStates[self.Name].PeersDirty then
+            if sort_specs.SpecsDirty or state.WindowStates[self.Name].PeersDirty or self.SortDirty then
                 if #state.WindowStates[self.Name].Peers > 0 then
                     current_sort_specs = sort_specs
                     current_columns = columns
@@ -95,6 +95,7 @@ function Window:drawTableTab(columns, tabName)
                     current_columns = nil
                 end
                 sort_specs.SpecsDirty = false
+                self.SortDirty = true
                 state.WindowStates[self.Name].PeersDirty = false
             end
         end
@@ -148,6 +149,10 @@ function Window:drawTabs()
         for _,tabName in ipairs(self.Tabs) do
             local tab = utils.GetTabByName(tabName)
             if ImGui.BeginTabItem(tab['Name']) then
+                if self.currentTab ~= tab.Name then
+                    self.SortDirty = true
+                    self.CurrentTab = tab.Name
+                end
                 if tab['Columns'] and #tab['Columns'] > 0 then
                     self:drawTableTab(tab['Columns'], tab['Name'])
                     ImGui.EndTabItem()

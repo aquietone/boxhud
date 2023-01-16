@@ -1,8 +1,8 @@
-local Column = require 'boxhud.classes.config.column'
-local ColumnInput = require 'boxhud.classes.inputs.columninput'
-local helpers = require 'boxhud.utils.uihelpers'
-local state = require 'boxhud.state'
-local settings = require 'boxhud.settings.settings'
+local Column = require 'classes.config.column'
+local ColumnInput = require 'classes.inputs.columninput'
+local helpers = require 'utils.uihelpers'
+local state = require 'state'
+local settings = require 'settings.settings'
 
 local classes = {'all', 'melee', 'caster', 'hybrids', 'ranged', 'ber', 'brd',
         'bst', 'clr', 'dru', 'enc', 'mag', 'mnk', 'nec', 'pal', 'shd', 'rng',
