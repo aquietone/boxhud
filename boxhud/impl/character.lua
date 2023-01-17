@@ -382,9 +382,11 @@ function Character:updateCharacterProperties(currTime, peerGroup)
                 end
                 properties[propName] = mq.TLO.Spawn(string.format('id %s', properties[propSettings.FromIDProperty]))[propName]()
             else
-                properties[propName] = charSpawnData[propName]()
-                if type(properties[propName]) == 'number' then
-                    properties[propName] = string.format("%.2f", properties[propName])
+                local tempValue = charSpawnData[propName]()
+                if type(tempValue) == 'number' then
+                    properties[propName] = string.format("%.2f", tempValue)
+                else
+                    properties[propName] = tempValue
                 end
             end
         end
