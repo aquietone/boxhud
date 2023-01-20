@@ -1,3 +1,5 @@
+2.6.3
+- Add slight delay back on add observer loop
 2.6.2
 - Use group leader name when constructing dannet group name for eq group
 2.6.1

@@ -71,6 +71,7 @@ function Character:addObserver(propName, propSettings)
                         self.Observers[propName] = 'ERR'
                     end
                 end]]
+                mq.delay(50)
             end
             if self.Observers[propName] ~= 'ERR' then
                 self.Observers[propName] = true
