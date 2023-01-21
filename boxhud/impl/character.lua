@@ -13,7 +13,7 @@ function Character:shouldObserveProperty(propSettings)
         -- Does not care what the value is of the property, just that it is observed
         return true
     elseif propSettings.DependsOnValue then
-        local dependentValue = mq.TLO.DanNet(self.Name).Observe('"'..propSettings.DependsOnName..'"')()
+        local dependentValue = mq.TLO.DanNet(self.Name).Observe(propSettings.DependsOnName)()
         if dependentValue then
             if not propSettings.Inverse and propSettings.DependsOnValue:lower():find(dependentValue:lower()) then
                 -- The value of the dependent property matches
@@ -29,7 +29,7 @@ end
 
 -- Return whether or not a property is observed for a toon
 function Character:isObserverSet(propName)
-    return not mq.TLO.DanNet(self.Name)() or mq.TLO.DanNet(self.Name).ObserveSet('"'..propName..'"')()
+    return not mq.TLO.DanNet(self.Name)() or mq.TLO.DanNet(self.Name).ObserveSet(propName)()
 end
 
 -- Return whether or not all expected observers are set for a toon 
@@ -61,17 +61,9 @@ function Character:addObserver(propName, propSettings)
             --    -- remove potentially stale observer and re-add it
             --    self:removeObserver(propName, true)
             --end
-            if not mq.TLO.DanNet(self.Name).ObserveSet(propName)() then
+            if not self:isObserverSet(propName) then
                 mq.cmdf('/dobserve %s -q "%s"', self.Name, propName)
-                --[[local verifyStartTime = os.time(os.date("!*t"))
-                while not self:isObserverSet(propName) do
-                    mq.delay(100)
-                    if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 5 then
-                        print_err('Timed out waiting for observer to be added for \ay'..self.Name)
-                        self.Observers[propName] = 'ERR'
-                    end
-                end]]
-                mq.delay(50)
+                mq.delay(1000, function() return self:isObserverSet(propName) end)
             end
             if self.Observers[propName] ~= 'ERR' then
                 self.Observers[propName] = true
@@ -83,7 +75,7 @@ end
 function Character:removeObserver(propName, force)
     -- Drop the observation if it is set
     if self.Observers[propName] or force then
-        if force or mq.TLO.DanNet(self.Name).ObserveSet('"'..propName..'"')() then
+        if force or mq.TLO.DanNet(self.Name).ObserveSet(propName)() then
             mq.cmdf('/dobserve %s -q "%s" -drop', self.Name, propName)
             local verifyStartTime = os.time(os.date("!*t"))
             while self:isObserverSet(propName) do
