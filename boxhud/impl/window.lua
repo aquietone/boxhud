@@ -21,18 +21,18 @@ local function CompareWithSortSpecs(a, b)
         local delta = 0
 
         local columnName = current_columns[sort_spec.ColumnUserID]
-        local column = state.Settings['Columns'][columnName]
+        local column = state.Settings.Columns[columnName]
         if not column then
             return a < b
         end
         local aVal = nil
         local bVal = nil
-        if column['Name'] == 'Name' or not column['Properties'] or not column['Properties']['all'] then
+        if column.Name == 'Name' or not column.Properties or not column.Properties.all then
             aVal = tostring(a)
             bVal = tostring(b)
-        elseif state.Characters[a].Properties and state.Characters[b].Properties then
-            aVal = tostring(state.Characters[a].Properties[column['Properties']['all']] or -1)
-            bVal = tostring(state.Characters[b].Properties[column['Properties']['all']] or -1)
+        elseif (state.Characters[a] and state.Characters[a].Properties) and (state.Characters[b] and state.Characters[b].Properties) then
+            aVal = tostring((state.Characters[a] and state.Characters[a].Properties[column.Properties.all]) or -1)
+            bVal = tostring((state.Characters[b] and state.Characters[b].Properties[column.Properties.all]) or -1)
         else
             aVal = tostring(a)
             bVal = tostring(b)
