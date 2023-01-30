@@ -292,7 +292,7 @@ function Character:drawNameButton()
         col = state.Settings.Colors.NotInZone or {1,0,0}
     end
     ImGui.PushStyleColor(ImGuiCol.Text, col[1], col[2], col[3], 1)
-    if state.Settings.Columns.Name.IncludeLevel then
+    if state.Settings.Columns.Name.IncludeLevel and self.Properties['Me.Level'] then
         buttonText = buttonText .. ' (' .. self.Properties['Me.Level'] .. ')'
     end
 

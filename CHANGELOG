@@ -1,3 +1,5 @@
+2.6.6
+- nil check on level when appending to name button
 2.6.5
 - fix error in sort
 - fix error in add new tab
