@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.6.6 -- aquietone
+boxhud.lua 2.6.7 -- aquietone
 https://www.redguides.com/community/resources/boxhud.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -34,19 +34,8 @@ require 'ImGui'
 -- so do that first. This will open a dialog prompting to download lfs.dll
 -- if not already present.
 -- Include helper function so we can give user friendly messages
-function Include(...)
-    local status, lib = pcall(require, ...)
-    if(status) then
-        return lib
-    end
-    return nil
-end
-local lfs = Include('lfs')
-if not lfs then
-    local PackageMan = Include('mq.PackageMan')
-    lfs = PackageMan.InstallAndLoad('luafilesystem', 'lfs')
-end
-
+local PackageMan = require('mq.PackageMan')
+local lfs = PackageMan.Require('luafilesystem', 'lfs')
 if not lfs then
     print('\arError loading LuaFileSystem dependency, ending script\ax')
     mq.exit()
@@ -88,7 +77,9 @@ local HUDGUI = function()
         if not window.TitleBar then flags = ImGuiWindowFlags.NoTitleBar end
         if window.Transparency then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
         if state.WindowStates[window.Name] and state.WindowStates[window.Name].Peers then
-            openGUI, shouldDrawGUI = ImGui.Begin('Box HUD##'..state.MyName..window.Name, openGUI, flags)
+            local windowName = 'Box HUD##'..state.MyName..window.Name
+            if window.Name ~= 'default' then windowName = window.Name..'###'..state.MyName..window.Name end
+            openGUI, shouldDrawGUI = ImGui.Begin(windowName, openGUI, flags)
             if shouldDrawGUI then
                 if ImGui.GetWindowHeight() == 32 and ImGui.GetWindowWidth() == 32 then
                     ImGui.SetWindowSize(460, 177)
