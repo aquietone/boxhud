@@ -237,7 +237,7 @@ end
 
 function Character:drawContextMenu()
     if ImGui.BeginPopupContextItem("##popup"..self.Name) then
-        self:drawCmdButton('Target##'..self.Name, '/target %s')
+        self:drawCmdButton('Target##'..self.Name, '/mqt pc =%s')
         ImGui.SameLine()
         self:drawCmdButton('Nav To##'..self.Name, '/nav spawn %s')
         ImGui.SameLine()

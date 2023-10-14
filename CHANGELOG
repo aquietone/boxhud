@@ -1,3 +1,5 @@
+2.6.8
+- Update /target button to specify pc
 2.6.7
 - Use window name for imgui window name on non-default windows
 2.6.6
