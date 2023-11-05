@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.6.7 -- aquietone
+boxhud.lua 2.6.8 -- aquietone
 https://www.redguides.com/community/resources/boxhud.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -198,7 +198,7 @@ local function main()
         if state.StoredCommand then
             SendCommand()
         end
-        local currTime = os.time(os.date("!*t"))
+        local currTime = os.time()
         for windowName,window in pairs(state.Settings.Windows) do
             if not state.WindowStates[windowName] then
                 state.WindowStates[windowName] = WindowState(windowName, window.PeerGroup or utils.GetZonePeerGroup(), ConfigurationPanel(windowName))

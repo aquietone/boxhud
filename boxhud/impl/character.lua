@@ -77,10 +77,10 @@ function Character:removeObserver(propName, force)
     if self.Observers[propName] or force then
         if force or mq.TLO.DanNet(self.Name).ObserveSet(propName)() then
             mq.cmdf('/dobserve %s -q "%s" -drop', self.Name, propName)
-            local verifyStartTime = os.time(os.date("!*t"))
+            local verifyStartTime = os.time()
             while self:isObserverSet(propName) do
                 mq.delay(100)
-                if os.difftime(os.time(os.date("!*t")), verifyStartTime) > 10 then
+                if os.difftime(os.time(), verifyStartTime) > 10 then
                     print_err('Timed out waiting for observer to be removed for \ay'..self.Name)
                     self.Observers[propName] = 'ERR'
                 end
