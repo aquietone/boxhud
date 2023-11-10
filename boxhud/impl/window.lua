@@ -141,7 +141,7 @@ function Window:drawTableTab(columns, tabName)
 end
 
 function Window:getPeerNameForIndex(index)
-    return state.WindowStates[self.Name].Peers[adminPeerSelected]
+    return state.WindowStates[self.Name].Peers[index]
 end
 
 function Window:drawTabs()
@@ -175,7 +175,9 @@ function Window:drawTabs()
                 if ImGui.Button('Reset All Observers') then
                     state.AdminPeerAction = 'reset'
                     state.AdminPeerName = self:getPeerNameForIndex(adminPeerSelected)
-                    print_msg('Resetting observed properties for: \ay'..state.AdminPeerName)
+                    if state.AdminPeerName then
+                        print_msg('Resetting observed properties for: \ay%s', state.AdminPeerName)
+                    end
                 end
                 ImGui.Text('Enter an observed property to check or drop:')
                 state.AdminPeerItem = ImGui.InputText('##checkobs', state.AdminPeerItem)
@@ -183,13 +185,17 @@ function Window:drawTabs()
                 if ImGui.Button('Check') then
                     state.AdminPeerAction = 'check'
                     state.AdminPeerName = self:getPeerNameForIndex(adminPeerSelected)
-                    print_msg('Check observed property \ay'..state.AdminPeerItem..'\ax for: \ay'..state.AdminPeerName)
+                    if state.AdminPeerName then
+                        print_msg('Check observed property \ay%s\ax for: \ay%s', state.AdminPeerItem, state.AdminPeerName)
+                    end
                 end
                 ImGui.SameLine()
                 if ImGui.Button('Drop') then
                     state.AdminPeerAction = 'drop'
                     state.AdminPeerName = self:getPeerNameForIndex(adminPeerSelected)
-                    print_msg('Drop observed property \ay'..state.AdminPeerItem..'\ax for: \ay'..state.AdminPeerName)
+                    if state.AdminPeerName then
+                        print_msg('Drop observed property \ay%s\ax for: \ay%s', state.AdminPeerItem, state.AdminPeerName)
+                    end
                 end
                 ImGui.Separator()
                 ImGui.TextColored(1, 0, 0, 1, 'BEWARE!')
@@ -222,6 +228,12 @@ function WindowInput:toWindow()
     for idx,tab in ipairs(self.Tabs) do
         window.Tabs[idx] = tab
     end
+    if self.pos then
+        window.pos = {x=self.pos.x, y=self.pos.y}
+    end
+    if self.size then
+        window.size = {w=self.size.w, h=self.size.h}
+    end
     return window
 end
 
@@ -233,6 +245,12 @@ function WindowInput:fromWindow(window)
         o.Tabs[idx] = tab
     end
     o.TabCount = #window['Tabs']
+    if window.pos then
+        o.pos = {x=window.pos.x, y=window.pos.y}
+    end
+    if window.size then
+        o.size = {w=window.size.w, h=window.size.h}
+    end
     return o
 end
 

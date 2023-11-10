@@ -8,38 +8,22 @@ local lfs = require 'lfs'
 
 --- @type Mq
 local mq = require 'mq'
-require('boxhud.utils.persistence')
 
 local s = {}
 
 local settings_file = nil
 
-local function deepcopy(orig)
-    local orig_type = type(orig)
-    local copy
-    if orig_type == 'table' then
-        copy = {}
-        for orig_key, orig_value in next, orig, nil do
-            copy[deepcopy(orig_key)] = deepcopy(orig_value)
-        end
-        setmetatable(copy, deepcopy(getmetatable(orig)))
-    else -- number, string, boolean, etc
-        copy = orig
-    end
-    return copy
-end
-
 local function ValidateOptionalSettings()
     if not state.Settings['Windows'] then
         print_msg('No windows defined, adding default')
         state.Settings['Windows'] = {
-            ['default'] = Window({Name='default',Tabs={},Transparency=false,TitleBar=false})
+            ['default'] = Window({Name='default',Tabs={},Transparency=false,TitleBar=false,pos={x=400,y=400},size={w=460,h=177}})
         }
         for _,tab in ipairs(state.Settings['Tabs']) do
             table.insert(state.Settings['Windows']['default']['Tabs'], tab['Name'])
         end
         if state.Settings['PeerSource'] and state.Settings['PeerSource'] == 'dannet' then
-            print_msg('Setting default window peer group to '..state.Settings['DanNetPeerGroup'])
+            print_msg('Setting default window peer group to %s', state.Settings['DanNetPeerGroup'])
             state.Settings['Windows']['default']['PeerGroup'] = state.Settings['DanNetPeerGroup']
         end
     else
@@ -182,13 +166,13 @@ s.LoadSettings = function(arg)
     local default_settings_path = string.format('%s/boxhud/settings/%s', mq.luaDir, 'boxhud-settings.lua')
 
     if utils.FileExists(settings_path) then
-        print_msg('Loading settings from file: ' .. settings_file)
+        print_msg('Loading settings from file: %s', settings_file)
         state.Settings = assert(loadfile(settings_path))()
     elseif utils.FileExists(old_settings_path) then
         -- copy old settings to new location in boxhud folder
-        print_msg(string.format('Moving lua/boxhud/settings/%s to config/%s', settings_file, settings_file))
+        print_msg('Moving lua/boxhud/settings/%s to config/%s', settings_file, settings_file)
         utils.CopyFile(old_settings_path, settings_path)
-        print_msg('Loading settings from file: ' .. settings_file)
+        print_msg('Loading settings from file: %s', settings_file)
         state.Settings = assert(loadfile(settings_path))()
     else
         print_msg('Loading default settings from file: boxhud-settings')
@@ -203,7 +187,7 @@ end
 
 s.SaveSettings = function()
     local settings_path = string.format('%s/%s', mq.configDir, settings_file)
-    persistence.store(settings_path, state.Settings)
+    mq.pickle(settings_path, state.Settings)
     return true
 end
 
@@ -219,7 +203,7 @@ s.ImportSettings = function(new_settings)
                         state.Settings['Properties'][propName] = property
                     end
                 else
-                    print_err(string.format('Property \'%s\' already exists, skipping import.', propName))
+                    print_err('Property \'%s\' already exists, skipping import.', propName)
                 end
             end
         end
@@ -235,7 +219,7 @@ s.ImportSettings = function(new_settings)
                         state.Settings['Columns'][columnName] = column
                     end
                 else
-                    print_err(string.format('Column \'%s\' already exists. skipping import.', columnName))
+                    print_err('Column \'%s\' already exists. skipping import.', columnName)
                 end
             end
         end

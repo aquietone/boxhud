@@ -1,3 +1,7 @@
+2.6.9
+- Store window position in boxhud character config when saving
+- Switch to use mq.pickle
+- Switch to use printf
 2.6.8
 - Update /target button to specify pc
 2.6.7

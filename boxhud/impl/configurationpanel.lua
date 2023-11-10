@@ -219,10 +219,11 @@ function ConfigurationPanel:drawLeftPaneWindow()
 end
 
 function ConfigurationPanel:drawDisplaySettings()
+    local window = state.Settings.Windows[self.Name]
     ImGui.TextColored(1, 0, 1, 1, 'Window Settings')
     ImGui.Separator()
-    state.Settings.Windows[self.Name].Transparency = helpers.DrawCheckBox('Transparent Window: ', '##transparency', state.Settings.Windows[self.Name].Transparency, 'Check this box to toggle transparency of the window.')
-    state.Settings.Windows[self.Name].TitleBar = helpers.DrawCheckBox('Show Title Bar: ', '##titlebar', state.Settings.Windows[self.Name].TitleBar, 'Check this box to toggle showing the title bar.')
+    window.Transparency = helpers.DrawCheckBox('Transparent Window: ', '##transparency', window.Transparency, 'Check this box to toggle transparency of the window.')
+    window.TitleBar = helpers.DrawCheckBox('Show Title Bar: ', '##titlebar', window.TitleBar, 'Check this box to toggle showing the title bar.')
     state.Settings.Columns['Name']['IncludeLevel'] = helpers.DrawCheckBox('Name includes Level: ', '##namewithlevel', state.Settings.Columns['Name']['IncludeLevel'], 'Check this box to toggle showing name and level together in the Name column.')
     ImGui.Separator()
     ImGui.Text('Column Text Colors:')
@@ -249,6 +250,8 @@ function ConfigurationPanel:drawDisplaySettings()
     state.Settings['Colors']['False'] = helpers.DrawColorEditor("False values", state.Settings['Colors']['False'])
     ImGui.Separator()
     if ImGui.Button('Save##displaysettings') then
+        local curPos = ImGui.GetWindowPosVec()
+        window.pos = {x=curPos.x, y=curPos.y}
         settings.SaveSettings()
         self:clearSelection()
     end
