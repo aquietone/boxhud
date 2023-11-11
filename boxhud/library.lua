@@ -3,14 +3,14 @@ local library = {}
 library['Properties'] = {
     {
         ["Inverse"] = false;
-        ["DependsOnValue"] = "war,shd,clr,shm,mag,bst,mnk,ber,rog,enc";
+        ["DependsOnValue"] = "war,shd,clr,shm,mag,bst,mnk,ber,rog,enc,dru,rng,nec,pal";
         ["Type"] = "Observed";
         ["DependsOnName"] = "Me.Class.ShortName";
         ["Name"] = "CWTN.Mode";
     },
     {
         ["Inverse"] = false;
-        ["DependsOnValue"] = "war,shd,clr,shm,mag,bst,mnk,ber,rog,enc";
+        ["DependsOnValue"] = "war,shd,clr,shm,mag,bst,mnk,ber,rog,enc,dru,rng,nec,pal";
         ["Type"] = "Observed";
         ["DependsOnName"] = "Me.Class.ShortName";
         ["Name"] = "CWTN.Paused";
