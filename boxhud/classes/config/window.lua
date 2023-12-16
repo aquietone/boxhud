@@ -10,13 +10,13 @@ local Window = BaseClass(function(w,windowSettings)
     w.Tabs = windowSettings['Tabs']
     w.Transparency = windowSettings['Transparency']
     w.TitleBar = windowSettings['TitleBar']
-    -- Look into saving window position per toon in boxhud config instead of relying on MacroQuest_Overlay.ini
-    -- if windowSettings.pos then
-    --     w.pos = {x=windowSettings.pos.x, y=windowSettings.pos.y}
-    -- end
-    -- if windowSettings.size then
-    --     w.size = {w=windowSettings.size.w, h=windowSettings.size.h}
-    -- end
+    if windowSettings.pos then
+        w.pos = {x=windowSettings.pos.x, y=windowSettings.pos.y}
+    end
+    if windowSettings.size then
+        w.size = {w=windowSettings.size.w, h=windowSettings.size.h}
+    end
+    w.Locked = windowSettings['Locked']
 end)
 
 local function GetTabByName(tabName)

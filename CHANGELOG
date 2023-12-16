@@ -1,3 +1,6 @@
+2.7.0
+- Add new lock/unlock button to lock window movement and save window position and size
+- Window position will save when locking the window position
 2.6.8
 - Update /target button to specify pc
 2.6.7

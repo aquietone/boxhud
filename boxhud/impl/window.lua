@@ -147,7 +147,17 @@ function Window:getPeerNameForIndex(index)
     return state.WindowStates[self.Name].Peers[index]
 end
 
+local icons = require('mq.icons')
 function Window:drawTabs()
+    local lockedIcon = self.Locked and icons.FA_LOCK .. '##lock'..self.Name or icons.FA_UNLOCK .. '##lock'..self.Name
+    if ImGui.Button(lockedIcon) then
+        --ImGuiWindowFlags.NoMove
+        self.Locked = not self.Locked
+        if self.Locked then
+            settings.SaveSettings()
+        end
+    end
+    ImGui.SameLine()
     if ImGui.BeginTabBar('BOXHUDTABS##'..self.Name, ImGuiTabBarFlags.Reorderable) then
         for _,tabName in ipairs(self.Tabs) do
             local tab = utils.GetTabByName(tabName)
@@ -231,12 +241,13 @@ function WindowInput:toWindow()
     for idx,tab in ipairs(self.Tabs) do
         window.Tabs[idx] = tab
     end
-    -- if self.pos then
-    --     window.pos = {x=self.pos.x, y=self.pos.y}
-    -- end
-    -- if self.size then
-    --     window.size = {w=self.size.w, h=self.size.h}
-    -- end
+    if self.pos then
+        window.pos = {x=self.pos.x, y=self.pos.y}
+    end
+    if self.size then
+        window.size = {w=self.size.w, h=self.size.h}
+    end
+    window.Locked = self.Locked
     return window
 end
 
@@ -248,12 +259,13 @@ function WindowInput:fromWindow(window)
         o.Tabs[idx] = tab
     end
     o.TabCount = #window['Tabs']
-    -- if window.pos then
-    --     o.pos = {x=window.pos.x, y=window.pos.y}
-    -- end
-    -- if window.size then
-    --     o.size = {w=window.size.w, h=window.size.h}
-    -- end
+    if window.pos then
+        o.pos = {x=window.pos.x, y=window.pos.y}
+    end
+    if window.size then
+        o.size = {w=window.size.w, h=window.size.h}
+    end
+    o.Locked = window.Locked
     return o
 end
 

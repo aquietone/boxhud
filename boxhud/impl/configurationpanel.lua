@@ -252,8 +252,6 @@ function ConfigurationPanel:drawDisplaySettings()
     colors['False'] = helpers.DrawColorEditor("False values", colors['False'])
     ImGui.Separator()
     if ImGui.Button('Save##displaysettings') then
-        -- local curPos = ImGui.GetWindowPosVec()
-        -- window.pos = {x=curPos.x, y=curPos.y}
         settings.SaveSettings()
         self:clearSelection()
     end
