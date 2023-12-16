@@ -223,6 +223,28 @@ function Character:drawCmdButton(label, action)
     end
 end
 
+function Character:drawTargetButton(label)
+    if ImGui.SmallButton(label) then
+        ImGui.CloseCurrentPopup()
+        if mq.TLO.Spawn('pc ='..self.Name)() then
+            mq.cmdf('/mqt pc =%s', self.Name)
+        elseif mq.TLO.Spawn('pccorpse ="'..self.Name..'\'s Corpse"')() then
+            mq.cmdf('/mqt pccorpse ="%s\'s Corpse"', self.Name)
+        end
+    end
+end
+
+function Character:drawNavToTargetButton(label)
+    if ImGui.SmallButton(label) then
+        ImGui.CloseCurrentPopup()
+        if mq.TLO.Spawn('pc ='..self.Name)() then
+            mq.cmdf('/nav spawn pc =%s', self.Name)
+        elseif mq.TLO.Spawn('pccorpse ="'..self.Name..'\'s Corpse"')() then
+            mq.cmdf('/nav spawn pccorpse ="%s\'s Corpse"', self.Name)
+        end
+    end
+end
+
 function Character:getDisplayName()
     if state.Anonymize then
         if self.ClassName then
@@ -237,9 +259,9 @@ end
 
 function Character:drawContextMenu()
     if ImGui.BeginPopupContextItem("##popup"..self.Name) then
-        self:drawCmdButton('Target##'..self.Name, '/mqt pc =%s')
+        self:drawTargetButton('Target##'..self.Name)
         ImGui.SameLine()
-        self:drawCmdButton('Nav To##'..self.Name, '/nav spawn %s')
+        self:drawNavToTargetButton('Nav To##'..self.Name)
         ImGui.SameLine()
         self:drawCmdButton('Come To Me##'..self.Name, '/dex %s /nav id ${Me.ID}')
         
@@ -345,7 +367,10 @@ end
 function Character:updateCharacterProperties(currTime, peerGroup)
     if not self.Properties then self.Properties = {} end
     local properties = self.Properties
-    local charSpawnData = mq.TLO.Spawn('='..self.Name)
+    local charSpawnData = mq.TLO.Spawn('pc ='..self.Name)
+    if not charSpawnData() then
+        charSpawnData = mq.TLO.Spawn('pccorpse ="'..self.Name..'\'s Corpse"')
+    end
     properties['Me.ID'] = charSpawnData.ID()
     properties['Me.Invis'] = charSpawnData.Invis()
 

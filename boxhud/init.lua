@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.6.8 -- aquietone
+boxhud.lua 2.6.9 -- aquietone
 https://www.redguides.com/community/resources/boxhud.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -76,6 +76,8 @@ local HUDGUI = function()
         local flags = 0
         if not window.TitleBar then flags = ImGuiWindowFlags.NoTitleBar end
         if window.Transparency then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
+        -- if window.pos then ImGui.SetNextWindowPos(ImVec2(window.pos.x, window.pos.y), ImGuiCond.Once) end
+        -- if window.size then ImGui.SetNextWindowSize(ImVec2(window.size.w, window.size.h), ImGuiCond.Once) end
         if state.WindowStates[window.Name] and state.WindowStates[window.Name].Peers then
             local windowName = 'Box HUD##'..state.MyName..window.Name
             if window.Name ~= 'default' then windowName = window.Name..'###'..state.MyName..window.Name end
@@ -85,6 +87,17 @@ local HUDGUI = function()
                     ImGui.SetWindowSize(460, 177)
                 end
                 window:drawTabs()
+                -- local curWidth = ImGui.GetWindowWidth()
+                -- local curHeight = ImGui.GetWindowHeight()
+                -- if curWidth == 32 and curHeight == 32 then
+                --     ImGui.SetWindowSize(460, 177)
+                --     window.size = {w=460, h=177}
+                -- else
+                --     window.size = {w=curWidth, h=curHeight}
+                -- end
+                -- local curPos = ImGui.GetWindowPosVec()
+                -- window.pos = {x=curPos.x, y=curPos.y}
+                -- window:drawTabs()
             end
             ImGui.End()
         end
@@ -95,7 +108,7 @@ local Admin = function(action, name)
     if action == nil then
         adminMode = not adminMode
         openGUI = not adminMode
-        print_msg('Setting \ayadminMode\ax = \ay'..tostring(adminMode))
+        print_msg('Setting \ayadminMode\ax = \ay%s', adminMode)
     elseif action == 'anon' then
         state.Anonymize = not state.Anonymize
     elseif action  == 'reset' then
@@ -110,7 +123,7 @@ local Admin = function(action, name)
                 char:manageObservers(false)
             end
         else
-            print_msg('Resetting observed properties for: \ay'..name)
+            print_msg('Resetting observed properties for: \ay%s', name)
             state.Characters[name]:manageObservers(true)
             state.Characters[name]:manageObservers(false)
         end
@@ -130,7 +143,7 @@ local Help = function()
 end
 
 local ShowVersion = function()
-    print_msg('Version '..state.Version)
+    print_msg('Version %s', state.Version)
 end
 
 local function SetupBindings()
@@ -150,7 +163,7 @@ end
 local function CleanupStaleData(currTime)
     for name, char in pairs(state.Characters) do
         if os.difftime(currTime, char.Properties.lastUpdated) > state.StaleDataTimeout then
-            print_msg('Removing stale toon data: \ay'..name)
+            print_msg('Removing stale toon data: \ay%s', name)
             state.Characters[name] = nil
         end
     end
