@@ -132,6 +132,9 @@ function Window:drawTableTab(columns, tabName)
                         end
                     end
                     ImGui.PopID()
+                else
+                    ImGui.TableNextRow()
+                    ImGui.TableNextColumn()
                 end
             end
         end
