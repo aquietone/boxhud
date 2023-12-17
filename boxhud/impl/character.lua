@@ -264,7 +264,7 @@ function Character:drawContextMenu()
         self:drawNavToTargetButton('Nav To##'..self.Name)
         ImGui.SameLine()
         self:drawCmdButton('Come To Me##'..self.Name, '/dex %s /nav id ${Me.ID}')
-        
+
         self:drawCmdButton('G Inv##'..self.Name, '/invite %s')
         ImGui.SameLine()
         self:drawCmdButton('R Inv##'..self.Name, '/raidinvite %s')
@@ -272,7 +272,7 @@ function Character:drawContextMenu()
         self:drawCmdButton('DZAdd##'..self.Name, '/dzadd %s')
         ImGui.SameLine()
         self:drawCmdButton('TAdd##'..self.Name, '/taskadd %s')
-        
+
         if ImGui.SmallButton("Reset Obs##"..self.Name) then
             print_msg('Resetting observed properties for: \ay'..self.Name)
             ImGui.CloseCurrentPopup()
@@ -295,7 +295,10 @@ function Character:drawNameButton()
     local buttonText = self:getDisplayName()
     local col = nil
     if self.Properties.BotInZone then
-        if self.Properties['Me.Invis'] == true then -- Me.Invis* isn't observed, just getting ANY invis from spawn data
+        if self.Properties['Me.Type'] == 'Corpse' then
+            col = state.Settings.Colors.NotInZone or {1,0,0}
+            buttonText = buttonText .. '\'s Corpse'
+        elseif self.Properties['Me.Invis'] == true then -- Me.Invis* isn't observed, just getting ANY invis from spawn data
             col = state.Settings.Colors.Invis or {0.26, 0.98, 0.98}
             buttonText = '('..self:getDisplayName()..')'
         elseif self.Properties['Me.Invis'] == 1 then -- Me.Invis[1] is observed and toon has regular invis
@@ -373,6 +376,7 @@ function Character:updateCharacterProperties(currTime, peerGroup)
     end
     properties['Me.ID'] = charSpawnData.ID()
     properties['Me.Invis'] = charSpawnData.Invis()
+    properties['Me.Type'] = charSpawnData.Type()
 
     local nameTitleCase = utils.TitleCase(self.Name)
     -- Fill in data from this toons observed properties
