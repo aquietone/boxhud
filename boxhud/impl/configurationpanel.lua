@@ -9,7 +9,7 @@ local ConfigurationPanel = require 'classes.config.configurationpanel'
 local state = require 'state'
 local settings = require 'settings.settings'
 local library = require 'library'
-local filedialog = require 'utils.imguifiledialog'
+local filedialog = nil
 
 function ConfigurationPanel:drawDisplaySettingsSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
@@ -200,18 +200,20 @@ function ConfigurationPanel:drawLeftPaneWindow()
             ImGui.TableNextRow()
             ImGui.TableNextColumn()
             self:drawTabTreeSelector()
-            if state.PeerSource == 'dannet' then
+            if state.PeerSource == 'dannet' and not state.Embedded then
                 ImGui.TableNextRow()
                 ImGui.TableNextColumn()
                 self:drawWindowTreeSelector()
             end
-            ImGui.TableNextRow()
-            ImGui.TableNextColumn()
-            self:drawImportSelector()
-            ImGui.TableNextRow()
-            ImGui.TableNextColumn()
-            self:drawAboutSelector()
-
+            if not state.Embedded then
+                filedialog = filedialog or require('utils.ImGuiFileDialog')
+                ImGui.TableNextRow()
+                ImGui.TableNextColumn()
+                self:drawImportSelector()
+                ImGui.TableNextRow()
+                ImGui.TableNextColumn()
+                self:drawAboutSelector()
+            end
             ImGui.EndTable()
         end
     end
@@ -220,10 +222,12 @@ end
 
 function ConfigurationPanel:drawDisplaySettings()
     local window = state.Settings.Windows[self.Name]
-    ImGui.TextColored(1, 0, 1, 1, 'Window Settings')
-    ImGui.Separator()
-    window.Transparency = helpers.DrawCheckBox('Transparent Window: ', '##transparency', window.Transparency, 'Check this box to toggle transparency of the window.')
-    window.TitleBar = helpers.DrawCheckBox('Show Title Bar: ', '##titlebar', window.TitleBar, 'Check this box to toggle showing the title bar.')
+    if not state.Embedded then
+        ImGui.TextColored(1, 0, 1, 1, 'Window Settings')
+        ImGui.Separator()
+        window.Transparency = helpers.DrawCheckBox('Transparent Window: ', '##transparency', window.Transparency, 'Check this box to toggle transparency of the window.')
+        window.TitleBar = helpers.DrawCheckBox('Show Title Bar: ', '##titlebar', window.TitleBar, 'Check this box to toggle showing the title bar.')
+    end
     local nameColumn = state.Settings.Columns.Name
     nameColumn['IncludeLevel'] = helpers.DrawCheckBox('Name includes Level: ', '##namewithlevel', nameColumn['IncludeLevel'], 'Check this box to toggle showing name and level together in the Name column.')
     ImGui.Separator()
@@ -432,7 +436,6 @@ end
 
 function ConfigurationPanel:drawSplitter(thickness, size0, min_size0)
     local x,y = ImGui.GetCursorPos()
-    local delta = 0
     ImGui.SetCursorPosX(x + size0)
 
     ImGui.PushStyleColor(ImGuiCol.Button, 0, 0, 0, 0)
@@ -444,16 +447,16 @@ function ConfigurationPanel:drawSplitter(thickness, size0, min_size0)
     ImGui.SetItemAllowOverlap()
 
     if ImGui.IsItemActive() then
-        delta,_ = ImGui.GetMouseDragDelta()
+        local dragDelta = ImGui.GetMouseDragDelta()
 
-        if delta < min_size0 - size0 then
-            delta = min_size0 - size0
+        if dragDelta.x < min_size0 - size0 then
+            dragDelta.x = min_size0 - size0
         end
-        if delta > 275 - size0 then
-            delta = 275 - size0
+        if dragDelta.x > 275 - size0 then
+            dragDelta.x = 275 - size0
         end
 
-        size0 = size0 + delta
+        size0 = size0 + dragDelta.x
         self.LeftPaneSize = size0
     else
         self.BaseLeftPaneSize = self.LeftPaneSize

@@ -149,15 +149,17 @@ end
 
 local icons = require('mq.icons')
 function Window:drawTabs()
-    local lockedIcon = self.Locked and icons.FA_LOCK .. '##lock'..self.Name or icons.FA_UNLOCK .. '##lock'..self.Name
-    if ImGui.Button(lockedIcon) then
-        --ImGuiWindowFlags.NoMove
-        self.Locked = not self.Locked
-        if self.Locked then
-            settings.SaveSettings()
+    if not state.Embedded then
+        local lockedIcon = self.Locked and icons.FA_LOCK .. '##lock'..self.Name or icons.FA_UNLOCK .. '##lock'..self.Name
+        if ImGui.Button(lockedIcon) then
+            --ImGuiWindowFlags.NoMove
+            self.Locked = not self.Locked
+            if self.Locked then
+                settings.SaveSettings()
+            end
         end
+        ImGui.SameLine()
     end
-    ImGui.SameLine()
     if ImGui.BeginTabBar('BOXHUDTABS##'..self.Name, ImGuiTabBarFlags.Reorderable) then
         for _,tabName in ipairs(self.Tabs) do
             local tab = utils.GetTabByName(tabName)
@@ -175,7 +177,6 @@ function Window:drawTabs()
                 end
             end
         end
-
         -- Admin tab only allows resetting observers, so only show if dannet is being used
         if state.IsUsingDanNet then
             if ImGui.BeginTabItem('Admin') then

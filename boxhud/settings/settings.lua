@@ -154,12 +154,6 @@ local function ValidateSettings()
 end
 
 s.LoadSettings = function(arg)
-    -- cleanup files
-    for file in lfs.dir(string.format('%s/boxhud/settings', mq.luaDir)) do
-        if file ~= '.' and file ~= '..' and file:find('boxhud%-settings%-.*%.lua') then
-            os.remove(string.format('%s/boxhud/settings/%s', mq.luaDir, file))
-        end
-    end
     settings_file = arg[1] or string.format('boxhud-settings-%s.lua', string.lower(mq.TLO.Me.Name()))
     local settings_path = string.format('%s/%s', mq.configDir, settings_file)
     local old_settings_path = string.format('%s/boxhud/settings/%s', mq.luaDir, settings_file)
