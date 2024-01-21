@@ -1,14 +1,13 @@
---- @type Mq
 local mq = require 'mq'
-local helpers = require 'utils.uihelpers'
-local PropertyInput = require 'classes.inputs.propertyinput'
-local ColumnInput = require 'classes.inputs.columninput'
-local TabInput = require  'classes.inputs.tabinput'
-local WindowInput = require 'classes.inputs.windowinput'
-local ConfigurationPanel = require 'classes.config.configurationpanel'
-local state = require 'state'
-local settings = require 'settings.settings'
-local library = require 'library'
+local state = require(BOXHUD_REQUIRE_PREFIX..'state')
+local helpers = require(BOXHUD_REQUIRE_PREFIX..'utils.uihelpers')
+local PropertyInput = require(BOXHUD_REQUIRE_PREFIX..'classes.inputs.propertyinput')
+local ColumnInput = require(BOXHUD_REQUIRE_PREFIX..'classes.inputs.columninput')
+local TabInput = require(BOXHUD_REQUIRE_PREFIX..'classes.inputs.tabinput')
+local WindowInput = require(BOXHUD_REQUIRE_PREFIX..'classes.inputs.windowinput')
+local ConfigurationPanel = require(BOXHUD_REQUIRE_PREFIX..'classes.config.configurationpanel')
+local settings = require(BOXHUD_REQUIRE_PREFIX..'settings.settings')
+local library = require(BOXHUD_REQUIRE_PREFIX..'library')
 local filedialog = nil
 
 function ConfigurationPanel:drawDisplaySettingsSelector()
@@ -206,7 +205,7 @@ function ConfigurationPanel:drawLeftPaneWindow()
                 self:drawWindowTreeSelector()
             end
             if not state.Embedded then
-                filedialog = filedialog or require('utils.ImGuiFileDialog')
+                filedialog = filedialog or require(BOXHUD_REQUIRE_PREFIX..'utils.ImGuiFileDialog')
                 ImGui.TableNextRow()
                 ImGui.TableNextColumn()
                 self:drawImportSelector()

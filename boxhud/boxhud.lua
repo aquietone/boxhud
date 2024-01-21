@@ -1,19 +1,27 @@
 local mq = require 'mq'
 require 'ImGui'
 
-local WindowState = require 'classes.hud.windowstate'
-local ConfigurationPanel = require 'classes.config.configurationpanel'
-require 'impl.window'
-require 'impl.windowstate'
-require 'impl.character'
-require 'impl.property'
-require 'impl.column'
-require 'impl.tab'
-require 'impl.configurationpanel'
+local ok, state = pcall(require, 'state')
+if not ok then
+    print('require state failed')
+    BOXHUD_REQUIRE_PREFIX = 'boxhud.boxhud.'
+    state = require(BOXHUD_REQUIRE_PREFIX..'state')
+    print(state)
+else
+    BOXHUD_REQUIRE_PREFIX = ''
+end
+local WindowState = require(BOXHUD_REQUIRE_PREFIX..'classes.hud.windowstate')
+local ConfigurationPanel = require(BOXHUD_REQUIRE_PREFIX..'classes.config.configurationpanel')
+require(BOXHUD_REQUIRE_PREFIX..'impl.window')
+require(BOXHUD_REQUIRE_PREFIX..'impl.windowstate')
+require(BOXHUD_REQUIRE_PREFIX..'impl.character')
+require(BOXHUD_REQUIRE_PREFIX..'impl.property')
+require(BOXHUD_REQUIRE_PREFIX..'impl.column')
+require(BOXHUD_REQUIRE_PREFIX..'impl.tab')
+require(BOXHUD_REQUIRE_PREFIX..'impl.configurationpanel')
 
-local utils = require 'utils.utils'
-local settings = require 'settings.settings'
-local state = require 'state'
+local utils = require(BOXHUD_REQUIRE_PREFIX..'utils.utils')
+local settings = require(BOXHUD_REQUIRE_PREFIX..'settings.settings')
 
 local boxhud = {}
 

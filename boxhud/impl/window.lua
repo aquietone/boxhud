@@ -1,11 +1,10 @@
---- @type Mq
 local mq = require 'mq'
-local Window = require 'classes.config.window'
-local WindowInput = require 'classes.inputs.windowinput'
-local helpers = require 'utils.uihelpers'
-local utils = require 'utils.utils'
-local state = require 'state'
-local settings = require 'settings.settings'
+local state = require(BOXHUD_REQUIRE_PREFIX..'state')
+local Window = require(BOXHUD_REQUIRE_PREFIX..'classes.config.window')
+local WindowInput = require(BOXHUD_REQUIRE_PREFIX..'classes.inputs.windowinput')
+local helpers = require(BOXHUD_REQUIRE_PREFIX..'utils.uihelpers')
+local utils = require(BOXHUD_REQUIRE_PREFIX..'utils.utils')
+local settings = require(BOXHUD_REQUIRE_PREFIX..'settings.settings')
 
 local adminPeerSelected = 0
 math.randomseed(os.time())

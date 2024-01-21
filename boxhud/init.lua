@@ -34,9 +34,8 @@ Running boxhud embedded:
 5. boxhud:Render(boxhudWindow) -- during imgui callback, call Render to draw the main boxhud table
 --]]
 local mq = require 'mq'
-require 'ImGui'
 local boxhud = require 'boxhud'
-local state = require 'boxhud.state'
+local state = require 'state'
 
 -- LFS must be downloaded from the luarocks server before anything can work
 -- so do that first. This will open a dialog prompting to download lfs.dll

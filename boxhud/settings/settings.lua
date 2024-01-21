@@ -1,12 +1,10 @@
-local Property = require 'classes.config.property'
-local Column = require 'classes.config.column'
-local Tab = require 'classes.config.tab'
-local Window = require 'classes.config.window'
-local utils = require 'utils.utils'
-local state = require 'state'
-local lfs = require 'lfs'
+local state = require(BOXHUD_REQUIRE_PREFIX..'state')
+local Property = require(BOXHUD_REQUIRE_PREFIX..'classes.config.property')
+local Column = require(BOXHUD_REQUIRE_PREFIX..'classes.config.column')
+local Tab = require(BOXHUD_REQUIRE_PREFIX..'classes.config.tab')
+local Window = require(BOXHUD_REQUIRE_PREFIX..'classes.config.window')
+local utils = require(BOXHUD_REQUIRE_PREFIX..'utils.utils')
 
---- @type Mq
 local mq = require 'mq'
 
 local s = {}

@@ -1,4 +1,3 @@
---- @type Mq
 local mq = require 'mq'
 --[[
 Leftover stuff i didn't squeeze into a class somewhere, mostly shared info

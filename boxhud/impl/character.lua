@@ -1,6 +1,6 @@
-local Character = require 'classes.hud.character'
-local utils = require 'utils.utils'
-local state = require 'state'
+local state = require(BOXHUD_REQUIRE_PREFIX..'state')
+local Character = require(BOXHUD_REQUIRE_PREFIX..'classes.hud.character')
+local utils = require(BOXHUD_REQUIRE_PREFIX..'utils.utils')
 
 --- @type Mq
 local mq = require 'mq'
