@@ -185,7 +185,7 @@ end
 
 function ConfigurationPanel:drawLeftPaneWindow()
     local _,y = ImGui.GetContentRegionAvail()
-    if ImGui.BeginChild("left##"..self.Name, self.LeftPaneSize, y-1, true) then
+    if ImGui.BeginChild("left##"..self.Name, self.LeftPaneSize, y-1, ImGuiChildFlags.Border) then
         local flags = bit32.bor(ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY)
         if ImGui.BeginTable('##configmenu'..self.Name, 1, flags, 0, 0, 0.0) then
             ImGui.TableNextRow()
@@ -384,7 +384,7 @@ end
 
 function ConfigurationPanel:drawRightPaneWindow()
     local x,y = ImGui.GetContentRegionAvail()
-    if ImGui.BeginChild("right##"..self.Name, x, y-1, true) then
+    if ImGui.BeginChild("right##"..self.Name, x, y-1, ImGuiChildFlags.Border) then
         if self.SelectedItemType == 'displaysettings' then
             self:drawDisplaySettings()
         elseif self.SelectedItemType == 'addnewproperty' then

@@ -68,7 +68,7 @@ local function CompareWithSortSpecs(a, b)
 end
 
 function Window:drawTableTab(columns, tabName)
-    local flags = bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Reorderable, ImGuiTableFlags.Hideable, ImGuiTableFlags.Sortable, ImGuiTableFlags.MultiSortable,
+    local flags = bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Reorderable, ImGuiTableFlags.Hideable, ImGuiTableFlags.Sortable, ImGuiTableFlags.SortMulti,
             ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.BordersH, ImGuiTableFlags.ScrollY, ImGuiTableFlags.NoSavedSettings)
     if ImGui.BeginTable('##bhtable'..tabName..tostring(tableRandom), #columns, flags, 0, 0, 0.0) then
         for i, columnName in ipairs(columns) do

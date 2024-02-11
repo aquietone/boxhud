@@ -2,7 +2,6 @@ local Character = require 'classes.hud.character'
 local utils = require 'utils.utils'
 local state = require 'state'
 
---- @type Mq
 local mq = require 'mq'
 
 function Character:shouldObserveProperty(propSettings)
