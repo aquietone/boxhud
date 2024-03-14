@@ -394,7 +394,11 @@ function Character:updateCharacterProperties(currTime, peerGroup)
             if propName:find('Class') then
                 properties[propName] = tostring(mq.TLO.NetBots(nameTitleCase)[propName])
             else
-                properties[propName] = mq.TLO.NetBots(nameTitleCase)[propName]()
+                local tempValue = mq.TLO.NetBots(nameTitleCase)[propName]()
+                if type(tempValue) == 'number' then
+                    tempValue = string.format("%.2f", tempValue)
+                end
+                properties[propName] = tempValue
             end
         elseif propSettings.Type == 'Spawn' then
             if propSettings.FromIDProperty then
