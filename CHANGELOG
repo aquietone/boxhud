@@ -1,3 +1,5 @@
+2.7.1
+- Truncate numbers in netbots properties
 2.7.0
 - Add new lock/unlock button to lock window movement and save window position and size
 - Window position will save when locking the window position
