@@ -220,10 +220,15 @@ end
 
 function ConfigurationPanel:drawDisplaySettings()
     local window = state.Settings.Windows[self.Name]
-    ImGui.TextColored(1, 0, 1, 1, 'Window Settings')
+    if ImGui.Button('Save Window Settings##displaysettings') then
+        settings.SaveSettings()
+        self:clearSelection()
+    end
     ImGui.Separator()
+    window.OverrideWindowName = helpers.DrawCheckBox('Use global window name: ', '##overridewindowname', window.OverrideWindowName, 'Do not append per character details to ImGui window name, so same window definition is used across characters.')
     window.Transparency = helpers.DrawCheckBox('Transparent Window: ', '##transparency', window.Transparency, 'Check this box to toggle transparency of the window.')
     window.TitleBar = helpers.DrawCheckBox('Show Title Bar: ', '##titlebar', window.TitleBar, 'Check this box to toggle showing the title bar.')
+    window.SavePos = helpers.DrawCheckBox('Save Window Position in BoxHUD: ', '##savepos', window.SavePos, 'Save the windows position in boxhuds own config file.')
     local nameColumn = state.Settings.Columns.Name
     nameColumn['IncludeLevel'] = helpers.DrawCheckBox('Name includes Level: ', '##namewithlevel', nameColumn['IncludeLevel'], 'Check this box to toggle showing name and level together in the Name column.')
     ImGui.Separator()
@@ -250,11 +255,6 @@ function ConfigurationPanel:drawDisplaySettings()
     ImGui.SetCursorPosX(175)
     colors['NotInZone'] = helpers.DrawColorEditor("Characters not in zone", colors['NotInZone'])
     colors['False'] = helpers.DrawColorEditor("False values", colors['False'])
-    ImGui.Separator()
-    if ImGui.Button('Save##displaysettings') then
-        settings.SaveSettings()
-        self:clearSelection()
-    end
 end
 
 function ConfigurationPanel:drawPropertyLibrary()

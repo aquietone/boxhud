@@ -1,3 +1,8 @@
+2.8.0
+- Added new window setting 'Use global window name' in case you want to use the same ImGui window name across all characters
+- Added new window setting 'Save window position in boxhud' in case you want to rely on ImGui configuration for window position (like if using global window name)
+- Would one setting ever be used without the other? who knows
+- Now checking if window is docked before applying saved position. If its docked, then it skips setting window size.
 2.7.1
 - Truncate numbers in netbots properties
 2.7.0

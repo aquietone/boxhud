@@ -17,7 +17,7 @@ local function ValidateOptionalSettings()
     if not state.Settings['Windows'] then
         print_msg('No windows defined, adding default')
         state.Settings['Windows'] = {
-            ['default'] = Window({Name='default',Tabs={},Transparency=false,TitleBar=false,pos={x=400,y=400},size={w=460,h=177},Locked=false})
+            ['default'] = Window({Name='default',Tabs={},Transparency=false,TitleBar=false,pos={x=400,y=400},size={w=460,h=177},Locked=false,SavePos=true,OverrideWindowName=false})
         }
         for _,tab in ipairs(state.Settings['Tabs']) do
             table.insert(state.Settings['Windows']['default']['Tabs'], tab['Name'])
@@ -28,6 +28,7 @@ local function ValidateOptionalSettings()
         end
     else
         for name,window in pairs(state.Settings['Windows']) do
+            if window.SavePos == nil then window.SavePos = true end
             state.Settings['Windows'][name] = Window(window)
         end
     end

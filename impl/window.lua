@@ -248,6 +248,8 @@ function WindowInput:toWindow()
         window.size = {w=self.size.w, h=self.size.h}
     end
     window.Locked = self.Locked
+    window.SavePos = self.SavePos
+    window.OverrideWindowName = self.OverrideWindowName
     return window
 end
 
@@ -266,6 +268,8 @@ function WindowInput:fromWindow(window)
         o.size = {w=window.size.w, h=window.size.h}
     end
     o.Locked = window.Locked
+    o.SavePos = window.SavePos
+    o.OverrideWindowName = window.OverrideWindowName
     return o
 end
 

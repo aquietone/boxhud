@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.7.1 -- aquietone
+boxhud.lua 2.8.0 -- aquietone
 https://www.redguides.com/community/resources/boxhud.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -76,12 +76,20 @@ local HUDGUI = function()
         local flags = 0
         if not window.TitleBar then flags = ImGuiWindowFlags.NoTitleBar end
         if window.Transparency then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
-        if window.Locked then flags = bit32.bor(flags, ImGuiWindowFlags.NoMove) end
-        if window.pos then ImGui.SetNextWindowPos(ImVec2(window.pos.x, window.pos.y), ImGuiCond.Once) end
-        if window.size then ImGui.SetNextWindowSize(ImVec2(window.size.w, window.size.h), ImGuiCond.Once) end
+        if window.Locked then flags = bit32.bor(flags, ImGuiWindowFlags.NoMove, ImGuiWindowFlags.NoResize) end
+        if not ImGui.IsWindowDocked() and window.SavePos then
+            if window.pos then ImGui.SetNextWindowPos(ImVec2(window.pos.x, window.pos.y), ImGuiCond.Once) end
+            if window.size then ImGui.SetNextWindowSize(ImVec2(window.size.w, window.size.h), ImGuiCond.Once) end
+        end
         if state.WindowStates[window.Name] and state.WindowStates[window.Name].Peers then
-            local windowName = 'Box HUD##'..state.MyName..window.Name
-            if window.Name ~= 'default' then windowName = window.Name..'###'..state.MyName..window.Name end
+            local windowVisibleName = 'Box HUD'
+            if window.Name ~= 'default' then
+                windowVisibleName = window.Name
+            end
+            local windowName = windowVisibleName..'##'..state.MyName..window.Name
+            if window.OverrideWindowName then
+                windowName =  windowVisibleName
+            end
             openGUI, shouldDrawGUI = ImGui.Begin(windowName, openGUI, flags)
             if shouldDrawGUI then
                 local curWidth = ImGui.GetWindowWidth()
@@ -95,17 +103,6 @@ local HUDGUI = function()
                 local curPos = ImGui.GetWindowPosVec()
                 window.pos = {x=curPos.x, y=curPos.y}
                 window:drawTabs()
-                -- local curWidth = ImGui.GetWindowWidth()
-                -- local curHeight = ImGui.GetWindowHeight()
-                -- if curWidth == 32 and curHeight == 32 then
-                --     ImGui.SetWindowSize(460, 177)
-                --     window.size = {w=460, h=177}
-                -- else
-                --     window.size = {w=curWidth, h=curHeight}
-                -- end
-                -- local curPos = ImGui.GetWindowPosVec()
-                -- window.pos = {x=curPos.x, y=curPos.y}
-                -- window:drawTabs()
             end
             ImGui.End()
         end
