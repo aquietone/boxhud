@@ -76,7 +76,7 @@ local HUDGUI = function()
         local flags = 0
         if not window.TitleBar then flags = ImGuiWindowFlags.NoTitleBar end
         if window.Transparency then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
-        if window.Locked then flags = bit32.bor(flags, ImGuiWindowFlags.NoMove, ImGuiWindowFlags.NoResize) end
+        if window.Locked then flags = bit32.bor(flags, ImGuiWindowFlags.NoMove) end
         if not ImGui.IsWindowDocked() and window.SavePos then
             if window.pos then ImGui.SetNextWindowPos(ImVec2(window.pos.x, window.pos.y), ImGuiCond.Once) end
             if window.size then ImGui.SetNextWindowSize(ImVec2(window.size.w, window.size.h), ImGuiCond.Once) end
