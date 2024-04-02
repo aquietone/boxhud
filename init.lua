@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.8.0 -- aquietone
+boxhud.lua 2.8.1 -- aquietone
 https://www.redguides.com/community/resources/boxhud.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -69,6 +69,38 @@ if utils.FileExists(mq.luaDir..'/boxhud.lua') then
     os.remove(mq.luaDir..'/boxhud.lua')
 end
 
+-- local function pushStyle(theme)
+--     local t = constants.uiThemes[theme]
+--     t.windowbg.w = 1*(config.OPACITY.value/100)
+--     t.bg.w = 1*(config.OPACITY.value/100)
+--     ImGui.PushStyleColor(ImGuiCol.WindowBg, t.windowbg)
+--     ImGui.PushStyleColor(ImGuiCol.TitleBg, t.bg)
+--     ImGui.PushStyleColor(ImGuiCol.TitleBgActive, t.active)
+--     ImGui.PushStyleColor(ImGuiCol.FrameBg, t.bg)
+--     ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, t.hovered)
+--     ImGui.PushStyleColor(ImGuiCol.FrameBgActive, t.active)
+--     ImGui.PushStyleColor(ImGuiCol.Button, t.button)
+--     ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.hovered)
+--     ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.active)
+--     ImGui.PushStyleColor(ImGuiCol.PopupBg, t.bg)
+--     ImGui.PushStyleColor(ImGuiCol.Tab, 0, 0, 0, 0)
+--     ImGui.PushStyleColor(ImGuiCol.TabActive, t.active)
+--     ImGui.PushStyleColor(ImGuiCol.TabHovered, t.hovered)
+--     ImGui.PushStyleColor(ImGuiCol.TabUnfocused, t.bg)
+--     ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, t.hovered)
+--     ImGui.PushStyleColor(ImGuiCol.TextDisabled, t.text)
+--     ImGui.PushStyleColor(ImGuiCol.CheckMark, t.text)
+--     ImGui.PushStyleColor(ImGuiCol.Separator, t.hovered)
+
+--     ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 10)
+-- end
+
+-- local function popStyles()
+--     ImGui.PopStyleColor(18)
+
+--     ImGui.PopStyleVar(1)
+-- end
+
 -- ImGui main function for rendering the UI window
 local HUDGUI = function()
     if not openGUI then return end
@@ -80,6 +112,11 @@ local HUDGUI = function()
         if not ImGui.IsWindowDocked() and window.SavePos then
             if window.pos then ImGui.SetNextWindowPos(ImVec2(window.pos.x, window.pos.y), ImGuiCond.Once) end
             if window.size then ImGui.SetNextWindowSize(ImVec2(window.size.w, window.size.h), ImGuiCond.Once) end
+        end
+        local doPopRounding = false
+        if window.RoundedEdges then
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 10)
+            doPopRounding = true
         end
         if state.WindowStates[window.Name] and state.WindowStates[window.Name].Peers then
             local windowVisibleName = 'Box HUD'
@@ -98,6 +135,11 @@ local HUDGUI = function()
                     ImGui.SetWindowSize(460, 177)
                     window.size = {w=460, h=177}
                 else
+                    if window.AutoScaleHeight then
+                        local currentSize = ImGui.GetWindowWidth()
+                        local height = math.max(160, 25*#state.WindowStates[window.Name].Peers+40)
+                        ImGui.SetWindowSize(currentSize, height)
+                    end
                     window.size = {w=curWidth, h=curHeight}
                 end
                 local curPos = ImGui.GetWindowPosVec()
@@ -106,6 +148,7 @@ local HUDGUI = function()
             end
             ImGui.End()
         end
+        if doPopRounding then ImGui.PopStyleVar(1) end
     end
 end
 

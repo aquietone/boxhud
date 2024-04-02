@@ -220,7 +220,10 @@ function Window:drawTabs()
         end
 
         if ImGui.BeginTabItem('Configuration##'..self.Name) then
+            local currentSize = ImGui.GetWindowSizeVec()
+            ImGui.SetWindowSize(currentSize.x, -1)
             state.WindowStates[self.Name].ConfigPanel:draw()
+            ImGui.SetWindowSize(currentSize.x, currentSize.y)
             ImGui.EndTabItem()
         end
         ImGui.EndTabBar()
@@ -250,6 +253,8 @@ function WindowInput:toWindow()
     window.Locked = self.Locked
     window.SavePos = self.SavePos
     window.OverrideWindowName = self.OverrideWindowName
+    window.RoundedEdges = self.RoundedEdges
+    window.AutoScaleHeight = self.AutoScaleHeight
     return window
 end
 
@@ -270,6 +275,8 @@ function WindowInput:fromWindow(window)
     o.Locked = window.Locked
     o.SavePos = window.SavePos
     o.OverrideWindowName = window.OverrideWindowName
+    o.RoundedEdges = window.RoundedEdges
+    o.AutoScaleHeight = window.AutoScaleHeight
     return o
 end
 

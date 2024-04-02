@@ -229,6 +229,8 @@ function ConfigurationPanel:drawDisplaySettings()
     window.Transparency = helpers.DrawCheckBox('Transparent Window: ', '##transparency', window.Transparency, 'Check this box to toggle transparency of the window.')
     window.TitleBar = helpers.DrawCheckBox('Show Title Bar: ', '##titlebar', window.TitleBar, 'Check this box to toggle showing the title bar.')
     window.SavePos = helpers.DrawCheckBox('Save Window Position in BoxHUD: ', '##savepos', window.SavePos, 'Save the windows position in boxhuds own config file.')
+    window.AutoScaleHeight = helpers.DrawCheckBox('Auto Scale Height: ', '##autoscale', window.AutoScaleHeight, 'Auto scale height to fit characters')
+    window.RoundedEdges = helpers.DrawCheckBox('Round Edges: ', '##roundedges', window.RoundedEdges, 'Use rounded edges for window style')
     local nameColumn = state.Settings.Columns.Name
     nameColumn['IncludeLevel'] = helpers.DrawCheckBox('Name includes Level: ', '##namewithlevel', nameColumn['IncludeLevel'], 'Check this box to toggle showing name and level together in the Name column.')
     ImGui.Separator()

@@ -19,6 +19,8 @@ local Window = BaseClass(function(w,windowSettings)
     w.Locked = windowSettings['Locked']
     w.SavePos = windowSettings['SavePos']
     w.OverrideWindowName = windowSettings['OverrideWindowName']
+    w.AutoScaleHeight = windowSettings['AutoScaleHeight']
+    w.RoundedEdges = windowSettings['RoundedEdges']
 end)
 
 local function GetTabByName(tabName)
