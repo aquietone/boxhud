@@ -1,3 +1,6 @@
+2.8.1
+- Add auto scale height option to scale window to fit an army
+- Add rounded edges option to get rid of those scary sharp corners
 2.8.0
 - Added new window setting 'Use global window name' in case you want to use the same ImGui window name across all characters
 - Added new window setting 'Save window position in boxhud' in case you want to rely on ImGui configuration for window position (like if using global window name)
