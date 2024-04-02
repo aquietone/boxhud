@@ -137,7 +137,7 @@ local HUDGUI = function()
                 else
                     if window.AutoScaleHeight then
                         local currentSize = ImGui.GetWindowWidth()
-                        local height = math.max(160, 25*#state.WindowStates[window.Name].Peers+40)
+                        local height = math.max(160, 25*(#state.WindowStates[window.Name].Peers or 0)+40)
                         ImGui.SetWindowSize(currentSize, height)
                     end
                     window.size = {w=curWidth, h=curHeight}
