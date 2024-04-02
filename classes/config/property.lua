@@ -20,7 +20,9 @@ function Property:validate()
         print_err(string.format('[%s %s] %s', self.Type, self.Name, message))
         return false, message
     else
-        if self.Type == 'Observed' then
+        if self.Type == 'Actor' then
+            
+        elseif self.Type == 'Observed' then
             if self.Name:find('CWTN.') then
                 if not self.DependsOnName and not self.DependsOnValue then
                     print_err('Adding CWTN properties without limiting the classes they apply to will almost certainly break macros on non-CWTN boxes!')

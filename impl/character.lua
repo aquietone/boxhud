@@ -378,6 +378,8 @@ function Character:updateCharacterProperties(currTime, peerGroup)
     properties['Me.Type'] = charSpawnData.Type()
 
     local nameTitleCase = utils.TitleCase(self.Name)
+    local characterActorData = mq.TLO.SharedData and mq.TLO.SharedData.Characters(nameTitleCase)()
+
     -- Fill in data from this toons observed properties
     for propName, propSettings in pairs(state.Settings.Properties) do
         if propSettings.Type == 'Observed' then
@@ -413,6 +415,13 @@ function Character:updateCharacterProperties(currTime, peerGroup)
                 else
                     properties[propName] = tempValue
                 end
+            end
+        elseif propSettings.Type == 'Actor' then
+            if characterActorData and characterActorData[propName] ~= nil then
+                -- printf('here %s %s', self.Name, characterActorData[propName])
+                properties[propName] = characterActorData[propName]
+            else
+                properties[propName] = ''
             end
         end
     end

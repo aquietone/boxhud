@@ -69,6 +69,38 @@ if utils.FileExists(mq.luaDir..'/boxhud.lua') then
     os.remove(mq.luaDir..'/boxhud.lua')
 end
 
+-- local function pushStyle(theme)
+--     local t = constants.uiThemes[theme]
+--     t.windowbg.w = 1*(config.OPACITY.value/100)
+--     t.bg.w = 1*(config.OPACITY.value/100)
+--     ImGui.PushStyleColor(ImGuiCol.WindowBg, t.windowbg)
+--     ImGui.PushStyleColor(ImGuiCol.TitleBg, t.bg)
+--     ImGui.PushStyleColor(ImGuiCol.TitleBgActive, t.active)
+--     ImGui.PushStyleColor(ImGuiCol.FrameBg, t.bg)
+--     ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, t.hovered)
+--     ImGui.PushStyleColor(ImGuiCol.FrameBgActive, t.active)
+--     ImGui.PushStyleColor(ImGuiCol.Button, t.button)
+--     ImGui.PushStyleColor(ImGuiCol.ButtonHovered, t.hovered)
+--     ImGui.PushStyleColor(ImGuiCol.ButtonActive, t.active)
+--     ImGui.PushStyleColor(ImGuiCol.PopupBg, t.bg)
+--     ImGui.PushStyleColor(ImGuiCol.Tab, 0, 0, 0, 0)
+--     ImGui.PushStyleColor(ImGuiCol.TabActive, t.active)
+--     ImGui.PushStyleColor(ImGuiCol.TabHovered, t.hovered)
+--     ImGui.PushStyleColor(ImGuiCol.TabUnfocused, t.bg)
+--     ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, t.hovered)
+--     ImGui.PushStyleColor(ImGuiCol.TextDisabled, t.text)
+--     ImGui.PushStyleColor(ImGuiCol.CheckMark, t.text)
+--     ImGui.PushStyleColor(ImGuiCol.Separator, t.hovered)
+
+--     ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 10)
+-- end
+
+-- local function popStyles()
+--     ImGui.PopStyleColor(18)
+
+--     ImGui.PopStyleVar(1)
+-- end
+
 -- ImGui main function for rendering the UI window
 local HUDGUI = function()
     if not openGUI then return end

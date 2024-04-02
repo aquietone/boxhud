@@ -14,6 +14,8 @@ function PropertyInput:toProperty()
         property['Type'] = 'NetBots'
     elseif self.Type == 3 then
         property['Type'] = 'Spawn'
+    elseif self.Type == 4 then
+        property['Type'] = 'Actor'
     end
     if self.DependsOnName ~= '' then
         property['DependsOnName'] = self.DependsOnName
@@ -38,6 +40,8 @@ function PropertyInput:fromProperty(property)
     elseif property['Type'] == 'Spawn' then
         o.Type = 3
         o.FromIDProperty = property['FromIDProperty'] or ''
+    elseif property['Type'] == 'Actor' then
+        o.Type = 4
     else
         o.Type = 2
     end
@@ -55,6 +59,8 @@ function PropertyInput:draw(width, configPanel)
     self.Type,_ = ImGui.RadioButton("NetBots", self.Type, 2)
     ImGui.SameLine()
     self.Type,_ = ImGui.RadioButton("Spawn", self.Type, 3)
+    ImGui.SameLine()
+    self.Type,_ = ImGui.RadioButton("Actor", self.Type, 4)
     
     self.Name = helpers.DrawLabelAndTextInput('Name(*): ', '##newpropname', self.Name, 'The data member this property should display. Examples:\nObserved: \'Me.PctHPs\'\nNetBots: \'PctHPs\'\nSpawn: \'Distance3D\'\n')
     self.Name = self.Name:gsub('^${','')
