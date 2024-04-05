@@ -113,11 +113,13 @@ local HUDGUI = function()
             if window.pos then ImGui.SetNextWindowPos(ImVec2(window.pos.x, window.pos.y), ImGuiCond.Once) end
             if window.size then ImGui.SetNextWindowSize(ImVec2(window.size.w, window.size.h), ImGuiCond.Once) end
         end
-        local doPopRounding = false
-        if window.RoundedEdges then
-            ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 10)
-            doPopRounding = true
-        end
+        local StyleCount, ColorCount = 0, 0
+        ColorCount, StyleCount = settings.DrawTheme(state.Settings.ThemeName)
+        -- local doPopRounding = false
+        -- if window.RoundedEdges then
+        --     ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 10)
+        --     doPopRounding = true
+        -- end
         if state.WindowStates[window.Name] and state.WindowStates[window.Name].Peers then
             local windowVisibleName = 'Box HUD'
             if window.Name ~= 'default' then
@@ -146,9 +148,11 @@ local HUDGUI = function()
                 window.pos = {x=curPos.x, y=curPos.y}
                 window:drawTabs()
             end
+            if ColorCount > 0 then ImGui.PopStyleColor(ColorCount) end
+            if StyleCount > 0 then ImGui.PopStyleVar(StyleCount) end
             ImGui.End()
         end
-        if doPopRounding then ImGui.PopStyleVar(1) end
+        -- if doPopRounding then ImGui.PopStyleVar(1) end
     end
 end
 
@@ -241,6 +245,7 @@ end
 
 local function main()
     settings.LoadSettings(arg)
+    settings.loadTheme()
     utils.PluginCheck()
     SetupBindings()
     SetupWindowStates()
