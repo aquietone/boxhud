@@ -118,7 +118,7 @@ local HUDGUI = function()
             ImGui.End()
         end
         if colorCount > 0 then ImGui.PopStyleColor(colorCount) end
-        if styleCount > 0 then ImGui.PopStyleColor(styleCount) end
+        if styleCount > 0 then ImGui.PopStyleVar(styleCount) end
         if doPopRounding then ImGui.PopStyleVar(1) end
     end
 end
