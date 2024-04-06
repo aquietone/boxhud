@@ -90,10 +90,6 @@ local function ValidateOptionalSettings()
     if state.Settings['StaleDataTimeout'] and type(state.Settings['StaleDataTimeout']) == 'number' then
         state.StaleDataTimeout = state.Settings['StaleDataTimeout']
     end
-    if not state.Settings.ThemeName then
-        s.loadTheme()
-        state.Settings.ThemeName = theme.LoadTheme or 'Default'
-    end
     if not state.Settings['Colors'] then
         state.Settings['Colors'] = {}
     end
