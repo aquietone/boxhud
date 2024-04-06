@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.8.1 -- aquietone
+boxhud.lua 2.9.0 -- aquietone
 https://www.redguides.com/community/resources/boxhud.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
