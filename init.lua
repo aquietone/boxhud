@@ -212,7 +212,6 @@ end
 
 local function main()
     settings.LoadSettings(arg)
-    settings.loadTheme()
     utils.PluginCheck()
     SetupBindings()
     SetupWindowStates()
