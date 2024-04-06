@@ -12,58 +12,7 @@ local lfs = require 'lfs'
 local mq = require 'mq'
 
 local s = {}
-local theme = {}
-local themeFile = mq.configDir..'/MyThemeZ.lua'
 local settings_file = nil
-
----comment Check to see if the file we want to work on exists.
----@param name string -- Full Path to file
----@return boolean -- returns true if the file exists and false otherwise
-local function File_Exists(name)
-    local f=io.open(name,"r")
-    if f~=nil then io.close(f) return true else return false end
-end
-
-function s.loadTheme()
-    if File_Exists(themeFile) then
-        theme = dofile(themeFile)
-        else
-        theme = require('settings.themes')
-        -- mq.pickle(themeFile, theme)
-        -- s.loadTheme()
-    end
-    -- state.Settings.themeName = theme.LoadTheme or 'notheme'
-end
-
----comment
----@param themeName string -- name of the theme to load form table
----@return integer, integer -- returns the new counter values 
-function s.DrawTheme(themeName)
-    local StyleCounter = 0
-    local ColorCounter = 0
-    for tID, tData in pairs(theme.Theme) do
-        if tData.Name == themeName then
-            for pID, cData in pairs(theme.Theme[tID].Color) do
-                ImGui.PushStyleColor(pID, ImVec4(cData.Color[1], cData.Color[2], cData.Color[3], cData.Color[4]))
-                ColorCounter = ColorCounter + 1
-            end
-            if tData['Style'] ~= nil then
-                if next(tData['Style']) ~= nil then
-                    for sID, sData in pairs (theme.Theme[tID].Style) do
-                        if sData.Size ~= nil then
-                            ImGui.PushStyleVar(sID, sData.Size)
-                            StyleCounter = StyleCounter + 1
-                            elseif sData.X ~= nil then
-                            ImGui.PushStyleVar(sID, sData.X, sData.Y)
-                            StyleCounter = StyleCounter + 1
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return ColorCounter, StyleCounter
-end
 
 local function ValidateOptionalSettings()
     if not state.Settings['Windows'] then

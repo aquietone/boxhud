@@ -1,3 +1,5 @@
+2.9.0
+- Add support for Themez, pick a theme from config tab -> Display Settings
 2.8.1
 - Add auto scale height option to scale window to fit an army
 - Add rounded edges option to get rid of those scary sharp corners
