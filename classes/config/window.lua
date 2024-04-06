@@ -21,6 +21,7 @@ local Window = BaseClass(function(w,windowSettings)
     w.OverrideWindowName = windowSettings['OverrideWindowName']
     w.AutoScaleHeight = windowSettings['AutoScaleHeight']
     w.RoundedEdges = windowSettings['RoundedEdges']
+    w.Theme = windowSettings['Theme']
 end)
 
 local function GetTabByName(tabName)

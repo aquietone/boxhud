@@ -1,5 +1,6 @@
 --- @type Mq
 local mq = require 'mq'
+local utils = require 'utils.utils'
 local helpers = require 'utils.uihelpers'
 local PropertyInput = require 'classes.inputs.propertyinput'
 local ColumnInput = require 'classes.inputs.columninput'
@@ -10,6 +11,7 @@ local state = require 'state'
 local settings = require 'settings.settings'
 local library = require 'library'
 local filedialog = require 'utils.imguifiledialog'
+local theme = utils.loadTheme()
 
 function ConfigurationPanel:drawDisplaySettingsSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
@@ -218,6 +220,22 @@ function ConfigurationPanel:drawLeftPaneWindow()
     ImGui.EndChild()
 end
 
+local function DrawThemeComboBox(label, resultVar, options, bykey, helpText)
+    -- ImGui.SetCursorPosX(posX or ImGui.GetCursorPosX())
+    -- ImGui.SetCursorPosY((posY or ImGui.GetCursorPosY()) + 5)
+    -- if width then ImGui.SetNextItemWidth(width) end
+    if ImGui.BeginCombo(label, resultVar) then
+        for i,j in pairs(options) do
+            if ImGui.Selectable(j.Name, j.Name == resultVar) then
+                resultVar = j.Name
+            end
+        end
+        ImGui.EndCombo()
+    end
+    helpers.HelpMarker(helpText)
+    return resultVar
+end
+
 function ConfigurationPanel:drawDisplaySettings()
     local window = state.Settings.Windows[self.Name]
     if ImGui.Button('Save Window Settings##displaysettings') then
@@ -233,6 +251,8 @@ function ConfigurationPanel:drawDisplaySettings()
     window.RoundedEdges = helpers.DrawCheckBox('Round Edges: ', '##roundedges', window.RoundedEdges, 'Use rounded edges for window style')
     local nameColumn = state.Settings.Columns.Name
     nameColumn['IncludeLevel'] = helpers.DrawCheckBox('Name includes Level: ', '##namewithlevel', nameColumn['IncludeLevel'], 'Check this box to toggle showing name and level together in the Name column.')
+    window.Theme = DrawThemeComboBox('Theme', window.Theme, theme.Theme, false, 'Select a ThemeZ theme')
+    theme.LoadTheme = window.Theme
     ImGui.Separator()
     ImGui.Text('Column Text Colors:')
     local colors = state.Settings.Colors

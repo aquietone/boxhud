@@ -6,6 +6,7 @@ local helpers = require 'utils.uihelpers'
 local utils = require 'utils.utils'
 local state = require 'state'
 local settings = require 'settings.settings'
+local theme = utils.loadTheme()
 
 local adminPeerSelected = 0
 math.randomseed(os.time())
@@ -255,6 +256,7 @@ function WindowInput:toWindow()
     window.OverrideWindowName = self.OverrideWindowName
     window.RoundedEdges = self.RoundedEdges
     window.AutoScaleHeight = self.AutoScaleHeight
+    window.Theme = self.Theme
     return window
 end
 
@@ -277,6 +279,7 @@ function WindowInput:fromWindow(window)
     o.OverrideWindowName = window.OverrideWindowName
     o.RoundedEdges = window.RoundedEdges
     o.AutoScaleHeight = window.AutoScaleHeight
+    o.Theme = window.Theme
     return o
 end
 
@@ -376,4 +379,32 @@ function Window:draw(configPanel)
             ImGui.TextColored(0, 1, 0, 1, tab)
         end
     end
+end
+
+---@return integer, integer -- returns the new counter values 
+function Window:drawTheme()
+    local StyleCounter = 0
+    local ColorCounter = 0
+    for tID, tData in pairs(theme.Theme) do
+        if tData.Name == self.Theme then
+            for pID, cData in pairs(tData.Color) do
+                ImGui.PushStyleColor(pID, ImVec4(cData.Color[1], cData.Color[2], cData.Color[3], cData.Color[4]))
+                ColorCounter = ColorCounter + 1
+            end
+            if tData['Style'] ~= nil then
+                if next(tData['Style']) ~= nil then
+                    for sID, sData in pairs (tData.Style) do
+                        if sData.Size ~= nil then
+                            ImGui.PushStyleVar(sID, sData.Size)
+                            StyleCounter = StyleCounter + 1
+                            elseif sData.X ~= nil then
+                            ImGui.PushStyleVar(sID, sData.X, sData.Y)
+                            StyleCounter = StyleCounter + 1
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return ColorCounter, StyleCounter
 end

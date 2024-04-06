@@ -7,6 +7,18 @@ function print_err(msg, ...) printf('\at[\ayBOXHUD\at] \ar' .. msg, ...) end
 
 local utils = {}
 
+local theme = nil
+local themeFile = mq.configDir..'/MyThemeZ.lua'
+function utils.loadTheme()
+    if theme then return theme end
+    if utils.FileExists(themeFile) then
+        theme = dofile(themeFile)
+    else
+        theme = require('settings.themes')
+    end
+    return theme
+end
+
 utils.FileExists = function(path)
     local f = io.open(path, "r")
     if f ~= nil then io.close(f) return true else return false end
