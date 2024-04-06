@@ -72,7 +72,7 @@ return {
     RefreshInterval = 250,
 
     StaleDataTimeout = 30,
-
+    ThemeName = 'Default',
     -- Global columns to display on all tabs
     Columns = {
         ['Name'] = { 
