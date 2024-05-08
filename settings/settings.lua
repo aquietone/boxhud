@@ -1,7 +1,7 @@
-local Property = require 'classes.config.property'
-local Column = require 'classes.config.column'
-local Tab = require 'classes.config.tab'
-local Window = require 'classes.config.window'
+local Property = require 'classes.configpanel.property'
+local Column = require 'classes.configpanel.column'
+local Tab = require 'classes.configpanel.tab'
+local Window = require 'classes.configpanel.window'
 local utils = require 'utils.utils'
 local state = require 'state'
 local lfs = require 'lfs'
@@ -162,33 +162,32 @@ s.LoadSettings = function(arg)
             os.remove(string.format('%s/boxhud/settings/%s', mq.luaDir, file))
         end
     end
-    settings_file = arg[1] or string.format('boxhud-settings-%s.lua', string.lower(mq.TLO.Me.Name()))
-    local settings_path = string.format('%s/%s', mq.configDir, settings_file)
-    local old_settings_path = string.format('%s/boxhud/settings/%s', mq.luaDir, settings_file)
+    settings_file = arg[1] or string.format('boxhud-settings-%s.lua', string.lower(mq.TLO.Me()))
+    local settings_path = string.format('%s/boxhud/%s', mq.configDir, settings_file)
+    local old_settings_path = string.format('%s/%s', mq.configDir, settings_file)
     local default_settings_path = string.format('%s/boxhud/settings/%s', mq.luaDir, 'boxhud-settings.lua')
 
     if utils.FileExists(settings_path) then
         print_msg('Loading settings from file: %s', settings_file)
         state.Settings = assert(loadfile(settings_path))()
+        ValidateSettings()
     elseif utils.FileExists(old_settings_path) then
         -- copy old settings to new location in boxhud folder
-        print_msg('Moving lua/boxhud/settings/%s to config/%s', settings_file, settings_file)
-        utils.CopyFile(old_settings_path, settings_path)
-        print_msg('Loading settings from file: %s', settings_file)
-        state.Settings = assert(loadfile(settings_path))()
+        print_msg('Moving config/%s to config/boxhud/%s', settings_file, settings_file)
+        state.Settings = assert(loadfile(old_settings_path))()
+        ValidateSettings()
+        s.SaveSettings()
     else
         print_msg('Loading default settings from file: boxhud-settings')
         -- Default settings
         state.Settings = require('boxhud.settings.boxhud-settings')
-        -- Copy defaults into toon specific settings
-        utils.CopyFile(default_settings_path, settings_path)
+        ValidateSettings()
+        s.SaveSettings()
     end
-
-    ValidateSettings()
 end
 
 s.SaveSettings = function()
-    local settings_path = string.format('%s/%s', mq.configDir, settings_file)
+    local settings_path = string.format('%s/boxhud/%s', mq.configDir, settings_file)
     mq.pickle(settings_path, state.Settings)
     return true
 end

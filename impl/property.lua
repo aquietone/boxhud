@@ -1,6 +1,6 @@
 --- @type Mq
 local mq = require 'mq'
-local Property = require 'classes.config.property'
+local Property = require 'classes.configpanel.property'
 local PropertyInput = require 'classes.inputs.propertyinput'
 local helpers = require 'utils.uihelpers'
 local state = require 'state'
@@ -16,6 +16,8 @@ function PropertyInput:toProperty()
         property['Type'] = 'Spawn'
     elseif self.Type == 4 then
         property['Type'] = 'Actor'
+    elseif self.Type == 5 then
+        property['Type'] = 'E3Bots'
     end
     if self.DependsOnName ~= '' then
         property['DependsOnName'] = self.DependsOnName
@@ -48,20 +50,16 @@ function PropertyInput:fromProperty(property)
     return o
 end
 
+local propertyTypesByIdx = {[1]='Observed', [2]='NetBots', [3]='Spawn', [4]='Actor', [5]='E3Bots',}
+local propertyTypes = {Observed=1, NetBots=2, Spawn=3, Actor=4, E3Bots=5,}
 function PropertyInput:draw(width, configPanel)
     ImGui.TextColored(1, 0, 1, 1, "Add New Property")
     ImGui.Separator()
     ImGui.Text('Type: ')
     ImGui.SameLine()
     helpers.HelpMarker('The source of the property value.\n\'Observed\' will get the value using MQ2DanNet.\n\'NetBots\' will get the value using MQ2NetBots.\n\'Spawn\' will get the value from the Spawn TLO.')
-    self.Type,_ = ImGui.RadioButton("Observed", self.Type, 1)
-    ImGui.SameLine()
-    self.Type,_ = ImGui.RadioButton("NetBots", self.Type, 2)
-    ImGui.SameLine()
-    self.Type,_ = ImGui.RadioButton("Spawn", self.Type, 3)
-    ImGui.SameLine()
-    self.Type,_ = ImGui.RadioButton("Actor", self.Type, 4)
-    
+    self.Type = propertyTypes[helpers.DrawComboBox("##proptypecombo", propertyTypesByIdx[self.Type], propertyTypes, true)]
+
     self.Name = helpers.DrawLabelAndTextInput('Name(*): ', '##newpropname', self.Name, 'The data member this property should display. Examples:\nObserved: \'Me.PctHPs\'\nNetBots: \'PctHPs\'\nSpawn: \'Distance3D\'\n')
     self.Name = self.Name:gsub('^${','')
     self.Name = self.Name:gsub('}$','')

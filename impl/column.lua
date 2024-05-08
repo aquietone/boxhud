@@ -1,4 +1,4 @@
-local Column = require 'classes.config.column'
+local Column = require 'classes.configpanel.column'
 local ColumnInput = require 'classes.inputs.columninput'
 local helpers = require 'utils.uihelpers'
 local state = require 'state'

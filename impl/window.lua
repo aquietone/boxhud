@@ -1,6 +1,6 @@
 --- @type Mq
 local mq = require 'mq'
-local Window = require 'classes.config.window'
+local Window = require 'classes.configpanel.window'
 local WindowInput = require 'classes.inputs.windowinput'
 local helpers = require 'utils.uihelpers'
 local utils = require 'utils.utils'

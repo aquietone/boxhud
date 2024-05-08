@@ -418,11 +418,13 @@ function Character:updateCharacterProperties(currTime, peerGroup)
             end
         elseif propSettings.Type == 'Actor' then
             if characterActorData and characterActorData[propName] ~= nil then
-                -- printf('here %s %s', self.Name, characterActorData[propName])
                 properties[propName] = characterActorData[propName]
             else
                 properties[propName] = ''
             end
+        elseif propSettings.Type == 'E3Bots' then
+            local queryString = ('e3,E3Bots(%s).%s'):format(self.Name, propName)
+            properties[propName] = mq.TLO.MQ2Mono.Query(queryString)()
         end
     end
 

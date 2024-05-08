@@ -1,4 +1,4 @@
-local Tab = require 'classes.config.tab'
+local Tab = require 'classes.configpanel.tab'
 local TabInput = require 'classes.inputs.tabinput'
 local helpers = require 'utils.uihelpers'
 local state = require 'state'

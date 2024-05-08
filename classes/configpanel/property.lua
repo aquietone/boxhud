@@ -56,6 +56,8 @@ function Property:validate()
             end
         elseif self.Type == 'NetBots' then
             state.IsUsingNetBots = true
+        elseif self.Type == 'E3Bots' then
+            
         else
             message = string.format('[Properties %s] Property type not supported. Type=%s', self.Name, self.Type)
             print_err(message)

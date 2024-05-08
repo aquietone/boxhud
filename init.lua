@@ -42,7 +42,7 @@ if not lfs then
 end
 
 local WindowState = require 'classes.hud.windowstate'
-local ConfigurationPanel = require 'classes.config.configurationpanel'
+local ConfigurationPanel = require 'classes.configpanel.configurationpanel'
 require 'impl.window'
 require 'impl.windowstate'
 require 'impl.character'
