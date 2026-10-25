@@ -13,8 +13,13 @@ local mq = require 'mq'
 
 local s = {}
 local settings_file = nil
+local FOLDER = 'boxhud'
+local SETTINGS_PREFIX = 'boxhud-settings'
 
 local function ValidateOptionalSettings()
+    -- settings files may omit these; default them before anything below iterates them
+    state.Settings['Tabs'] = state.Settings['Tabs'] or {}
+    state.Settings['Properties'] = state.Settings['Properties'] or {}
     if not state.Settings['Windows'] then
         print_msg('No windows defined, adding default')
         state.Settings['Windows'] = {
@@ -62,7 +67,9 @@ local function ValidateOptionalSettings()
         end
     elseif state.PeerSource == 'netbots' then
         state.IsUsingNetBots = true
-        if table.getn(state.Settings['Windows']) > 1 then
+        local windowCount = 0
+        for _ in pairs(state.Settings['Windows']) do windowCount = windowCount + 1 end
+        if windowCount > 1 then
             print_err('NetBots only supports 1 window')
             return false
         end
@@ -157,29 +164,29 @@ end
 
 s.LoadSettings = function(arg)
     -- cleanup files
-    for file in lfs.dir(string.format('%s/boxhud/settings', mq.luaDir)) do
+    for file in lfs.dir(string.format('%s/%s/settings', mq.luaDir, FOLDER)) do
         if file ~= '.' and file ~= '..' and file:find('boxhud%-settings%-.*%.lua') then
-            os.remove(string.format('%s/boxhud/settings/%s', mq.luaDir, file))
+            os.remove(string.format('%s/%s/settings/%s', mq.luaDir, FOLDER, file))
         end
     end
-    settings_file = arg[1] or string.format('boxhud-settings-%s.lua', string.lower(mq.TLO.Me.Name()))
+    settings_file = arg[1] or string.format('%s-%s.lua', SETTINGS_PREFIX, string.lower(mq.TLO.Me.Name()))
     local settings_path = string.format('%s/%s', mq.configDir, settings_file)
-    local old_settings_path = string.format('%s/boxhud/settings/%s', mq.luaDir, settings_file)
-    local default_settings_path = string.format('%s/boxhud/settings/%s', mq.luaDir, 'boxhud-settings.lua')
+    local old_settings_path = string.format('%s/%s/settings/%s', mq.luaDir, FOLDER, settings_file)
+    local default_settings_path = string.format('%s/%s/settings/%s', mq.luaDir, FOLDER, 'boxhud-settings.lua')
 
     if utils.FileExists(settings_path) then
         print_msg('Loading settings from file: %s', settings_file)
         state.Settings = assert(loadfile(settings_path))()
     elseif utils.FileExists(old_settings_path) then
         -- copy old settings to new location in boxhud folder
-        print_msg('Moving lua/boxhud/settings/%s to config/%s', settings_file, settings_file)
+        print_msg('Moving lua/%s/settings/%s to config/%s', FOLDER, settings_file, settings_file)
         utils.CopyFile(old_settings_path, settings_path)
         print_msg('Loading settings from file: %s', settings_file)
         state.Settings = assert(loadfile(settings_path))()
     else
         print_msg('Loading default settings from file: boxhud-settings')
         -- Default settings
-        state.Settings = require('boxhud.settings.boxhud-settings')
+        state.Settings = require(FOLDER..'.settings.boxhud-settings')
         -- Copy defaults into toon specific settings
         utils.CopyFile(default_settings_path, settings_path)
     end

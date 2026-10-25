@@ -169,7 +169,7 @@ end
 
 function ConfigurationPanel:drawImportSelector()
     ImGui.PushStyleColor(ImGuiCol.Text, 1, 1, 1, 1)
-    self.Selected = ImGui.Selectable('Import Configuration', self.selectedItemType == 'import')
+    self.Selected = ImGui.Selectable('Import Configuration', self.SelectedItemType == 'import')
     ImGui.PopStyleColor(1)
     if self.Selected then
         self:selectItem(nil, 'import')
@@ -346,8 +346,18 @@ function ConfigurationPanel:drawImport()
     end
     ImGui.Text('Import settings from: ' .. self.ImportFileName)
     if not self.tmp_settings and self.ImportFileName ~= '' then
-        self.tmp_settings = assert(loadfile(mq.configDir..'/'..self.ImportFileName))()
-        -- validate settings file
+        local chunk, err = loadfile(mq.configDir..'/'..self.ImportFileName)
+        local ok, result = false, err
+        if chunk then
+            ok, result = pcall(chunk)
+        end
+        if ok and type(result) == 'table' then
+            self.tmp_settings = result
+        else
+            -- report once and clear the file name so this is not retried every frame
+            print_err('Unable to import \ay%s\ar: %s', self.ImportFileName, tostring(result or 'file did not return a table'))
+            self.ImportFileName = ''
+        end
     end
     if self.tmp_settings then
         local flags = bit32.bor(ImGuiTableFlags.RowBg, ImGuiTableFlags.BordersOuter, ImGuiTableFlags.BordersV, ImGuiTableFlags.ScrollY)

@@ -1,5 +1,5 @@
 --[[
-boxhud.lua 2.9.0 -- aquietone
+boxhud.lua 2.9.1 -- aquietone
 https://www.redguides.com/community/resources/boxhud.2088/
 
 Recreates the traditional MQ2NetBots/MQ2HUD based HUD with a DanNet observer
@@ -61,6 +61,9 @@ local arg = {...}
 local openGUI = true
 local shouldDrawGUI = true
 local terminate = false
+-- Per window runtime state, so closing or docking one window does not affect the others
+local windowOpen = {}
+local windowDocked = {}
 
 -- Stores all live observed toon information that will be displayed
 local adminMode = false
@@ -73,53 +76,58 @@ end
 local HUDGUI = function()
     if not openGUI then return end
     for _,window in pairs(state.Settings.Windows) do
-        local flags = 0
-        if not window.TitleBar then flags = ImGuiWindowFlags.NoTitleBar end
-        if window.Transparency then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
-        if window.Locked then flags = bit32.bor(flags, ImGuiWindowFlags.NoMove) end
-        if not ImGui.IsWindowDocked() and window.SavePos then
-            if window.pos then ImGui.SetNextWindowPos(ImVec2(window.pos.x, window.pos.y), ImGuiCond.Once) end
-            if window.size then ImGui.SetNextWindowSize(ImVec2(window.size.w, window.size.h), ImGuiCond.Once) end
-        end
-        local colorCount, styleCount = window:drawTheme()
-        local doPopRounding = false
-        if window.RoundedEdges then
-            ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 10)
-            doPopRounding = true
-        end
-        if state.WindowStates[window.Name] and state.WindowStates[window.Name].Peers then
-            local windowVisibleName = 'Box HUD'
-            if window.Name ~= 'default' then
-                windowVisibleName = window.Name
+        if windowOpen[window.Name] == nil then windowOpen[window.Name] = true end
+        if windowOpen[window.Name] then
+            local flags = 0
+            if not window.TitleBar then flags = ImGuiWindowFlags.NoTitleBar end
+            if window.Transparency then flags = bit32.bor(flags, ImGuiWindowFlags.NoBackground) end
+            if window.Locked then flags = bit32.bor(flags, ImGuiWindowFlags.NoMove) end
+            -- docked state is only known after Begin, so use what was seen on the previous frame
+            if not windowDocked[window.Name] and window.SavePos then
+                if window.pos then ImGui.SetNextWindowPos(ImVec2(window.pos.x, window.pos.y), ImGuiCond.Once) end
+                if window.size then ImGui.SetNextWindowSize(ImVec2(window.size.w, window.size.h), ImGuiCond.Once) end
             end
-            local windowName = windowVisibleName..'##'..state.MyName..window.Name
-            if window.OverrideWindowName then
-                windowName =  windowVisibleName
+            local colorCount, styleCount = window:drawTheme()
+            local doPopRounding = false
+            if window.RoundedEdges then
+                ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 10)
+                doPopRounding = true
             end
-            openGUI, shouldDrawGUI = ImGui.Begin(windowName, openGUI, flags)
-            if shouldDrawGUI then
-                local curWidth = ImGui.GetWindowWidth()
-                local curHeight = ImGui.GetWindowHeight()
-                if curWidth == 32 and curHeight == 32 then
-                    ImGui.SetWindowSize(460, 177)
-                    window.size = {w=460, h=177}
-                else
-                    if window.AutoScaleHeight then
-                        local currentSize = ImGui.GetWindowWidth()
-                        local height = math.max(160, 25*(#state.WindowStates[window.Name].Peers or 0)+40)
-                        ImGui.SetWindowSize(currentSize, height)
-                    end
-                    window.size = {w=curWidth, h=curHeight}
+            if state.WindowStates[window.Name] and state.WindowStates[window.Name].Peers then
+                local windowVisibleName = 'Box HUD'
+                if window.Name ~= 'default' then
+                    windowVisibleName = window.Name
                 end
-                local curPos = ImGui.GetWindowPosVec()
-                window.pos = {x=curPos.x, y=curPos.y}
-                window:drawTabs()
+                local windowName = windowVisibleName..'##'..state.MyName..window.Name
+                if window.OverrideWindowName then
+                    windowName =  windowVisibleName
+                end
+                windowOpen[window.Name], shouldDrawGUI = ImGui.Begin(windowName, windowOpen[window.Name], flags)
+                if shouldDrawGUI then
+                    windowDocked[window.Name] = ImGui.IsWindowDocked()
+                    local curWidth = ImGui.GetWindowWidth()
+                    local curHeight = ImGui.GetWindowHeight()
+                    if curWidth == 32 and curHeight == 32 then
+                        ImGui.SetWindowSize(460, 177)
+                        window.size = {w=460, h=177}
+                    else
+                        if window.AutoScaleHeight then
+                            local currentSize = ImGui.GetWindowWidth()
+                            local height = math.max(160, 25*(#state.WindowStates[window.Name].Peers or 0)+40)
+                            ImGui.SetWindowSize(currentSize, height)
+                        end
+                        window.size = {w=curWidth, h=curHeight}
+                    end
+                    local curPos = ImGui.GetWindowPosVec()
+                    window.pos = {x=curPos.x, y=curPos.y}
+                    window:drawTabs()
+                end
+                ImGui.End()
             end
-            ImGui.End()
+            if colorCount > 0 then ImGui.PopStyleColor(colorCount) end
+            if styleCount > 0 then ImGui.PopStyleVar(styleCount) end
+            if doPopRounding then ImGui.PopStyleVar(1) end
         end
-        if colorCount > 0 then ImGui.PopStyleColor(colorCount) end
-        if styleCount > 0 then ImGui.PopStyleVar(styleCount) end
-        if doPopRounding then ImGui.PopStyleVar(1) end
     end
 end
 
@@ -135,16 +143,28 @@ local Admin = function(action, name)
             print_err('\ayadminMode\ax must be enabled')
             return
         end
-        if name == nil then
+        if name == nil or name:lower() == 'all' then
             print_msg('Resetting observed properties for: \ayALL')
             for _,char in pairs(state.Characters) do
                 char:manageObservers(true)
                 char:manageObservers(false)
             end
         else
-            print_msg('Resetting observed properties for: \ay%s', name)
-            state.Characters[name]:manageObservers(true)
-            state.Characters[name]:manageObservers(false)
+            -- character names are matched case-insensitively
+            local char = nil
+            for charName, c in pairs(state.Characters) do
+                if charName:lower() == name:lower() then
+                    char = c
+                    break
+                end
+            end
+            if not char then
+                print_err('Unknown character: \ay%s', name)
+                return
+            end
+            print_msg('Resetting observed properties for: \ay%s', char.Name)
+            char:manageObservers(true)
+            char:manageObservers(false)
         end
     end
 end
@@ -169,7 +189,17 @@ local function SetupBindings()
     mq.bind('/bhversion', ShowVersion)
     mq.bind('/bhhelp', Help)
     mq.bind('/boxhud', function()
-        openGUI = not openGUI
+        -- if any window was closed with its own X, bring them all back first
+        local anyClosed = false
+        for _, open in pairs(windowOpen) do
+            if not open then anyClosed = true end
+        end
+        if anyClosed then
+            for name in pairs(windowOpen) do windowOpen[name] = true end
+            openGUI = true
+        else
+            openGUI = not openGUI
+        end
     end)
     mq.bind('/boxhudend', function()
         mq.imgui.destroy('BOXHUDUI')

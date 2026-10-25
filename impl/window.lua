@@ -38,14 +38,20 @@ local function CompareWithSortSpecs(a, b)
             aVal = tostring(a)
             bVal = tostring(b)
         end
-        if tonumber(aVal) ~= nil and tonumber(bVal) ~= nil then
-            if tonumber(aVal) < tonumber(bVal) then
+        local aNum, bNum = tonumber(aVal), tonumber(bVal)
+        if aNum ~= nil and bNum ~= nil then
+            if aNum < bNum then
                 delta = -1
-            elseif tonumber(bVal) < tonumber(aVal) then
+            elseif bNum < aNum then
                 delta = 1
             else
                 delta = 0
             end
+        elseif aNum ~= nil then
+            -- numbers sort before non-numbers so the ordering stays consistent for table.sort
+            delta = -1
+        elseif bNum ~= nil then
+            delta = 1
         else
             if aVal < bVal then
                 delta = -1
@@ -96,7 +102,7 @@ function Window:drawTableTab(columns, tabName)
                     current_columns = nil
                 end
                 sort_specs.SpecsDirty = false
-                self.SortDirty = true
+                self.SortDirty = false
                 state.WindowStates[self.Name].PeersDirty = false
             end
         end
@@ -162,8 +168,12 @@ function Window:drawTabs()
     if ImGui.BeginTabBar('BOXHUDTABS##'..self.Name, ImGuiTabBarFlags.Reorderable) then
         for _,tabName in ipairs(self.Tabs) do
             local tab = utils.GetTabByName(tabName)
+            if not tab then
+                -- window lists a tab that is not defined in the settings; show it instead of erroring
+                tab = {Name = tostring(tabName)..' (missing)', Columns = {}}
+            end
             if ImGui.BeginTabItem(tab['Name']) then
-                if self.currentTab ~= tab.Name then
+                if self.CurrentTab ~= tab.Name then
                     self.SortDirty = true
                     self.CurrentTab = tab.Name
                 end

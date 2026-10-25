@@ -28,8 +28,14 @@ function ColumnInput:toColumn()
         if self.ThresholdCount > 0 then
             column['Thresholds']={}
         end
-        for i,j in ipairs(self.Thresholds) do
-            column['Thresholds'][i] = tonumber(j)
+        -- skip blank or non-numeric rows so the list has no holes
+        local thresholdIdx = 0
+        for _,j in ipairs(self.Thresholds) do
+            local value = tonumber(j)
+            if value then
+                thresholdIdx = thresholdIdx + 1
+                column['Thresholds'][thresholdIdx] = value
+            end
         end
         column['OwnColor'] = self.OwnColor
         column['Color'] = self.Color
@@ -252,6 +258,8 @@ function Column:draw(configPanel)
                 state.Settings['Columns'][self.Name] = nil
                 settings.SaveSettings()
                 configPanel:clearSelection()
+            else
+                print_err('Cannot delete column \ay%s\ar, it is still used by a tab', self.Name)
             end
         end
     end

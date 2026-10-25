@@ -133,6 +133,8 @@ function Tab:draw(configPanel)
             state.Settings['Tabs'][tabIter] = nil
             settings.SaveSettings()
             configPanel:clearSelection()
+        else
+            print_err('Cannot delete tab \ay%s\ar, it is still used by a window', self.Name)
         end
     end
     ImGui.Text('Columns:')

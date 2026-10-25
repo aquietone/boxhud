@@ -14,12 +14,13 @@ function Character:shouldObserveProperty(propSettings)
     elseif propSettings.DependsOnValue then
         local dependentValue = mq.TLO.DanNet(self.Name).Observe(propSettings.DependsOnName)()
         if dependentValue then
-            if not propSettings.Inverse and propSettings.DependsOnValue:lower():find(dependentValue:lower()) then
-                -- The value of the dependent property matches
-                return true
-            elseif propSettings.Inverse and propSettings.DependsOnValue:lower():find(dependentValue:lower()) then
-                return true
+            -- plain-text substring match (4th arg) so values are not treated as Lua patterns
+            local matches = propSettings.DependsOnValue:lower():find(dependentValue:lower(), 1, true) ~= nil
+            if propSettings.Inverse then
+                -- Inverse: observe when the dependent value is NOT in the list
+                return not matches
             end
+            return matches
         end
     end
     -- Do not observe the property
@@ -31,12 +32,26 @@ function Character:isObserverSet(propName)
     return not mq.TLO.DanNet(self.Name)() or mq.TLO.DanNet(self.Name).ObserveSet(propName)()
 end
 
--- Return whether or not all expected observers are set for a toon 
+-- seconds to wait before retrying an observer that failed to set
+local OBSERVER_RETRY_SECONDS = 30
+
+-- Return whether an observer is missing, or failed long enough ago that it should be retried
+function Character:observerNeedsAttempt(propName)
+    local observer = self.Observers[propName]
+    if not observer then return true end
+    if observer == 'ERR' then
+        local failedAt = self.ObserverFailedAt and self.ObserverFailedAt[propName] or 0
+        return os.difftime(os.time(), failedAt) > OBSERVER_RETRY_SECONDS
+    end
+    return false
+end
+
+-- Return whether or not all expected observers are set for a toon
 function Character:verifyObservers()
     for propName, propSettings in pairs(state.Settings.Properties) do
         if propSettings.Type == 'Observed' and self:shouldObserveProperty(propSettings) then
             --if not self:isObserverSet(propName) then
-            if not self.Observers[propName] or self.Observers[propName] == 'ERR' then
+            if self:observerNeedsAttempt(propName) then
                 return false
             end
         end
@@ -54,7 +69,7 @@ function Character:addObserver(propName, propSettings)
     end
     if self:shouldObserveProperty(propSettings) then
         -- Add the observation if it is not set
-        if not self.Observers[propName] or self.Observers[propName] == 'ERR' then
+        if self:observerNeedsAttempt(propName) then
             self.Observers[propName] = nil
             --if mq.TLO.DanNet(self.Name).ObserveSet('"'..propName..'"')() then
             --    -- remove potentially stale observer and re-add it
@@ -64,8 +79,14 @@ function Character:addObserver(propName, propSettings)
                 mq.cmdf('/dobserve %s -q "%s"', self.Name, propName)
                 mq.delay(1000, function() return self:isObserverSet(propName) end)
             end
-            if self.Observers[propName] ~= 'ERR' then
+            if self:isObserverSet(propName) then
                 self.Observers[propName] = true
+            else
+                -- observer never took; show ERR and try again after the cooldown
+                self.Observers[propName] = 'ERR'
+                self.ObserverFailedAt = self.ObserverFailedAt or {}
+                self.ObserverFailedAt[propName] = os.time()
+                print_err('Observer not set for \ay%s\ar: \ay%s', self.Name, propName)
             end
         end
     end
@@ -82,6 +103,7 @@ function Character:removeObserver(propName, force)
                 if os.difftime(os.time(), verifyStartTime) > 10 then
                     print_err('Timed out waiting for observer to be removed for \ay'..self.Name)
                     self.Observers[propName] = 'ERR'
+                    break
                 end
             end
         end
@@ -94,6 +116,8 @@ end
 -- Add or remove observers for the given toon
 function Character:manageObservers(drop)
     if drop then
+        -- a reset should retry failed observers right away, not wait out the cooldown
+        self.ObserverFailedAt = nil
         for propName, propSettings in pairs(state.Settings.Properties) do
             if propSettings.Type == 'Observed' then
                 self:removeObserver(propName)
@@ -158,9 +182,8 @@ local function SetText(value, thresholds, ascending, percentage, colColor, prett
         if thresholds ~= nil then
             local valueNum = tonumber(value)
             if valueNum == nil then
-                return
-            end
-            if #thresholds == 1 then
+                -- not a number (e.g. no value yet or 'ERR'): keep the default color but still show the text
+            elseif #thresholds == 1 then
                 if valueNum >= thresholds[1] then
                     if ascending then
                         col = state.Settings.Colors.High
@@ -279,7 +302,7 @@ function Character:drawContextMenu()
             state.AdminPeerName = self.Name
         end
         ImGui.Text('Send Command to '..self:getDisplayName()..': ')
-        local textInput = ""
+        local textInput, selected = "", false
         textInput, selected = ImGui.InputText("##input"..self.Name, textInput, ImGuiInputTextFlags.EnterReturnsTrue)
         if selected then
             print_msg('Sending command: \ag/dex '..self:getDisplayName()..' '..textInput)
@@ -356,7 +379,7 @@ end
 
 function Character:drawColumnButton(columnName, columnAction)
     if ImGui.SmallButton(columnName..'##'..self.Name) then
-        if self.Name == mq.TLO.Me.Name():lower() and columnAction:find('/dex #botName# ') ~= -1 then
+        if self.Name == mq.TLO.Me.Name():lower() and columnAction:find('/dex #botName# ', 1, true) then
             -- don't noparse or dex if the command would just be sent to ourself
             state.StoredCommand = columnAction:gsub('/dex #botName# ', ''):gsub('/noparse ', '')
         else
@@ -418,7 +441,7 @@ function Character:updateCharacterProperties(currTime, peerGroup)
     end
 
     if peerGroup ~= 'zone' then
-        properties.BotInZone = properties['Me.ID'] ~= 0
+        properties.BotInZone = (properties['Me.ID'] or 0) ~= 0
     else
         properties.BotInZone = true
     end

@@ -1,3 +1,23 @@
+2.9.1
+- Fix removeObserver looping forever (and spamming errors) if an observer would not drop
+- Fix observers that fail to add never being marked as failed. They now show ERR and are retried after 30 seconds. Reset observers retries right away
+- Fix `Inverse` on observed properties having no effect, and match DependsOnValue as plain text instead of a Lua pattern
+- Fix editing a property in the config tab resetting its Inverse setting
+- Fix tables re-sorting every frame (SortDirty was never cleared, and CurrentTab was read as currentTab)
+- Fix sort error that could happen when a column mixes numbers and text
+- Fix `/bhadmin reset all` erroring, make `/bhadmin reset <name>` ignore case and report unknown names
+- Fix button columns run on your own character not substituting #botName# in all cases
+- Fix errors when MQ2DanNet or MQ2NetBots returns no peer list
+- Fix NetBots 'only supports 1 window' check never triggering
+- Fix error when a window lists a tab that no longer exists, it now shows as '<name> (missing)'
+- Fix BotInZone treating a missing spawn id as in zone
+- Closing one window no longer hides the others, and /boxhud brings back any windows closed with their X button
+- Threshold columns now show non numeric values (such as ERR) instead of an empty cell
+- A bad file chosen in Import Configuration now reports one error instead of an error every frame
+- Deleting a tab, column or property that is still in use now says why it was refused
+- Ignore blank threshold rows in the add column form, and default Tabs and Properties when missing from a settings file
+- Import file chooser rescans the folder each time it opens
+- CopyFile no longer errors if a file is missing, and peers are compared item by item
 2.9.0
 - Add support for Themez, pick a theme from config tab -> Display Settings
 2.8.1

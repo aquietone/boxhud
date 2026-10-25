@@ -78,7 +78,9 @@ ImGuiFileDialog.draw_file_selector = function(path, pattern)
                 if file ~= '.' and file ~= '..' and file:find(pattern) then
                     local f = path..'/'..file
                     local attr = lfs.attributes(f)
-                    table.insert(sorted_items, {name=file,size=attr.size,date=attr.modification})
+                    if attr then
+                        table.insert(sorted_items, {name=file,size=attr.size,date=attr.modification})
+                    end
                 end
             end
         end
@@ -106,7 +108,7 @@ ImGuiFileDialog.draw_file_selector = function(path, pattern)
                 local clipper = ImGuiListClipper.new()
                 clipper:Begin(#sorted_items)
                 while clipper:Step() do
-                    for row_n = clipper.DisplayStart, clipper.DisplayEnd, 1 do
+                    for row_n = clipper.DisplayStart, clipper.DisplayEnd - 1, 1 do
                         local file = sorted_items[row_n + 1]
                         if file then
                             ImGui.TableNextRow()
@@ -141,6 +143,8 @@ end
 
 ImGuiFileDialog.set_file_selector_open = function(open)
     openGUI = open
+    -- rescan the folder each time the dialog is opened
+    if open then sorted_items = {} end
     internal_selected = selected
 end
 

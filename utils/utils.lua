@@ -26,11 +26,14 @@ end
 
 utils.CopyFile = function(source, dest)
     local f = io.open(source, 'r')
+    if not f then return false end
     local contents = f:read('*a')
     io.close(f)
     f = io.open(dest, 'w')
+    if not f then return false end
     f:write(contents)
     io.close(f)
+    return true
 end
 
 -- Split a string using the provided separator, | by default
@@ -77,7 +80,11 @@ utils.TableClone = function(org)
 end
 
 utils.DoTablesMatch = function(a, b)
-    return table.concat(a) == table.concat(b)
+    if #a ~= #b then return false end
+    for i = 1, #a do
+        if a[i] ~= b[i] then return false end
+    end
+    return true
 end
 
 -- Load required plugins

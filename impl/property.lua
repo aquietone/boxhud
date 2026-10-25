@@ -31,6 +31,7 @@ end
 function PropertyInput:fromProperty(property)
     local o = PropertyInput()
     o.Name = property.Name
+    o.Inverse = property['Inverse'] or false
     if property['Type'] == 'Observed' then
         o.Type = 1
         o.DependsOnName = property['DependsOnName'] or ''
@@ -179,6 +180,8 @@ function Property:draw(configPanel)
                 state.Settings['Properties'][self.Name] = nil
                 settings.SaveSettings()
                 configPanel:clearSelection()
+            else
+                print_err('Cannot delete property \ay%s\ar, it is still used by a column or property', self.Name)
             end
         end
     end

@@ -8,6 +8,8 @@ Settings file for boxhud.lua script.
 - DanNetPeerGroup:      DanNet group to load peer data from. Options:
   PeerGroup(deprecated)   - all: The All peer group
                           - zone: The zone_servername_zonename peer group
+                          - group: The DanNet peer group of the running character's EQ group
+                          - any other value is used as the name of a DanNet peer group
                         
 - RefreshInterval:      Interval to poll observed data (separate from ImGui refresh rate)
 
@@ -51,7 +53,10 @@ Settings file for boxhud.lua script.
                           - DependsOnName: (string)  Name of observed property used to check whether this
                                                      observer should be added
                           - DependsOnValue: (string) Acceptable values of the depended upon property
-                                                     for this observer to be added
+                                                     for this observer to be added. A comma separated
+                                                     list, matched as plain text and ignoring case
+                          - Inverse: (boolean)       Set to true to add the observer only when the depended
+                                                     upon property is NOT one of the DependsOnValue values
 
 - SpawnProperties:      List of Spawn properties which are based on spawn data of the observed Me.ID
                         Properties:

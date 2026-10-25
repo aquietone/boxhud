@@ -38,10 +38,22 @@ Toggle the window with:
 /boxhud
 ```
 
-Show help output:
+If a window was closed with its own close button, running `/boxhud` again brings all of the windows back.
+
+Show help output, or the running version:
 
 ```
 /bhhelp
+/bhversion
+```
+
+Admin commands. Admin mode hides the window, so it does not error while observers are being reset:
+
+```
+/bhadmin                  -- toggle admin mode
+/bhadmin reset all        -- reset the DanNet observers for all toons
+/bhadmin reset <name>     -- reset the DanNet observers for one toon (name is not case sensitive)
+/bhadmin anon             -- toggle showing class names instead of character names
 ```
 
 # Overview
@@ -116,13 +128,11 @@ The script takes a few seconds to start up as it waits for the DanNet observers 
 Characters which log off or for some reason stop being available will go stale and be removed from the table after 30 seconds.
 
 # Configuration
-The configuration is stored in a separate Lua file, which is then included with `settings = require 'boxhud.settings.boxhud-settings'`.
+The configuration is stored in a separate Lua file.
 
-By default, `boxhud-settings.lua` is included with the script. Upon startup, it will be copied to a character specific file `boxhud-settings-charactername.lua`.
+By default, `boxhud-settings.lua` is included with the script, in `boxhud/settings`. Upon startup, if there is no settings file for the character yet, it will be copied to a character specific file `boxhud-settings-charactername.lua` in the **config** folder of your MQ directory.
 An existing `boxhud-settings-charactername.lua` will always take precedence over `boxhud-settings.lua`.
-A settings filename can also be provided when starting the script like `lua run boxhud boxhud-settings.lua`
-
-Note that since the settings are another lua file, its expecting the settings file to also be in the lua folder, rather than the config folder.
+A settings filename can also be provided when starting the script like `lua run boxhud boxhud-settings.lua`. That file is also looked up in the config folder.
 
 Boxhud configuration is broken up into 4 main sections: Properties, Columns, Tabs and Windows.
 
@@ -153,7 +163,7 @@ Observing properties which are not defined on a toon can impact running macros. 
   Properties = {
     ['CWTN.Mode'] = {
       ['Name']='CWTN.Mode',
-      ['Type='Observed',
+      ['Type']='Observed',
       ['DependsOnName']='Me.Class.ShortName',
       ['DependsOnValue']='MNK,ROG,WAR,SHD,MAG,ENC,CLR,BST,SHM'
     }
@@ -161,6 +171,10 @@ Observing properties which are not defined on a toon can impact running macros. 
 ```
 
 The example above would observe `CWTN.Mode` only on toons whose class is listed in `DependsOnValue`, which are the classes that have CWTN plugins available.
+
+`DependsOnValue` is a comma separated list, matched as plain text and ignoring case. Add `['Inverse']=true` to do the opposite, and observe the property only on toons whose value is **not** in the list.
+
+If an observer cannot be set for a toon, that toon's cell shows `ERR`, a message is printed, and boxhud tries again after 30 seconds. Using `Reset Obs` from the right click menu, the Admin tab, or `/bhadmin reset` retries right away.
 
 ### NetBots properties
 
@@ -259,10 +273,36 @@ Windows include a name and a list of tabs to be shown on the window.
 ```
     ['default'] = {
         Name='default',
+        PeerGroup='zone',
         Tabs={
             'General'
         }
     }
+```
+
+`PeerGroup` (MQ2DanNet only) chooses which toons the window shows. It can be:
+- `all` -- the DanNet all peer group
+- `zone` -- the peer group for the current zone
+- `group` -- the DanNet peer group of the EQ group of the character running the script
+- any other value is used as the name of a DanNet peer group. Use `/dnet info` to list the groups.
+
+Windows can be added, edited and deleted from the config tab.
+
+### Keeping characters of the same group together
+To sort characters by their EQ group, observe `Group.Leader`, add a column for it, and add that column to a tab. Clicking the column header sorts by it, and rows with the same group leader stay together:
+
+```
+  Properties = {
+    ['Group.Leader'] = { Name='Group.Leader', Type='Observed' }
+  }
+  Columns = {
+    ['Group'] = {
+      Name='Group',
+      Type='property',
+      Properties={all='Group.Leader'},
+      InZone=false
+    }
+  }
 ```
 
 Some other configuration options include:
@@ -271,7 +311,7 @@ Some other configuration options include:
 This can be set to **dannet** or **netbots** to specify whether the list of peers to display in the HUD should come from **MQ2DanNet** or **MQ2NetBots**.
 
 ## DanNetPeerGroup
-This can be set to **all** or **zone** to use either the DanNet All peer group or the zone specific peer group.
+This can be set to **all**, **zone** or **group**, or the name of a DanNet peer group. It is used as the peer group of the default window, and each window can also set its own `PeerGroup`.
 **Default**: zone
 
 ## RefreshInterval
@@ -280,7 +320,7 @@ Configure the delay for polling observed properties. Used in `mq.delay()` call.
 
 ## StaleDataTimeout
 Configure the time in seconds before stale entries are removed from the displayed data.
-**Default**: 60
+**Default**: 60 (the provided `boxhud-settings.lua` sets it to 30)
 
 # Extra notes:
 - I'm far from (read: not at all) a Lua expert, so don't be too surprised if any Lua best practices haven't been followed here or things could be done in much more clean ways.

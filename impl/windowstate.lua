@@ -24,9 +24,9 @@ function WindowState:refreshPeers()
     end
     local t = {}
     if state.PeerSource == 'dannet' then
-        t = utils.Split(mq.TLO.DanNet.Peers(self.PeerGroup)())
+        t = utils.Split(mq.TLO.DanNet.Peers(self.PeerGroup)() or '')
     else
-        t = utils.Split(mq.TLO.NetBots.Client(), ' ')
+        t = utils.Split(mq.TLO.NetBots.Client() or '', ' ')
     end
 
     if not self.Peers or not utils.DoTablesMatch(self.Peers, t) then
